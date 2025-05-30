@@ -1,5 +1,5 @@
-<!DOCTYPE html> 
-<html lang="en" >
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -10,10 +10,122 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
   <style>
-    /* Styles remain the same */
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      margin: 0; padding: 0;
+      display: flex; justify-content: center; align-items: center; height: 100vh;
+      flex-direction: column;
+    }
+    #app {
+      background: white;
+      width: 450px;
+      max-width: 95vw;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgb(0 0 0 / 0.2);
+      display: flex;
+      flex-direction: column;
+      height: 650px;
+      overflow: hidden;
+    }
+    header {
+      padding: 1rem;
+      border-bottom: 1px solid #ddd;
+      font-weight: bold;
+      font-size: 1.2rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    #login, #register, #chat {
+      padding: 1rem;
+      flex: 1;
+      display: none;
+      flex-direction: column;
+    }
+    input, button, textarea, select {
+      font-size: 1rem;
+      padding: 0.5rem;
+      margin-bottom: 0.8rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: vertical;
+      height: 60px;
+    }
+    button {
+      cursor: pointer;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .message {
+      max-width: 70%;
+      padding: 0.5rem;
+      border-radius: 6px;
+      background: #e1ffc7;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+      position: relative;
+    }
+    .message.self {
+      background: #c7dfff;
+      align-self: flex-end;
+    }
+    .message .sender {
+      font-weight: bold;
+      font-size: 0.85rem;
+      margin-bottom: 0.3rem;
+    }
+    .message .timestamp {
+      font-size: 0.7rem;
+      color: #777;
+      margin-top: 0.3rem;
+    }
+    .typing {
+      font-style: italic;
+      color: #666;
+      height: 20px;
+      margin-bottom: 0.3rem;
+    }
+    a.media-link {
+      display: block;
+      margin-top: 0.2rem;
+      color: #0066cc;
+      text-decoration: underline;
+      font-size: 0.85rem;
+      word-break: break-all;
+    }
+    #userSelect, #displayNameInput {
+      margin-bottom: 0.8rem;
+    }
+    footer {
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 0.5rem;
+      color: #666;
+    }
   </style>
 </head>
 <body>
+
 <div id="app">
   <header>
     <div>Firebase Messenger</div>
@@ -35,16 +147,16 @@
   </section>
 
   <section id="chat">
+    <input type="text" id="displayNameInput" placeholder="Change Display Name" />
+    <button id="saveDisplayNameBtn">Save Name</button>
     <select id="userSelect" title="Choose user to chat with">
       <option value="" disabled selected>Loading users...</option>
     </select>
 
-    <input type="text" id="displayNameInput" placeholder="Set your display name" />
-    <button id="saveDisplayNameBtn" style="margin-bottom: 1rem; background: #28a745;">Save Display Name</button>
-
     <div id="messages"></div>
     <div class="typing" id="typingIndicator"></div>
     <textarea id="messageInput" placeholder="Type a message... (Enter to send, Shift+Enter new line)"></textarea>
+    <input type="file" id="mediaInput" />
     <button id="sendBtn">Send</button>
   </section>
 </div>
@@ -52,9 +164,298 @@
 <footer>&copy; 2025 Maki Web. All rights reserved</footer>
 
 <script>
-  // All your Firebase config and JS code remains unchanged.
-  // This includes authentication, chat logic, display name management,
-  // typing indicators, and push notification registration.
+  const firebaseConfig = {
+    apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
+    authDomain: "project-955237504610034331.firebaseapp.com",
+    projectId: "project-955237504610034331",
+    storageBucket: "project-955237504610034331.appspot.com",
+    messagingSenderId: "76212939677",
+    appId: "1:76212939677:web:ef498bc1e4e480ab6e5d74",
+    measurementId: "G-WXBEP1LXTX"
+  };
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.database();
+  const storage = firebase.storage();
+  const messaging = firebase.messaging();
+
+  const loginSection = document.getElementById("login");
+  const registerSection = document.getElementById("register");
+  const chatSection = document.getElementById("chat");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  const loginEmail = document.getElementById("loginEmail");
+  const loginPassword = document.getElementById("loginPassword");
+  const loginBtn = document.getElementById("loginBtn");
+  const toRegisterBtn = document.getElementById("toRegisterBtn");
+
+  const registerEmail = document.getElementById("registerEmail");
+  const registerPassword = document.getElementById("registerPassword");
+  const registerBtn = document.getElementById("registerBtn");
+  const toLoginBtn = document.getElementById("toLoginBtn");
+
+  const messagesDiv = document.getElementById("messages");
+  const messageInput = document.getElementById("messageInput");
+  const mediaInput = document.getElementById("mediaInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const typingIndicator = document.getElementById("typingIndicator");
+  const userSelect = document.getElementById("userSelect");
+  const displayNameInput = document.getElementById("displayNameInput");
+  const saveDisplayNameBtn = document.getElementById("saveDisplayNameBtn");
+
+  let allUsers = {};
+  let currentChatUserId = null;
+
+  function showSection(section) {
+    loginSection.style.display = "none";
+    registerSection.style.display = "none";
+    chatSection.style.display = "none";
+    section.style.display = "flex";
+  }
+
+  function updateUserSelect() {
+    userSelect.innerHTML = '';
+    const meOption = document.createElement('option');
+    meOption.textContent = `You: ${getDisplayName(auth.currentUser.uid)}`;
+    meOption.disabled = true;
+    userSelect.appendChild(meOption);
+
+    Object.entries(allUsers).forEach(([uid, u]) => {
+      if (uid === auth.currentUser.uid) return;
+      const opt = document.createElement('option');
+      opt.value = uid;
+      opt.textContent = u.displayName || u.email || 'No Name';
+      userSelect.appendChild(opt);
+    });
+
+    if (userSelect.options.length > 1) {
+      userSelect.disabled = false;
+      if (!currentChatUserId) {
+        userSelect.selectedIndex = 1;
+        currentChatUserId = userSelect.value;
+      }
+    } else {
+      userSelect.disabled = true;
+      const noUsers = document.createElement('option');
+      noUsers.textContent = 'No other users found';
+      noUsers.disabled = true;
+      userSelect.appendChild(noUsers);
+    }
+  }
+
+  function getDisplayName(uid) {
+    return allUsers[uid]?.displayName || allUsers[uid]?.email || "Unknown";
+  }
+
+  function listenUsers() {
+    db.ref("users").on("value", snapshot => {
+      allUsers = snapshot.val() || {};
+      updateUserSelect();
+      loadMessages();
+    });
+  }
+
+  function saveUserToDB(user) {
+    db.ref("users/" + user.uid).once("value").then(snapshot => {
+      if (!snapshot.exists()) {
+        db.ref("users/" + user.uid).set({
+          email: user.email,
+          displayName: user.email
+        });
+      }
+    });
+  }
+
+  saveDisplayNameBtn.onclick = () => {
+    const newName = displayNameInput.value.trim();
+    if (newName) {
+      db.ref("users/" + auth.currentUser.uid + "/displayName").set(newName);
+      alert("Display name updated!");
+      updateUserSelect();
+    }
+  };
+
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      logoutBtn.style.display = "inline-block";
+      showSection(chatSection);
+      saveUserToDB(user);
+      listenUsers();
+      setTyping(false);
+      listenTyping();
+      requestNotificationPermission();
+    } else {
+      logoutBtn.style.display = "none";
+      showSection(loginSection);
+      messagesDiv.innerHTML = "";
+      typingIndicator.textContent = "";
+      allUsers = {};
+      currentChatUserId = null;
+    }
+  });
+
+  toRegisterBtn.onclick = () => showSection(registerSection);
+  toLoginBtn.onclick = () => showSection(loginSection);
+
+  registerBtn.onclick = () => {
+    const email = registerEmail.value.trim();
+    const password = registerPassword.value.trim();
+    if (!email || !password) return alert("Please enter email and password");
+    auth.createUserWithEmailAndPassword(email, password).catch(e => alert("Register error: " + e.message));
+  };
+
+  loginBtn.onclick = () => {
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value.trim();
+    if (!email || !password) return alert("Please enter email and password");
+    auth.signInWithEmailAndPassword(email, password).catch(e => alert("Login error: " + e.message));
+  };
+
+  logoutBtn.onclick = () => auth.signOut();
+
+  userSelect.onchange = () => {
+    currentChatUserId = userSelect.value;
+    loadMessages();
+    listenTyping();
+  };
+
+  function chatId(uid1, uid2) {
+    return uid1 < uid2 ? uid1 + "_" + uid2 : uid2 + "_" + uid1;
+  }
+
+  function loadMessages() {
+    if (!currentChatUserId || !auth.currentUser) {
+      messagesDiv.innerHTML = '<i>Select a user to chat with</i>';
+      return;
+    }
+    const ref = db.ref("privateMessages/" + chatId(auth.currentUser.uid, currentChatUserId));
+    ref.off();
+    ref.on("value", snapshot => {
+      const data = snapshot.val() || {};
+      messagesDiv.innerHTML = "";
+      Object.values(data).forEach(msg => {
+        const div = document.createElement("div");
+        div.classList.add("message");
+        if (msg.sender === auth.currentUser.uid) div.classList.add("self");
+
+        const senderDiv = document.createElement("div");
+        senderDiv.textContent = getDisplayName(msg.sender);
+        senderDiv.classList.add("sender");
+        div.appendChild(senderDiv);
+
+        if (msg.text) div.appendChild(document.createTextNode(msg.text));
+        if (msg.media) {
+          const a = document.createElement("a");
+          a.href = msg.media;
+          a.textContent = "View Media";
+          a.target = "_blank";
+          a.className = "media-link";
+          div.appendChild(a);
+        }
+
+        const time = document.createElement("div");
+        const dt = new Date(msg.timestamp || Date.now());
+        time.textContent = dt.toLocaleString();
+        time.classList.add("timestamp");
+        div.appendChild(time);
+
+        messagesDiv.appendChild(div);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+  }
+
+  sendBtn.onclick = sendMessage;
+
+  function sendMessage() {
+    if (!currentChatUserId) return alert("Please select a user to chat with.");
+    const text = messageInput.value.trim();
+    const file = mediaInput.files[0];
+    if (!text && !file) return alert("Write a message or attach a file.");
+    sendBtn.disabled = true;
+
+    if (file) {
+      const ref = storage.ref('chatMedia/' + Date.now() + "_" + file.name);
+      ref.put(file).then(snap => snap.ref.getDownloadURL())
+        .then(url => pushMessage(text, url))
+        .catch(e => {
+          alert("Upload error: " + e.message);
+          sendBtn.disabled = false;
+        });
+    } else {
+      pushMessage(text, null);
+    }
+  }
+
+  function pushMessage(text, mediaUrl) {
+    const ref = db.ref("privateMessages/" + chatId(auth.currentUser.uid, currentChatUserId));
+    const msg = {
+      sender: auth.currentUser.uid,
+      text: text || null,
+      media: mediaUrl || null,
+      timestamp: Date.now()
+    };
+    ref.push(msg).then(() => {
+      messageInput.value = "";
+      mediaInput.value = "";
+      sendBtn.disabled = false;
+      sendTyping(false);
+    });
+  }
+
+  let typingTimeout = null;
+  messageInput.addEventListener("input", () => {
+    sendTyping(true);
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => sendTyping(false), 1500);
+  });
+
+  function sendTyping(typing) {
+    if (!currentChatUserId || !auth.currentUser) return;
+    db.ref("typing/" + chatId(auth.currentUser.uid, currentChatUserId) + "/" + auth.currentUser.uid).set(typing);
+  }
+
+  function listenTyping() {
+    if (!currentChatUserId) return;
+    db.ref("typing/" + chatId(auth.currentUser.uid, currentChatUserId)).on("value", snapshot => {
+      const data = snapshot.val() || {};
+      const otherUserId = Object.keys(data).find(uid => uid !== auth.currentUser.uid);
+      typingIndicator.textContent = (otherUserId && data[otherUserId]) ? `${getDisplayName(otherUserId)} is typing...` : "";
+    });
+  }
+
+  messageInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  async function requestNotificationPermission() {
+    try {
+      await messaging.requestPermission();
+      const token = await messaging.getToken({
+        vapidKey: "BElIT7exXMYvtZcKIk0MwBrh36uij6kr4iMKP_TJ4JJK0kr8t_V7VkHnektRYCJixraRFci2uNqZm_SXdsc9RXI"
+      });
+      console.log("Notification permission granted. Token:", token);
+      db.ref("fcmTokens/" + auth.currentUser.uid).set(token);
+    } catch (e) {
+      console.warn("Notifications not permitted", e);
+    }
+  }
+</script>
+
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("firebase-messaging-sw.js")
+      .then(reg => {
+        console.log("Service Worker registered:", reg.scope);
+        messaging.useServiceWorker(reg);
+      }).catch(e => {
+        console.error("Service Worker error:", e);
+      });
+  }
 </script>
 
 </body>
