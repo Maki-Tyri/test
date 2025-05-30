@@ -3,169 +3,57 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Firebase Messenger with Avatars</title>
-
-  <!-- Firebase SDKs -->
+  <title>Firebase Messenger with Avatars and Private Chat Fix</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
 
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f2f5;
-      height: 100%;
-    }
-    #app {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      max-width: 600px;
-      margin: auto;
-      background: #fff;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-    }
-    header {
-      padding: 1rem;
-      border-bottom: 1px solid #ddd;
-      font-weight: bold;
-      font-size: 1.2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #f9f9f9;
-    }
-    section {
-      padding: 1rem;
-      flex: 1;
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    section.active {
-      display: flex;
-    }
-    input, button, textarea, select {
-      font-size: 1rem;
-      padding: 0.5rem;
-      margin-bottom: 0.8rem;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      box-sizing: border-box;
-    }
-    textarea {
-      resize: vertical;
-      height: 60px;
-    }
-    button {
-      cursor: pointer;
-      background-color: #007bff;
-      border: none;
-      color: white;
-      transition: background-color 0.3s;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    #messages {
-      flex: 1;
-      overflow-y: auto;
-      border: 1px solid #ddd;
-      padding: 0.5rem;
-      border-radius: 4px;
-      background: #fafafa;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .message {
-      max-width: 80%;
-      padding: 0.5rem;
-      border-radius: 6px;
-      background: #e1ffc7;
-      word-wrap: break-word;
-      white-space: pre-wrap;
-      display: flex;
-      gap: 0.5rem;
-      align-items: flex-start;
-    }
-    .message.self {
-      background: #c7dfff;
-      align-self: flex-end;
-      flex-direction: row-reverse;
-    }
-    .sender-info {
-      display: flex;
-      flex-direction: column;
-      font-size: 0.85rem;
-    }
-    .sender {
-      font-weight: bold;
-    }
-    .timestamp {
-      font-size: 0.7rem;
-      color: #777;
-      margin-top: 0.2rem;
-    }
-    .message-text {
-      max-width: 100%;
-    }
-    .avatar {
-      width: 36px;
-      height: 36px;
-      border-radius: 50%;
-      object-fit: cover;
-      border: 1px solid #ccc;
-    }
-    .typing {
-      font-style: italic;
-      color: #666;
-      height: 20px;
-      margin-bottom: 0.5rem;
-    }
-    footer {
-      font-size: 0.85rem;
-      text-align: center;
-      padding: 0.5rem;
-      color: #666;
-      background: #f9f9f9;
-    }
-    #avatarPreview {
-      width: 50px;
-      height: 50px;
-      border-radius: 50%;
-      object-fit: cover;
-      margin-bottom: 0.5rem;
-      border: 1px solid #ccc;
-      display: none;
-    }
+    html, body { margin:0; padding:0; font-family: Arial, sans-serif; background:#f5f5f5; height:100%; }
+    #app { max-width:600px; margin:auto; background:#fff; height:100vh; display:flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
+    header { padding:1rem; border-bottom: 1px solid #ccc; display:flex; justify-content: space-between; align-items:center; background:#eee; }
+    section { flex:1; padding:1rem; overflow: hidden; display:none; flex-direction: column; }
+    section.active { display:flex; }
+    input, select, button, textarea { padding:0.5rem; margin-bottom:0.7rem; font-size:1rem; border:1px solid #ccc; border-radius:4px; }
+    button { background:#007bff; color:#fff; border:none; cursor:pointer; }
+    button:hover { background:#0056b3; }
+    #messages { flex:1; overflow-y:auto; border:1px solid #ccc; padding:0.5rem; border-radius:4px; background:#fafafa; display:flex; flex-direction: column; gap:0.5rem; }
+    .message { display:flex; gap:0.5rem; align-items:flex-start; max-width: 80%; padding: 0.5rem; border-radius: 6px; background: #e1ffc7; word-wrap: break-word; }
+    .message.self { background: #c7dfff; align-self: flex-end; flex-direction: row-reverse; }
+    .avatar { width:36px; height:36px; border-radius: 50%; object-fit: cover; border:1px solid #ccc; }
+    .sender-info { display:flex; flex-direction: column; font-size: 0.85rem; }
+    .sender { font-weight: bold; }
+    .timestamp { font-size: 0.7rem; color: #666; margin-top: 0.2rem; }
+    #typingIndicator { font-style: italic; color:#666; height: 20px; margin-bottom: 0.5rem; }
+    #avatarPreview { width:50px; height:50px; border-radius:50%; object-fit:cover; margin-bottom: 0.5rem; border:1px solid #ccc; display:none; }
   </style>
 </head>
 <body>
 
 <div id="app">
   <header>
-    <div>Firebase Messenger with Avatars</div>
-    <button id="logoutBtn" style="display: none;">Logout</button>
+    <div>Firebase Messenger</div>
+    <button id="logoutBtn" style="display:none;">Logout</button>
   </header>
 
+  <!-- Login -->
   <section id="login" class="active">
     <input type="email" id="loginEmail" placeholder="Email" />
     <input type="password" id="loginPassword" placeholder="Password" />
     <button id="loginBtn">Login</button>
-    <button id="toRegisterBtn" style="background: gray;">Register Instead</button>
+    <button id="toRegisterBtn" style="background:#666;">Register Instead</button>
   </section>
 
+  <!-- Register -->
   <section id="register">
     <input type="email" id="registerEmail" placeholder="Email" />
     <input type="password" id="registerPassword" placeholder="Password" />
     <button id="registerBtn">Register</button>
-    <button id="toLoginBtn" style="background: gray;">Back to Login</button>
+    <button id="toLoginBtn" style="background:#666;">Back to Login</button>
   </section>
 
+  <!-- Chat -->
   <section id="chat">
     <div>
       <img id="avatarPreview" alt="Your Avatar" />
@@ -181,18 +69,17 @@
     </select>
 
     <div id="messages"></div>
-    <div id="typingIndicator" class="typing"></div>
+    <div id="typingIndicator"></div>
 
-    <div style="display: flex; gap: 0.5rem;">
-      <textarea id="messageInput" placeholder="Type a message..." style="flex: 1;"></textarea>
-      <button id="sendBtn" style="width: 100px;">Send</button>
+    <div style="display:flex; gap:0.5rem;">
+      <textarea id="messageInput" placeholder="Type a message..." style="flex:1;"></textarea>
+      <button id="sendBtn" style="width:100px;">Send</button>
     </div>
   </section>
 </div>
 
-<footer>&copy; 2025 Maki Web. All rights reserved.</footer>
-
 <script>
+  // Firebase config — replace with your own!
   const firebaseConfig = {
     apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
     authDomain: "project-955237504610034331.firebaseapp.com",
@@ -204,7 +91,6 @@
     measurementId: "G-WXBEP1LXTX"
   };
 
-  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
@@ -247,6 +133,7 @@
   let typingTimeout;
   let avatarFile = null;
 
+  // Auth state listener
   auth.onAuthStateChanged(user => {
     if (user) {
       currentUser = user;
@@ -254,16 +141,13 @@
       logoutBtn.style.display = "block";
 
       loadUserProfile(user.uid);
-
       joinEveryoneGroup(user.uid);
       populateChatList();
-
       clearMessagesListener();
     } else {
       currentUser = null;
       showSection(loginSection);
       logoutBtn.style.display = "none";
-
       clearMessagesListener();
       messagesDiv.innerHTML = "";
       chatSelect.value = "";
@@ -297,7 +181,7 @@
     }
     auth.createUserWithEmailAndPassword(email, password)
       .then(cred => {
-        // Create basic user data in db
+        // Initialize user data in DB
         db.ref("users/" + cred.user.uid).set({
           email: email,
           displayName: email.split('@')[0],
@@ -313,7 +197,7 @@
   toRegisterBtn.onclick = () => showSection(registerSection);
   toLoginBtn.onclick = () => showSection(loginSection);
 
-  // Load user profile (displayName and avatar)
+  // Load user profile
   function loadUserProfile(uid) {
     db.ref("users/" + uid).once("value").then(snap => {
       const userData = snap.val();
@@ -324,57 +208,48 @@
         avatarPreview.style.display = "inline-block";
       } else {
         avatarPreview.style.display = "none";
-        avatarPreview.src = "";
       }
-      // Update Firebase Auth displayName for convenience
-      currentUser.updateProfile({ displayName: userData.displayName || "" });
     });
   }
 
-  // Save profile (displayName + avatar)
+  // Save profile updates
   saveProfileBtn.onclick = async () => {
-    const name = displayNameInput.value.trim();
-    if (!name) {
-      alert("Display name cannot be empty");
-      return;
-    }
     if (!currentUser) return alert("Not logged in");
 
-    try {
-      let avatarUrl = null;
-      if (avatarFile) {
-        // Upload avatar
-        const avatarRef = storage.ref("avatars/" + currentUser.uid + "/" + avatarFile.name);
-        const snapshot = await avatarRef.put(avatarFile);
+    let avatarUrl = null;
+
+    if (avatarFile) {
+      // Upload avatar to storage
+      const storageRef = storage.ref("avatars/" + currentUser.uid);
+      try {
+        const snapshot = await storageRef.put(avatarFile);
         avatarUrl = await snapshot.ref.getDownloadURL();
+      } catch (e) {
+        alert("Avatar upload failed: " + e.message);
+        return;
       }
-
-      // Update Realtime DB
-      const updateData = { displayName: name };
-      if (avatarUrl) updateData.avatarUrl = avatarUrl;
-
-      await db.ref("users/" + currentUser.uid).update(updateData);
-
-      // Update Firebase Auth profile
-      await currentUser.updateProfile({ displayName: name, photoURL: avatarUrl || currentUser.photoURL || "" });
-
-      // Reset avatarFile
-      avatarFile = null;
-
-      alert("Profile updated!");
-
-      // Reload avatar preview if updated
-      if (avatarUrl) {
-        avatarPreview.src = avatarUrl;
-        avatarPreview.style.display = "inline-block";
-      }
-    } catch (e) {
-      alert("Failed to update profile: " + e.message);
     }
+
+    const newData = {
+      displayName: displayNameInput.value.trim() || currentUser.email.split("@")[0],
+    };
+    if (avatarUrl) newData.avatarUrl = avatarUrl;
+
+    await db.ref("users/" + currentUser.uid).update(newData);
+
+    if (avatarUrl) {
+      avatarPreview.src = avatarUrl;
+      avatarPreview.style.display = "inline-block";
+    }
+
+    alert("Profile saved!");
+    avatarFile = null;
+    avatarInput.value = "";
+    populateChatList();
   };
 
-  // Avatar input preview and file
-  avatarInput.addEventListener("change", e => {
+  // Avatar file select preview
+  avatarInput.onchange = e => {
     const file = e.target.files[0];
     if (!file) return;
     if (!file.type.startsWith("image/")) {
@@ -384,123 +259,186 @@
     }
     avatarFile = file;
     const reader = new FileReader();
-    reader.onload = evt => {
-      avatarPreview.src = evt.target.result;
+    reader.onload = function(ev) {
+      avatarPreview.src = ev.target.result;
       avatarPreview.style.display = "inline-block";
     };
     reader.readAsDataURL(file);
-  });
+  };
 
-  // Join Everyone group if not member
+  // Join 'Everyone' group chat (ensure user added)
   function joinEveryoneGroup(uid) {
-    const everyoneRef = db.ref("groups/everyone");
-    everyoneRef.once("value").then(snap => {
-      let group = snap.val();
-      if (!group) {
-        everyoneRef.set({ name: "Everyone", members: [uid] });
-      } else if (!group.members.includes(uid)) {
-        group.members.push(uid);
-        everyoneRef.child("members").set(group.members);
-      }
-    });
+    // Group is a fixed chat id "group_everyone"
+    const groupId = "group_everyone";
+    // Add user to group members list (optional)
+    db.ref("groups/" + groupId + "/members/" + uid).set(true);
+
+    // Add group to groupOptions if not exists
+    // (Will be handled by populateChatList)
   }
 
-  // Populate chat select dropdown (users + groups)
-  function populateChatList() {
+  // Populate chat select options (users and groups)
+  async function populateChatList() {
     userOptions.innerHTML = "";
     groupOptions.innerHTML = "";
 
-    // Users (except current)
-    db.ref("users").once("value", snap => {
-      snap.forEach(child => {
-        if (child.key !== currentUser.uid) {
-          const user = child.val();
-          const opt = document.createElement("option");
-          opt.value = child.key;
-          opt.textContent = user.displayName || user.email || child.key;
-          userOptions.appendChild(opt);
-        }
-      });
-    });
+    // Get all users except current
+    const usersSnap = await db.ref("users").once("value");
+    const users = usersSnap.val() || {};
+    for (const uid in users) {
+      if (uid === currentUser.uid) continue;
 
-    // Groups user belongs to
-    db.ref("groups").once("value", snap => {
-      snap.forEach(child => {
-        const group = child.val();
-        if (group.members && group.members.includes(currentUser.uid)) {
-          const opt = document.createElement("option");
-          opt.value = "group:" + child.key;
-          opt.textContent = group.name || child.key;
-          groupOptions.appendChild(opt);
-        }
-      });
-    });
+      const option = document.createElement("option");
+      option.value = getPrivateChatId(currentUser.uid, uid);
+      option.textContent = users[uid].displayName || users[uid].email || "User";
+      option.dataset.isGroup = "false";
+      option.dataset.userId = uid;
+      userOptions.appendChild(option);
+    }
+
+    // Add "Everyone" group option
+    const groupOption = document.createElement("option");
+    groupOption.value = "group_everyone";
+    groupOption.textContent = "Everyone (Group Chat)";
+    groupOption.dataset.isGroup = "true";
+    groupOptions.appendChild(groupOption);
   }
 
-  // Listen for chat select change
-  chatSelect.onchange = () => {
-    const val = chatSelect.value;
-    if (!val) return;
+  // Generate a consistent private chat ID between two users
+  // Sort UIDs alphabetically to ensure same chatId for both
+  function getPrivateChatId(uid1, uid2) {
+    return [uid1, uid2].sort().join("_");
+  }
 
-    isGroupChat = val.startsWith("group:");
-    selectedChatId = isGroupChat ? val.slice(6) : val;
-
-    clearMessagesListener();
-
-    messagesDiv.innerHTML = "";
-
-    messagesRef = db.ref((isGroupChat ? "groupMessages" : "messages") + "/" + selectedChatId);
-
-    messagesRef.off("child_added");
-    messagesRef.on("child_added", snap => {
-      displayMessage(snap.val());
-    });
-
-    // Listen for typing indicator only on private chats
-    if (!isGroupChat) {
-      db.ref("typing/" + selectedChatId).on("value", snap => {
-        const typingUser = snap.val();
-        if (typingUser && typingUser !== (currentUser.displayName || currentUser.email)) {
-          typingIndicator.textContent = `${typingUser} is typing...`;
-        } else {
-          typingIndicator.textContent = "";
-        }
-      });
-    } else {
-      typingIndicator.textContent = "";
-    }
-  };
-
-  // Clear message listener if any
+  // Clear messages listener if any
   function clearMessagesListener() {
     if (messagesRef) {
       messagesRef.off();
       messagesRef = null;
     }
-    db.ref("typing").off();
     typingIndicator.textContent = "";
+  }
+
+  // Listen for messages in selected chat
+  function listenMessages(chatId, group) {
+    clearMessagesListener();
+    if (!chatId) return;
+    selectedChatId = chatId;
+    isGroupChat = group;
+
+    messagesDiv.innerHTML = "";
+
+    messagesRef = db.ref("messages/" + chatId);
+    messagesRef.off();
+
+    messagesRef.on("child_added", async snap => {
+      const msg = snap.val();
+      await displayMessage(msg);
+    });
+
+    // Typing indicator listener
+    const typingRef = db.ref("typing/" + chatId);
+    typingRef.off();
+
+    typingRef.on("value", snap => {
+      const typingUser = snap.val();
+      if (!typingUser || typingUser === (currentUser.displayName || currentUser.email)) {
+        typingIndicator.textContent = "";
+      } else {
+        typingIndicator.textContent = `${typingUser} is typing...`;
+      }
+    });
+  }
+
+  // Display a message element
+  async function displayMessage(msg) {
+    const div = document.createElement("div");
+    div.classList.add("message");
+
+    const isSelf = msg.sender === currentUser.uid;
+    if (isSelf) div.classList.add("self");
+
+    // Get sender info (displayName + avatar)
+    let senderName = "Unknown";
+    let avatarUrl = "https://i.pravatar.cc/150?u=" + msg.sender;
+
+    try {
+      const userSnap = await db.ref("users/" + msg.sender).once("value");
+      const userData = userSnap.val();
+      if (userData) {
+        senderName = userData.displayName || userData.email || senderName;
+        avatarUrl = userData.avatarUrl || avatarUrl;
+      }
+    } catch {}
+
+    const avatar = document.createElement("img");
+    avatar.className = "avatar";
+    avatar.src = avatarUrl;
+
+    const senderInfo = document.createElement("div");
+    senderInfo.className = "sender-info";
+
+    const senderNameDiv = document.createElement("div");
+    senderNameDiv.className = "sender";
+    senderNameDiv.textContent = senderName;
+
+    const timestamp = document.createElement("div");
+    timestamp.className = "timestamp";
+    timestamp.textContent = new Date(msg.timestamp).toLocaleTimeString();
+
+    senderInfo.appendChild(senderNameDiv);
+    senderInfo.appendChild(timestamp);
+
+    const textDiv = document.createElement("div");
+    textDiv.className = "message-text";
+    textDiv.textContent = msg.text;
+
+    div.appendChild(avatar);
+    div.appendChild(senderInfo);
+    div.appendChild(textDiv);
+
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 
   // Send message
   sendBtn.onclick = () => {
-    if (!selectedChatId) return alert("Select a chat first");
+    sendMessage();
+  };
+
+  // Enter key sends message
+  messageInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  async function sendMessage() {
+    if (!selectedChatId) return alert("Select a chat first.");
     const text = messageInput.value.trim();
     if (!text) return;
 
-    const msg = {
+    const newMsg = {
       sender: currentUser.uid,
-      senderName: currentUser.displayName || currentUser.email,
+      text: text,
       timestamp: Date.now(),
-      text: text
     };
 
-    db.ref((isGroupChat ? "groupMessages" : "messages") + "/" + selectedChatId).push(msg);
-    messageInput.value = "";
-  };
+    // Push message to Firebase DB under chat
+    try {
+      await db.ref("messages/" + selectedChatId).push(newMsg);
+      messageInput.value = "";
+      // Remove typing indicator after send
+      db.ref("typing/" + selectedChatId).set(null);
+    } catch (e) {
+      alert("Send failed: " + e.message);
+    }
+  }
 
-  // Typing indicator for private chats only
+  // Typing indicator emit
   messageInput.addEventListener("input", () => {
-    if (!selectedChatId || isGroupChat) return;
+    if (!selectedChatId || isGroupChat) return; // Only for private chats
 
     const typingRef = db.ref("typing/" + selectedChatId);
     typingRef.set(currentUser.displayName || currentUser.email);
@@ -511,55 +449,18 @@
     }, 1500);
   });
 
-  // Display message in chat
-  async function displayMessage(msg) {
-    const div = document.createElement("div");
-    div.classList.add("message");
+  // On chat selection change
+  chatSelect.addEventListener("change", e => {
+    const val = e.target.value;
+    if (!val) return;
 
-    // Mark messages from self with different style
-    if (msg.sender === currentUser.uid) {
-      div.classList.add("self");
-    }
+    isGroupChat = e.target.selectedOptions[0].dataset.isGroup === "true";
+    selectedChatId = val;
 
-    // Get avatar URL of sender
-    let avatarUrl = "";
-    try {
-      const userSnap = await db.ref("users/" + msg.sender).once("value");
-      const userData = userSnap.val();
-      avatarUrl = userData && userData.avatarUrl ? userData.avatarUrl : "";
-    } catch {
-      avatarUrl = "";
-    }
+    messagesDiv.innerHTML = "";
+    listenMessages(selectedChatId, isGroupChat);
+  });
 
-    const avatar = document.createElement("img");
-    avatar.className = "avatar";
-    avatar.src = avatarUrl || "https://i.pravatar.cc/150?u=" + msg.sender; // fallback avatar
-
-    const senderInfo = document.createElement("div");
-    senderInfo.className = "sender-info";
-
-    const senderName = document.createElement("div");
-    senderName.className = "sender";
-    senderName.textContent = msg.senderName || "Unknown";
-
-    const timestamp = document.createElement("div");
-    timestamp.className = "timestamp";
-    timestamp.textContent = new Date(msg.timestamp).toLocaleTimeString();
-
-    senderInfo.appendChild(senderName);
-    senderInfo.appendChild(timestamp);
-
-    const text = document.createElement("div");
-    text.className = "message-text";
-    text.textContent = msg.text;
-
-    div.appendChild(avatar);
-    div.appendChild(senderInfo);
-    div.appendChild(text);
-
-    messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
 </script>
 
 </body>
