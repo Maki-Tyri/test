@@ -9,11 +9,10 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
 
   <style>
-    /* Your existing CSS here (unchanged) */
+    /* Existing CSS mostly unchanged */
     html, body {
       margin: 0;
       padding: 0;
@@ -50,7 +49,7 @@
     section.active {
       display: flex;
     }
-    input, button, textarea, select {
+    input, button, textarea {
       font-size: 1rem;
       padding: 0.5rem;
       margin-bottom: 0.8rem;
@@ -112,14 +111,6 @@
       height: 20px;
       margin-bottom: 0.5rem;
     }
-    .media-link {
-      display: block;
-      margin-top: 0.2rem;
-      color: #0066cc;
-      text-decoration: underline;
-      font-size: 0.85rem;
-      word-break: break-word;
-    }
     footer {
       font-size: 0.85rem;
       text-align: center;
@@ -155,17 +146,9 @@
     <input type="text" id="displayNameInput" placeholder="Change Display Name" />
     <button id="saveDisplayNameBtn">Save Name</button>
 
-    <!-- Group Chat Option Added -->
-    <select id="chatSelect">
-      <option value="" disabled selected>Select user or group chat</option>
-      <optgroup label="Users" id="userOptions"></optgroup>
-      <optgroup label="Groups" id="groupOptions"></optgroup>
-    </select>
-
     <div id="messages"></div>
     <div id="typingIndicator" class="typing"></div>
     <textarea id="messageInput" placeholder="Type a message... (Enter to send)"></textarea>
-    <input type="file" id="mediaInput" />
     <button id="sendBtn">Send</button>
   </section>
 </div>
@@ -188,7 +171,6 @@
 
   const auth = firebase.auth();
   const db = firebase.database();
-  const storage = firebase.storage();
   const messaging = firebase.messaging();
 
   const loginSection = document.getElementById("login");
@@ -210,19 +192,15 @@
   const displayNameInput = document.getElementById("displayNameInput");
   const saveDisplayNameBtn = document.getElementById("saveDisplayNameBtn");
 
-  const chatSelect = document.getElementById("chatSelect");
-  const userOptions = document.getElementById("userOptions");
-  const groupOptions = document.getElementById("groupOptions");
   const messagesDiv = document.getElementById("messages");
   const typingIndicator = document.getElementById("typingIndicator");
 
   const messageInput = document.getElementById("messageInput");
-  const mediaInput = document.getElementById("mediaInput");
   const sendBtn = document.getElementById("sendBtn");
 
   let currentUser = null;
-  let selectedChatId = null;  // Can be user uid or group id
-  let isGroupChat = false;
+  let selectedChatId = "default_group";  // default group id
+  let isGroupChat = true;
   let messagesRef = null;
   let typingRef = null;
   let typingTimeout = null;
@@ -238,16 +216,15 @@
       logoutBtn.style.display = "inline-block";
       showSection(chatSection);
       loadDisplayName();
-      populateChatList(); // Populate users & groups
+      // Automatically join default group "default_group"
       setupMessageListener();
       setupTypingListener();
-      requestNotificationPermission(); // Push notifications
+      requestNotificationPermission();
     } else {
       currentUser = null;
       logoutBtn.style.display = "none";
       showSection(loginSection);
       clearChat();
-      chatSelect.innerHTML = '<option value="" disabled selected>Select user or group chat</option><optgroup label="Users" id="userOptions"></optgroup><optgroup label="Groups" id="groupOptions"></optgroup>';
       typingIndicator.textContent = "";
     }
   });
@@ -276,7 +253,7 @@
     }
     auth.createUserWithEmailAndPassword(email, password)
       .then(() => {
-        alert("Registration successful! You can now login.");
+        alert("Registered successfully! Please login.");
         showSection(loginSection);
       })
       .catch(err => alert(err.message));
@@ -290,332 +267,135 @@
     auth.signOut();
   };
 
-  function loadDisplayName() {
-    if (!currentUser) return;
-    db.ref("users/" + currentUser.uid + "/displayName").once("value").then(snap => {
-      displayNameInput.value = snap.val() || "";
-    });
-  }
-
   saveDisplayNameBtn.onclick = () => {
-    const name = displayNameInput.value.trim();
-    if (!currentUser) return;
-    db.ref("users/" + currentUser.uid + "/displayName").set(name);
-    alert("Display name saved!");
-    populateChatList();
-  };
-
-  // Populate user list and group list
-  function populateChatList() {
-    userOptions.innerHTML = "";
-    groupOptions.innerHTML = "";
-
-    // Users
-    db.ref("users").once("value").then(snap => {
-      const users = snap.val() || {};
-      const userEntries = Object.entries(users).filter(([uid]) => uid !== currentUser.uid);
-      if (userEntries.length === 0) {
-        const opt = document.createElement("option");
-        opt.textContent = "(No other users)";
-        opt.disabled = true;
-        userOptions.appendChild(opt);
-      } else {
-        userEntries.forEach(([uid, data]) => {
-          const opt = document.createElement("option");
-          opt.value = uid;
-          opt.textContent = data.displayName || data.email || uid;
-          userOptions.appendChild(opt);
-        });
-      }
-      // Select first user if available
-      if (userOptions.children.length > 0) {
-        chatSelect.value = userOptions.children[0].value;
-        selectedChatId = chatSelect.value;
-        isGroupChat = false;
-        setupMessageListener();
-        setupTypingListener();
-      }
-    });
-
-    // Groups - for demo, get all groups where current user is a member
-    db.ref("groups").once("value").then(snap => {
-      const groups = snap.val() || {};
-      const userGroups = Object.entries(groups).filter(([gid, g]) => (g.members || []).includes(currentUser.uid));
-      if (userGroups.length === 0) {
-        const opt = document.createElement("option");
-        opt.textContent = "(No groups)";
-        opt.disabled = true;
-        groupOptions.appendChild(opt);
-      } else {
-        userGroups.forEach(([gid, g]) => {
-          const opt = document.createElement("option");
-          opt.value = "group_" + gid; // prefix so we know it's a group
-          opt.textContent = g.name || gid;
-          groupOptions.appendChild(opt);
-        });
-      }
-    });
-  }
-
-  chatSelect.onchange = () => {
-    const val = chatSelect.value;
-    if (!val) return;
-    if (val.startsWith("group_")) {
-      selectedChatId = val.slice(6);
-      isGroupChat = true;
-    } else {
-      selectedChatId = val;
-      isGroupChat = false;
+    const newName = displayNameInput.value.trim();
+    if (!newName) {
+      alert("Display name cannot be empty.");
+      return;
     }
-    clearChat();
-    setupMessageListener();
-    setupTypingListener();
+    db.ref(`users/${currentUser.uid}/displayName`).set(newName)
+      .then(() => alert("Display name saved!"))
+      .catch(err => alert(err.message));
   };
 
-  function clearChat() {
-    messagesDiv.innerHTML = "";
-    typingIndicator.textContent = "";
-    if (messagesRef) messagesRef.off();
-    if (typingRef) typingRef.off();
+  function loadDisplayName() {
+    db.ref(`users/${currentUser.uid}/displayName`).once("value")
+      .then(snapshot => {
+        const name = snapshot.val();
+        displayNameInput.value = name || "";
+      });
   }
 
   function setupMessageListener() {
-    if (!selectedChatId) return;
-
     if (messagesRef) messagesRef.off();
-    if (isGroupChat) {
-      messagesRef = db.ref("groupMessages/" + selectedChatId);
-    } else {
-      // For 1-1 chat, we store messages under "messages/{chatId}" where chatId is sorted uids joined by _
-      const chatId = [currentUser.uid, selectedChatId].sort().join("_");
-      messagesRef = db.ref("messages/" + chatId);
-    }
 
-    messagesRef.limitToLast(50).on("child_added", snap => {
-      const msg = snap.val();
+    messagesRef = db.ref(`messages/${selectedChatId}`);
+    messagesRef.on("child_added", snapshot => {
+      const msg = snapshot.val();
       displayMessage(msg);
     });
   }
 
-  function setupTypingListener() {
-    if (!selectedChatId) return;
-
-    if (typingRef) typingRef.off();
-
-    if (isGroupChat) {
-      typingRef = db.ref(`groupTyping/${selectedChatId}`);
-    } else {
-      const chatId = [currentUser.uid, selectedChatId].sort().join("_");
-      typingRef = db.ref(`typing/${chatId}`);
+  function displayMessage(msg) {
+    const div = document.createElement("div");
+    div.classList.add("message");
+    if (msg.senderUid === currentUser.uid) {
+      div.classList.add("self");
     }
 
-    typingRef.on("value", snap => {
-      const val = snap.val() || {};
-      // Show who is typing except self
-      const typers = Object.entries(val)
-        .filter(([uid, isTyping]) => isTyping && uid !== currentUser.uid)
-        .map(([uid]) => uid);
-      if (typers.length > 0) {
-        // Fetch display names for typers
-        Promise.all(typers.map(uid => 
-          db.ref("users/" + uid + "/displayName").once("value")
-            .then(snap => snap.val() || "Unknown")
-        )).then(names => {
-          typingIndicator.textContent = names.join(", ") + " typing...";
-        });
+    const senderName = msg.senderDisplayName || "Anonymous";
+
+    div.innerHTML = `<div class="sender">${escapeHtml(senderName)}</div>
+                     <div class="content">${escapeHtml(msg.text)}</div>
+                     <div class="timestamp">${new Date(msg.timestamp).toLocaleTimeString()}</div>`;
+    messagesDiv.appendChild(div);
+    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  }
+
+  function escapeHtml(text) {
+    const div = document.createElement("div");
+    div.textContent = text;
+    return div.innerHTML;
+  }
+
+  sendBtn.onclick = sendMessage;
+
+  messageInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    } else {
+      notifyTyping();
+    }
+  });
+
+  function sendMessage() {
+    const text = messageInput.value.trim();
+    if (!text) return;
+    const msg = {
+      senderUid: currentUser.uid,
+      senderDisplayName: displayNameInput.value.trim() || currentUser.email,
+      text,
+      timestamp: Date.now()
+    };
+    messagesRef.push(msg)
+      .then(() => {
+        messageInput.value = "";
+        stopTyping();
+      })
+      .catch(err => alert(err.message));
+  }
+
+  // Typing indicator logic
+  function setupTypingListener() {
+    if (typingRef) typingRef.off();
+    typingRef = db.ref(`typing/${selectedChatId}`);
+
+    typingRef.on("value", snapshot => {
+      const typingData = snapshot.val() || {};
+      let othersTyping = Object.keys(typingData).filter(uid => uid !== currentUser.uid && typingData[uid]);
+      if (othersTyping.length > 0) {
+        typingIndicator.textContent = "Someone is typing...";
       } else {
         typingIndicator.textContent = "";
       }
     });
   }
 
-  messageInput.oninput = () => {
-    updateTypingStatus(true);
+  function notifyTyping() {
+    if (!typingRef) return;
+    typingRef.child(currentUser.uid).set(true);
+
     if (typingTimeout) clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      updateTypingStatus(false);
-    }, 1000);
-  };
-
-  function updateTypingStatus(isTyping) {
-    if (!selectedChatId) return;
-    let typingPath;
-    if (isGroupChat) {
-      typingPath = `groupTyping/${selectedChatId}/${currentUser.uid}`;
-    } else {
-      const chatId = [currentUser.uid, selectedChatId].sort().join("_");
-      typingPath = `typing/${chatId}/${currentUser.uid}`;
-    }
-    db.ref(typingPath).set(isTyping);
+    typingTimeout = setTimeout(stopTyping, 3000);
   }
 
-  sendBtn.onclick = () => {
-    sendMessage();
-  };
-
-  messageInput.addEventListener("keydown", (e) => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
-  async function sendMessage() {
-    if (!selectedChatId) {
-      alert("Select a user or group to chat with.");
-      return;
-    }
-
-    const text = messageInput.value.trim();
-    const file = mediaInput.files[0];
-
-    if (!text && !file) {
-      alert("Please enter a message or select a media file.");
-      return;
-    }
-
-    let mediaUrl = null;
-
-    if (file) {
-      try {
-        mediaUrl = await uploadMedia(file);
-      } catch (err) {
-        alert("Media upload failed: " + err.message);
-        return;
-      }
-    }
-
-    const msg = {
-      sender: currentUser.uid,
-      senderName: displayNameInput.value.trim() || currentUser.email,
-      timestamp: Date.now(),
-      text: text || null,
-      mediaUrl: mediaUrl || null,
-    };
-
-    let msgRef;
-    if (isGroupChat) {
-      msgRef = db.ref("groupMessages/" + selectedChatId).push();
-    } else {
-      const chatId = [currentUser.uid, selectedChatId].sort().join("_");
-      msgRef = db.ref("messages/" + chatId).push();
-    }
-
-    msgRef.set(msg);
-    messageInput.value = "";
-    mediaInput.value = "";
-    updateTypingStatus(false);
-
-    // Send push notification
-    sendPushNotification(msg);
-  }
-
-  async function uploadMedia(file) {
-    const ext = file.name.split('.').pop();
-    const filename = `${currentUser.uid}_${Date.now()}.${ext}`;
-    const storageRef = storage.ref("media/" + filename);
-    await storageRef.put(file);
-    return await storageRef.getDownloadURL();
-  }
-
-  function displayMessage(msg) {
-    const div = document.createElement("div");
-    div.className = "message";
-    if (msg.sender === currentUser.uid) div.classList.add("self");
-
-    const senderName = document.createElement("div");
-    senderName.className = "sender";
-    senderName.textContent = msg.senderName || msg.sender;
-
-    div.appendChild(senderName);
-
-    if (msg.text) {
-      const text = document.createElement("div");
-      text.textContent = msg.text;
-      div.appendChild(text);
-    }
-
-    if (msg.mediaUrl) {
-      const link = document.createElement("a");
-      link.href = msg.mediaUrl;
-      link.target = "_blank";
-      link.className = "media-link";
-      link.textContent = "📎 Media file";
-      div.appendChild(link);
-    }
-
-    const time = document.createElement("div");
-    time.className = "timestamp";
-    time.textContent = new Date(msg.timestamp).toLocaleString();
-    div.appendChild(time);
-
-    messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
+  function stopTyping() {
+    if (!typingRef) return;
+    typingRef.child(currentUser.uid).set(false);
   }
 
   function clearChat() {
     messagesDiv.innerHTML = "";
-    typingIndicator.textContent = "";
-    if (messagesRef) messagesRef.off();
-    if (typingRef) typingRef.off();
   }
 
-  // ------------- Push Notifications Setup -------------
-  async function requestNotificationPermission() {
-    try {
-      await messaging.requestPermission();
-      const token = await messaging.getToken({ vapidKey: 'YOUR_PUBLIC_VAPID_KEY' });
-      console.log("FCM Token:", token);
-      // Save token to database
-      if (currentUser) {
-        db.ref("fcmTokens/" + currentUser.uid).set(token);
-      }
-    } catch (err) {
-      console.warn("Notification permission denied", err);
-    }
-  }
-
-  messaging.onMessage(payload => {
-    console.log('Message received. ', payload);
-    // Show a notification in-app or via Notification API
-    if (Notification.permission === "granted") {
-      new Notification(payload.notification.title, {
-        body: payload.notification.body,
-        icon: payload.notification.icon || "/firebase-logo.png",
+  // Push notifications setup (basic)
+  function requestNotificationPermission() {
+    if (!messaging) return;
+    messaging.requestPermission()
+      .then(() => messaging.getToken())
+      .then(token => {
+        if (token) {
+          db.ref(`users/${currentUser.uid}/fcmToken`).set(token);
+        }
+      })
+      .catch(() => {
+        console.log("Notification permission denied.");
       });
-    }
-  });
 
-  // Send push notification on new message (simplified: sends notification to recipient(s))
-  function sendPushNotification(msg) {
-    if (!msg) return;
-    // We have the recipient in selectedChatId or group members
-    // For demo, we'll send to all tokens for recipient user(s)
-
-    let recipients = [];
-    if (isGroupChat) {
-      // get group members except sender
-      db.ref("groups/" + selectedChatId + "/members").once("value").then(snap => {
-        const members = snap.val() || [];
-        recipients = members.filter(uid => uid !== currentUser.uid);
-        sendNotificationToUsers(recipients, msg);
-      });
-    } else {
-      recipients = [selectedChatId];
-      sendNotificationToUsers(recipients, msg);
-    }
-  }
-
-  function sendNotificationToUsers(userIds, msg) {
-    userIds.forEach(uid => {
-      db.ref("fcmTokens/" + uid).once("value").then(snap => {
-        const token = snap.val();
-        if (!token) return;
-        // NOTE: You need your own backend or Cloud Functions to actually send notifications via FCM server API.
-        // Here is just a placeholder to show where to send the notification request.
-
-        console.log(`Would send push notification to token: ${token} with message: ${msg.text || "Media message"}`);
-      });
+    messaging.onMessage(payload => {
+      console.log('Message received:', payload);
+      // Optionally, show notification in-browser
     });
   }
 
