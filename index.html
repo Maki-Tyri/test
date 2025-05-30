@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html lang="en" >
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Firebase 1-on-1 Messenger</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
+  <style>
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      margin: 0; padding: 0;
+      display: flex; justify-content: center; align-items: center; height: 100vh;
+    }
+    #app {
+      background: white;
+      width: 450px;
+      max-width: 95vw;
+      border-radius: 8px;
+      box-shadow: 0 0 15px rgb(0 0 0 / 0.2);
+      display: flex;
+      flex-direction: column;
+      height: 650px;
+      overflow: hidden;
+    }
+    header {
+      padding: 1rem;
+      border-bottom: 1px solid #ddd;
+      font-weight: bold;
+      font-size: 1.2rem;
+      display: flex; justify-content: space-between; align-items: center;
+    }
+    #login, #register, #chat {
+      padding: 1rem;
+      flex: 1;
+      display: none;
+      flex-direction: column;
+    }
+    input, button, textarea, select {
+      font-size: 1rem;
+      padding: 0.5rem;
+      margin-bottom: 0.8rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: vertical;
+      height: 60px;
+    }
+    button {
+      cursor: pointer;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 0.5rem;
+      margin-bottom: 0.5rem;
+      border-radius: 4px;
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .message {
+      max-width: 70%;
+      padding: 0.5rem;
+      border-radius: 6px;
+      background: #e1ffc7;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .message.self {
+      background: #c7dfff;
+      align-self: flex-end;
+    }
+    .message .sender {
+      font-weight: bold;
+      font-size: 0.85rem;
+      margin-bottom: 0.3rem;
+    }
+    .typing {
+      font-style: italic;
+      color: #666;
+      height: 20px;
+      margin-bottom: 0.3rem;
+    }
+    a.media-link {
+      display: block;
+      margin-top: 0.2rem;
+      color: #0066cc;
+      text-decoration: underline;
+      font-size: 0.85rem;
+      word-break: break-all;
+    }
+    #userSelect {
+      margin-bottom: 0.8rem;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div>Firebase Messenger</div>
+    <button id="logoutBtn" style="display:none;">Logout</button>
+  </header>
+
+  <section id="login">
+    <input type="email" id="loginEmail" placeholder="Email" />
+    <input type="password" id="loginPassword" placeholder="Password" />
+    <button id="loginBtn">Login</button>
+    <button id="toRegisterBtn" style="margin-top: 10px; background: gray;">Register Instead</button>
+  </section>
+
+  <section id="register">
+    <input type="email" id="registerEmail" placeholder="Email" />
+    <input type="password" id="registerPassword" placeholder="Password" />
+    <button id="registerBtn">Register</button>
+    <button id="toLoginBtn" style="margin-top: 10px; background: gray;">Back to Login</button>
+  </section>
+
+  <section id="chat">
+    <select id="userSelect" title="Choose user to chat with">
+      <option value="" disabled selected>Loading users...</option>
+    </select>
+
+    <div id="messages"></div>
+    <div class="typing" id="typingIndicator"></div>
+    <textarea id="messageInput" placeholder="Type a message... (Enter to send, Shift+Enter new line)"></textarea>
+    <input type="file" id="mediaInput" />
+    <button id="sendBtn">Send</button>
+  </section>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
+    authDomain: "project-955237504610034331.firebaseapp.com",
+    projectId: "project-955237504610034331",
+    storageBucket: "project-955237504610034331.appspot.com",
+    messagingSenderId: "76212939677",
+    appId: "1:76212939677:web:ef498bc1e4e480ab6e5d74",
+    measurementId: "G-WXBEP1LXTX"
+  };
+  firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
+  const db = firebase.database();
+  const storage = firebase.storage();
+  const messaging = firebase.messaging();
+
+  // UI refs
+  const loginSection = document.getElementById("login");
+  const registerSection = document.getElementById("register");
+  const chatSection = document.getElementById("chat");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  const loginEmail = document.getElementById("loginEmail");
+  const loginPassword = document.getElementById("loginPassword");
+  const loginBtn = document.getElementById("loginBtn");
+  const toRegisterBtn = document.getElementById("toRegisterBtn");
+
+  const registerEmail = document.getElementById("registerEmail");
+  const registerPassword = document.getElementById("registerPassword");
+  const registerBtn = document.getElementById("registerBtn");
+  const toLoginBtn = document.getElementById("toLoginBtn");
+
+  const messagesDiv = document.getElementById("messages");
+  const messageInput = document.getElementById("messageInput");
+  const mediaInput = document.getElementById("mediaInput");
+  const sendBtn = document.getElementById("sendBtn");
+  const typingIndicator = document.getElementById("typingIndicator");
+  const userSelect = document.getElementById("userSelect");
+
+  // Show/hide helper
+  function showSection(section) {
+    loginSection.style.display = "none";
+    registerSection.style.display = "none";
+    chatSection.style.display = "none";
+    section.style.display = "flex";
+  }
+
+  // Store users in memory
+  let allUsers = {};
+  let currentChatUserId = null;
+
+  // Update user select options
+  function updateUserSelect() {
+    userSelect.innerHTML = '';
+    // Current user disabled option
+    const meOption = document.createElement('option');
+    meOption.textContent = `You: ${auth.currentUser.email}`;
+    meOption.disabled = true;
+    userSelect.appendChild(meOption);
+
+    Object.entries(allUsers).forEach(([uid, u]) => {
+      if (uid === auth.currentUser.uid) return; // skip self
+      const opt = document.createElement('option');
+      opt.value = uid;
+      opt.textContent = u.email || 'No Email';
+      userSelect.appendChild(opt);
+    });
+
+    if (userSelect.options.length > 1) {
+      userSelect.disabled = false;
+      if (!currentChatUserId) {
+        userSelect.selectedIndex = 1;
+        currentChatUserId = userSelect.value;
+      }
+    } else {
+      userSelect.disabled = true;
+      const noUsers = document.createElement('option');
+      noUsers.textContent = 'No other users found';
+      noUsers.disabled = true;
+      userSelect.appendChild(noUsers);
+    }
+  }
+
+  // Listen to all users in Realtime DB for chat selection
+  function listenUsers() {
+    db.ref("users").on("value", snapshot => {
+      allUsers = snapshot.val() || {};
+      updateUserSelect();
+      loadMessages();
+    });
+  }
+
+  // Save user data on registration/login
+  function saveUserToDB(user) {
+    db.ref("users/" + user.uid).set({
+      email: user.email
+    });
+  }
+
+  // Authentication state observer
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      logoutBtn.style.display = "inline-block";
+      showSection(chatSection);
+      saveUserToDB(user);
+      listenUsers();
+      setTyping(false);
+      listenTyping();
+      requestNotificationPermission();
+    } else {
+      logoutBtn.style.display = "none";
+      showSection(loginSection);
+      messagesDiv.innerHTML = "";
+      typingIndicator.textContent = "";
+      allUsers = {};
+      currentChatUserId = null;
+    }
+  });
+
+  // Register & login UI toggles
+  toRegisterBtn.onclick = () => showSection(registerSection);
+  toLoginBtn.onclick = () => showSection(loginSection);
+
+  // Register user
+  registerBtn.onclick = () => {
+    const email = registerEmail.value.trim();
+    const password = registerPassword.value.trim();
+    if (!email || !password) {
+      alert("Please enter email and password");
+      return;
+    }
+    auth.createUserWithEmailAndPassword(email, password)
+      .catch(e => alert("Register error: " + e.message));
+  };
+
+  // Login user
+  loginBtn.onclick = () => {
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value.trim();
+    if (!email || !password) {
+      alert("Please enter email and password");
+      return;
+    }
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(e => alert("Login error: " + e.message));
+  };
+
+  // Logout
+  logoutBtn.onclick = () => {
+    auth.signOut();
+  };
+
+  // When user changes chat target
+  userSelect.onchange = () => {
+    currentChatUserId = userSelect.value;
+    loadMessages();
+  };
+
+  // Compose chat ID for 1-on-1 chat (sorted UIDs)
+  function chatId(uid1, uid2) {
+    return uid1 < uid2 ? uid1 + "_" + uid2 : uid2 + "_" + uid1;
+  }
+
+  // Listen messages for current chat only
+  function loadMessages() {
+    if (!currentChatUserId || !auth.currentUser) {
+      messagesDiv.innerHTML = '<i>Select a user to chat with</i>';
+      return;
+    }
+    db.ref("privateMessages/" + chatId(auth.currentUser.uid, currentChatUserId)).off();
+
+    db.ref("privateMessages/" + chatId(auth.currentUser.uid, currentChatUserId)).on("value", snapshot => {
+      const data = snapshot.val() || {};
+      messagesDiv.innerHTML = "";
+      Object.values(data).forEach(msg => {
+        const div = document.createElement("div");
+        div.classList.add("message");
+        if (msg.sender === auth.currentUser.uid) div.classList.add("self");
+        const senderName = allUsers[msg.sender] ? allUsers[msg.sender].email : "Unknown";
+        const senderDiv = document.createElement("div");
+        senderDiv.textContent = senderName;
+        senderDiv.classList.add("sender");
+        div.appendChild(senderDiv);
+        if (msg.text) div.appendChild(document.createTextNode(msg.text));
+        if (msg.media) {
+          const a = document.createElement("a");
+          a.href = msg.media;
+          a.textContent = "View Media";
+          a.target = "_blank";
+          a.className = "media-link";
+          div.appendChild(a);
+        }
+        messagesDiv.appendChild(div);
+      });
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    });
+  }
+
+  // Send message (with media)
+  sendBtn.onclick = sendMessage;
+  function sendMessage() {
+    if (!currentChatUserId) {
+      alert("Please select a user to chat with.");
+      return;
+    }
+    const text = messageInput.value.trim();
+    const file = mediaInput.files[0];
+
+    if (!text && !file) {
+      alert("Write a message or attach a file.");
+      return;
+    }
+
+    sendBtn.disabled = true;
+
+    if (file) {
+      // Upload media first
+      const storageRef = storage.ref('chatMedia/' + Date.now() + "_" + file.name);
+      storageRef.put(file).then(snapshot => {
+        return snapshot.ref.getDownloadURL();
+      }).then(url => {
+        pushMessage(text, url);
+      }).catch(e => {
+        alert("Upload error: " + e.message);
+        sendBtn.disabled = false;
+      });
+    } else {
+      pushMessage(text, null);
+    }
+  }
+
+  function pushMessage(text, mediaUrl) {
+    const chatRef = db.ref("privateMessages/" + chatId(auth.currentUser.uid, currentChatUserId));
+    const newMsg = {
+      sender: auth.currentUser.uid,
+      text: text || null,
+      media: mediaUrl || null,
+      timestamp: Date.now()
+    };
+    chatRef.push(newMsg).then(() => {
+      messageInput.value = "";
+      mediaInput.value = "";
+      sendBtn.disabled = false;
+      sendTyping(false);
+    });
+  }
+
+  // Typing indicator
+  let typingTimeout = null;
+  messageInput.addEventListener("input", () => {
+    sendTyping(true);
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => sendTyping(false), 1500);
+  });
+
+  function sendTyping(typing) {
+    if (!currentChatUserId || !auth.currentUser) return;
+    db.ref("typing/" + chatId(auth.currentUser.uid, currentChatUserId) + "/" + auth.currentUser.uid).set(typing);
+  }
+
+  function listenTyping() {
+    if (!currentChatUserId) return;
+
+    db.ref("typing/" + chatId(auth.currentUser.uid, currentChatUserId)).on("value", snapshot => {
+      const data = snapshot.val() || {};
+      const otherUserId = Object.keys(data).find(uid => uid !== auth.currentUser.uid);
+      if (otherUserId && data[otherUserId]) {
+        const otherUserEmail = allUsers[otherUserId] ? allUsers[otherUserId].email : "User";
+        typingIndicator.textContent = `${otherUserEmail} is typing...`;
+      } else {
+        typingIndicator.textContent = "";
+      }
+    });
+  }
+
+  // Listen typing only for current chat when user changes
+  userSelect.addEventListener('change', () => {
+    listenTyping();
+  });
+
+  // Send message on Enter (Shift+Enter = newline)
+  messageInput.addEventListener("keydown", e => {
+    if (e.key === "Enter" && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // --- Firebase Messaging Push Notifications Setup ---
+  async function requestNotificationPermission() {
+    try {
+      await messaging.requestPermission();
+      const token = await messaging.getToken({
+        vapidKey: BElIT7exXMYvtZcKIk0MwBrh36uij6kr4iMKP_TJ4JJK0kr8t_V7VkHnektRYCJixraRFci2uNqZm_SXdsc9RXI
+      });
+      console.log("Notification permission granted. Token:", token);
+      // Save token to DB here if needed for targeting push notifications to this user
+      db.ref("fcmTokens/" + auth.currentUser.uid).set(token);
+    } catch (e) {
+      console.warn("Unable to get permission for notifications", e);
+    }
+  }
+</script>
+
+<!-- Service worker registration for push notifications -->
+<script>
+  if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("firebase-messaging-sw.js")
+      .then(registration => {
+        console.log("Service Worker registered with scope:", registration.scope);
+        messaging.useServiceWorker(registration);
+      }).catch(e => {
+        console.error("Service Worker registration failed:", e);
+      });
+  }
+</script>
+
+</body>
+</html>
