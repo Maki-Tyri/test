@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Firebase Messenger</title>
+  <title>Firebase Messenger with Avatars</title>
 
   <!-- Firebase SDKs -->
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
@@ -88,20 +88,37 @@
       background: #e1ffc7;
       word-wrap: break-word;
       white-space: pre-wrap;
+      display: flex;
+      gap: 0.5rem;
+      align-items: flex-start;
     }
     .message.self {
       background: #c7dfff;
       align-self: flex-end;
+      flex-direction: row-reverse;
+    }
+    .sender-info {
+      display: flex;
+      flex-direction: column;
+      font-size: 0.85rem;
     }
     .sender {
       font-weight: bold;
-      font-size: 0.85rem;
-      margin-bottom: 0.2rem;
     }
     .timestamp {
       font-size: 0.7rem;
       color: #777;
       margin-top: 0.2rem;
+    }
+    .message-text {
+      max-width: 100%;
+    }
+    .avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 1px solid #ccc;
     }
     .typing {
       font-style: italic;
@@ -116,13 +133,22 @@
       color: #666;
       background: #f9f9f9;
     }
+    #avatarPreview {
+      width: 50px;
+      height: 50px;
+      border-radius: 50%;
+      object-fit: cover;
+      margin-bottom: 0.5rem;
+      border: 1px solid #ccc;
+      display: none;
+    }
   </style>
 </head>
 <body>
 
 <div id="app">
   <header>
-    <div>Firebase Messenger</div>
+    <div>Firebase Messenger with Avatars</div>
     <button id="logoutBtn" style="display: none;">Logout</button>
   </header>
 
@@ -141,11 +167,12 @@
   </section>
 
   <section id="chat">
+    <div>
+      <img id="avatarPreview" alt="Your Avatar" />
+      <input type="file" id="avatarInput" accept="image/*" />
+    </div>
     <input type="text" id="displayNameInput" placeholder="Change Display Name" />
-    <button id="saveDisplayNameBtn">Save Name</button>
-    <input type="file" id="avatarInput" accept="image/*" />
-    <button id="uploadAvatarBtn" style="background: #6c757d;">Upload Avatar</button>
-    <img id="avatarPreview" style="width: 60px; height: 60px; border-radius: 50%; margin-top: 0.5rem; object-fit: cover;" />
+    <button id="saveProfileBtn">Save Profile</button>
 
     <select id="chatSelect">
       <option value="" disabled selected>Select user or group chat</option>
@@ -177,76 +204,363 @@
     measurementId: "G-WXBEP1LXTX"
   };
 
+  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
   const storage = firebase.storage();
 
+  // Elements
+  const loginSection = document.getElementById("login");
+  const registerSection = document.getElementById("register");
+  const chatSection = document.getElementById("chat");
+
+  const loginBtn = document.getElementById("loginBtn");
+  const registerBtn = document.getElementById("registerBtn");
+  const toRegisterBtn = document.getElementById("toRegisterBtn");
+  const toLoginBtn = document.getElementById("toLoginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  const loginEmail = document.getElementById("loginEmail");
+  const loginPassword = document.getElementById("loginPassword");
+  const registerEmail = document.getElementById("registerEmail");
+  const registerPassword = document.getElementById("registerPassword");
+
+  const displayNameInput = document.getElementById("displayNameInput");
+  const saveProfileBtn = document.getElementById("saveProfileBtn");
+  const sendBtn = document.getElementById("sendBtn");
+
+  const messagesDiv = document.getElementById("messages");
+  const chatSelect = document.getElementById("chatSelect");
+  const userOptions = document.getElementById("userOptions");
+  const groupOptions = document.getElementById("groupOptions");
+  const messageInput = document.getElementById("messageInput");
+  const typingIndicator = document.getElementById("typingIndicator");
+
   const avatarInput = document.getElementById("avatarInput");
-  const uploadAvatarBtn = document.getElementById("uploadAvatarBtn");
   const avatarPreview = document.getElementById("avatarPreview");
 
-  // ... keep your full existing JS here (unchanged), then update:
+  let currentUser = null;
+  let selectedChatId = null;
+  let isGroupChat = false;
+  let messagesRef = null;
+  let typingTimeout;
+  let avatarFile = null;
 
-  uploadAvatarBtn.onclick = () => {
-    const file = avatarInput.files[0];
-    if (!file || !currentUser) return alert("Select a file first.");
+  auth.onAuthStateChanged(user => {
+    if (user) {
+      currentUser = user;
+      showSection(chatSection);
+      logoutBtn.style.display = "block";
 
-    const storageRef = storage.ref("avatars/" + currentUser.uid);
-    storageRef.put(file).then(snapshot => snapshot.ref.getDownloadURL())
-      .then(url => {
-        db.ref("users/" + currentUser.uid).update({ avatarUrl: url });
-        avatarPreview.src = url;
-        alert("Avatar uploaded!");
-      }).catch(err => alert("Upload failed: " + err.message));
+      loadUserProfile(user.uid);
+
+      joinEveryoneGroup(user.uid);
+      populateChatList();
+
+      clearMessagesListener();
+    } else {
+      currentUser = null;
+      showSection(loginSection);
+      logoutBtn.style.display = "none";
+
+      clearMessagesListener();
+      messagesDiv.innerHTML = "";
+      chatSelect.value = "";
+      displayNameInput.value = "";
+      avatarPreview.style.display = "none";
+      avatarPreview.src = "";
+      avatarFile = null;
+    }
+  });
+
+  function showSection(section) {
+    loginSection.classList.remove("active");
+    registerSection.classList.remove("active");
+    chatSection.classList.remove("active");
+    section.classList.add("active");
+  }
+
+  // Login
+  loginBtn.onclick = () => {
+    auth.signInWithEmailAndPassword(loginEmail.value.trim(), loginPassword.value)
+      .catch(e => alert("Login failed: " + e.message));
   };
 
-  function displayMessage(msg) {
-    const container = document.createElement("div");
-    container.style.display = "flex";
-    container.style.gap = "0.5rem";
-    container.style.alignItems = "flex-start";
+  // Register
+  registerBtn.onclick = () => {
+    const email = registerEmail.value.trim();
+    const password = registerPassword.value;
+    if (!email || !password) {
+      alert("Please enter email and password");
+      return;
+    }
+    auth.createUserWithEmailAndPassword(email, password)
+      .then(cred => {
+        // Create basic user data in db
+        db.ref("users/" + cred.user.uid).set({
+          email: email,
+          displayName: email.split('@')[0],
+          avatarUrl: ""
+        });
+      })
+      .catch(e => alert("Registration failed: " + e.message));
+  };
 
-    const avatarImg = document.createElement("img");
-    avatarImg.style.width = "32px";
-    avatarImg.style.height = "32px";
-    avatarImg.style.borderRadius = "50%";
-    avatarImg.style.objectFit = "cover";
-    avatarImg.src = "";
+  // Logout
+  logoutBtn.onclick = () => auth.signOut();
 
-    db.ref("users/" + msg.sender).once("value").then(snap => {
-      const senderData = snap.val();
-      if (senderData && senderData.avatarUrl) avatarImg.src = senderData.avatarUrl;
+  toRegisterBtn.onclick = () => showSection(registerSection);
+  toLoginBtn.onclick = () => showSection(loginSection);
+
+  // Load user profile (displayName and avatar)
+  function loadUserProfile(uid) {
+    db.ref("users/" + uid).once("value").then(snap => {
+      const userData = snap.val();
+      if (!userData) return;
+      displayNameInput.value = userData.displayName || "";
+      if (userData.avatarUrl) {
+        avatarPreview.src = userData.avatarUrl;
+        avatarPreview.style.display = "inline-block";
+      } else {
+        avatarPreview.style.display = "none";
+        avatarPreview.src = "";
+      }
+      // Update Firebase Auth displayName for convenience
+      currentUser.updateProfile({ displayName: userData.displayName || "" });
+    });
+  }
+
+  // Save profile (displayName + avatar)
+  saveProfileBtn.onclick = async () => {
+    const name = displayNameInput.value.trim();
+    if (!name) {
+      alert("Display name cannot be empty");
+      return;
+    }
+    if (!currentUser) return alert("Not logged in");
+
+    try {
+      let avatarUrl = null;
+      if (avatarFile) {
+        // Upload avatar
+        const avatarRef = storage.ref("avatars/" + currentUser.uid + "/" + avatarFile.name);
+        const snapshot = await avatarRef.put(avatarFile);
+        avatarUrl = await snapshot.ref.getDownloadURL();
+      }
+
+      // Update Realtime DB
+      const updateData = { displayName: name };
+      if (avatarUrl) updateData.avatarUrl = avatarUrl;
+
+      await db.ref("users/" + currentUser.uid).update(updateData);
+
+      // Update Firebase Auth profile
+      await currentUser.updateProfile({ displayName: name, photoURL: avatarUrl || currentUser.photoURL || "" });
+
+      // Reset avatarFile
+      avatarFile = null;
+
+      alert("Profile updated!");
+
+      // Reload avatar preview if updated
+      if (avatarUrl) {
+        avatarPreview.src = avatarUrl;
+        avatarPreview.style.display = "inline-block";
+      }
+    } catch (e) {
+      alert("Failed to update profile: " + e.message);
+    }
+  };
+
+  // Avatar input preview and file
+  avatarInput.addEventListener("change", e => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (!file.type.startsWith("image/")) {
+      alert("Please select an image file");
+      avatarInput.value = "";
+      return;
+    }
+    avatarFile = file;
+    const reader = new FileReader();
+    reader.onload = evt => {
+      avatarPreview.src = evt.target.result;
+      avatarPreview.style.display = "inline-block";
+    };
+    reader.readAsDataURL(file);
+  });
+
+  // Join Everyone group if not member
+  function joinEveryoneGroup(uid) {
+    const everyoneRef = db.ref("groups/everyone");
+    everyoneRef.once("value").then(snap => {
+      let group = snap.val();
+      if (!group) {
+        everyoneRef.set({ name: "Everyone", members: [uid] });
+      } else if (!group.members.includes(uid)) {
+        group.members.push(uid);
+        everyoneRef.child("members").set(group.members);
+      }
+    });
+  }
+
+  // Populate chat select dropdown (users + groups)
+  function populateChatList() {
+    userOptions.innerHTML = "";
+    groupOptions.innerHTML = "";
+
+    // Users (except current)
+    db.ref("users").once("value", snap => {
+      snap.forEach(child => {
+        if (child.key !== currentUser.uid) {
+          const user = child.val();
+          const opt = document.createElement("option");
+          opt.value = child.key;
+          opt.textContent = user.displayName || user.email || child.key;
+          userOptions.appendChild(opt);
+        }
+      });
     });
 
+    // Groups user belongs to
+    db.ref("groups").once("value", snap => {
+      snap.forEach(child => {
+        const group = child.val();
+        if (group.members && group.members.includes(currentUser.uid)) {
+          const opt = document.createElement("option");
+          opt.value = "group:" + child.key;
+          opt.textContent = group.name || child.key;
+          groupOptions.appendChild(opt);
+        }
+      });
+    });
+  }
+
+  // Listen for chat select change
+  chatSelect.onchange = () => {
+    const val = chatSelect.value;
+    if (!val) return;
+
+    isGroupChat = val.startsWith("group:");
+    selectedChatId = isGroupChat ? val.slice(6) : val;
+
+    clearMessagesListener();
+
+    messagesDiv.innerHTML = "";
+
+    messagesRef = db.ref((isGroupChat ? "groupMessages" : "messages") + "/" + selectedChatId);
+
+    messagesRef.off("child_added");
+    messagesRef.on("child_added", snap => {
+      displayMessage(snap.val());
+    });
+
+    // Listen for typing indicator only on private chats
+    if (!isGroupChat) {
+      db.ref("typing/" + selectedChatId).on("value", snap => {
+        const typingUser = snap.val();
+        if (typingUser && typingUser !== (currentUser.displayName || currentUser.email)) {
+          typingIndicator.textContent = `${typingUser} is typing...`;
+        } else {
+          typingIndicator.textContent = "";
+        }
+      });
+    } else {
+      typingIndicator.textContent = "";
+    }
+  };
+
+  // Clear message listener if any
+  function clearMessagesListener() {
+    if (messagesRef) {
+      messagesRef.off();
+      messagesRef = null;
+    }
+    db.ref("typing").off();
+    typingIndicator.textContent = "";
+  }
+
+  // Send message
+  sendBtn.onclick = () => {
+    if (!selectedChatId) return alert("Select a chat first");
+    const text = messageInput.value.trim();
+    if (!text) return;
+
+    const msg = {
+      sender: currentUser.uid,
+      senderName: currentUser.displayName || currentUser.email,
+      timestamp: Date.now(),
+      text: text
+    };
+
+    db.ref((isGroupChat ? "groupMessages" : "messages") + "/" + selectedChatId).push(msg);
+    messageInput.value = "";
+  };
+
+  // Typing indicator for private chats only
+  messageInput.addEventListener("input", () => {
+    if (!selectedChatId || isGroupChat) return;
+
+    const typingRef = db.ref("typing/" + selectedChatId);
+    typingRef.set(currentUser.displayName || currentUser.email);
+
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      typingRef.set(null);
+    }, 1500);
+  });
+
+  // Display message in chat
+  async function displayMessage(msg) {
     const div = document.createElement("div");
-    div.className = "message";
-    if (msg.sender === currentUser.uid) div.classList.add("self");
+    div.classList.add("message");
+
+    // Mark messages from self with different style
+    if (msg.sender === currentUser.uid) {
+      div.classList.add("self");
+    }
+
+    // Get avatar URL of sender
+    let avatarUrl = "";
+    try {
+      const userSnap = await db.ref("users/" + msg.sender).once("value");
+      const userData = userSnap.val();
+      avatarUrl = userData && userData.avatarUrl ? userData.avatarUrl : "";
+    } catch {
+      avatarUrl = "";
+    }
+
+    const avatar = document.createElement("img");
+    avatar.className = "avatar";
+    avatar.src = avatarUrl || "https://i.pravatar.cc/150?u=" + msg.sender; // fallback avatar
+
+    const senderInfo = document.createElement("div");
+    senderInfo.className = "sender-info";
 
     const senderName = document.createElement("div");
     senderName.className = "sender";
-    senderName.textContent = msg.senderName || msg.sender;
-    div.appendChild(senderName);
+    senderName.textContent = msg.senderName || "Unknown";
 
-    if (msg.text) {
-      const text = document.createElement("div");
-      text.textContent = msg.text;
-      div.appendChild(text);
-    }
+    const timestamp = document.createElement("div");
+    timestamp.className = "timestamp";
+    timestamp.textContent = new Date(msg.timestamp).toLocaleTimeString();
 
-    if (msg.timestamp) {
-      const ts = document.createElement("div");
-      ts.className = "timestamp";
-      const date = new Date(msg.timestamp);
-      ts.textContent = date.toLocaleString();
-      div.appendChild(ts);
-    }
+    senderInfo.appendChild(senderName);
+    senderInfo.appendChild(timestamp);
 
-    container.appendChild(avatarImg);
-    container.appendChild(div);
-    messagesDiv.appendChild(container);
+    const text = document.createElement("div");
+    text.className = "message-text";
+    text.textContent = msg.text;
+
+    div.appendChild(avatar);
+    div.appendChild(senderInfo);
+    div.appendChild(text);
+
+    messagesDiv.appendChild(div);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 </script>
+
 </body>
 </html>
