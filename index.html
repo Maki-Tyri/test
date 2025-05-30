@@ -3,11 +3,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Firebase Messenger with Random Anime Avatars & Sorted Chat</title>
+  <title>Firebase Messenger with Emoji Avatars</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
   <style>
     html, body { margin:0; padding:0; font-family: Arial, sans-serif; background:#f5f5f5; height:100%; }
     #app { max-width:600px; margin:auto; background:#fff; height:100vh; display:flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
@@ -20,7 +19,7 @@
     #messages { flex:1; overflow-y:auto; border:1px solid #ccc; padding:0.5rem; border-radius:4px; background:#fafafa; display:flex; flex-direction: column; gap:0.5rem; }
     .message { display:flex; gap:0.5rem; align-items:flex-start; max-width: 80%; padding: 0.5rem; border-radius: 6px; background: #e1ffc7; word-wrap: break-word; }
     .message.self { background: #c7dfff; align-self: flex-end; flex-direction: row-reverse; }
-    .avatar { width:36px; height:36px; border-radius: 50%; object-fit: cover; border:1px solid #ccc; }
+    .avatar { width:36px; height:36px; font-size: 28px; line-height: 36px; text-align: center; border-radius: 50%; border:1px solid #ccc; user-select:none; }
     .sender-info { display:flex; flex-direction: column; font-size: 0.85rem; }
     .sender { font-weight: bold; }
     .timestamp { font-size: 0.7rem; color: #666; margin-top: 0.2rem; }
@@ -28,52 +27,41 @@
   </style>
 </head>
 <body>
-
 <div id="app">
   <header>
     <div>Firebase Messenger</div>
     <button id="logoutBtn" style="display:none;">Logout</button>
   </header>
-
-  <!-- Login -->
   <section id="login" class="active">
     <input type="email" id="loginEmail" placeholder="Email" />
     <input type="password" id="loginPassword" placeholder="Password" />
     <button id="loginBtn">Login</button>
     <button id="toRegisterBtn" style="background:#666;">Register Instead</button>
   </section>
-
-  <!-- Register -->
   <section id="register">
     <input type="email" id="registerEmail" placeholder="Email" />
     <input type="password" id="registerPassword" placeholder="Password" />
     <button id="registerBtn">Register</button>
     <button id="toLoginBtn" style="background:#666;">Back to Login</button>
   </section>
-
-  <!-- Chat -->
   <section id="chat">
     <input type="text" id="displayNameInput" placeholder="Change Display Name" />
     <button id="saveProfileBtn">Save Profile</button>
-
     <select id="chatSelect">
       <option value="" disabled selected>Select user or group chat</option>
       <optgroup label="Users" id="userOptions"></optgroup>
       <optgroup label="Groups" id="groupOptions"></optgroup>
     </select>
-
     <div id="messages"></div>
     <div id="typingIndicator"></div>
-
     <div style="display:flex; gap:0.5rem;">
       <textarea id="messageInput" placeholder="Type a message..." style="flex:1;"></textarea>
       <button id="sendBtn" style="width:100px;">Send</button>
     </div>
   </section>
 </div>
-
+  <footer>&copy; 2025 Maki Web. All rights reserved</footer>
 <script>
-  // Firebase config — replace with your own!
   const firebaseConfig = {
     apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
     authDomain: "project-955237504610034331.firebaseapp.com",
@@ -81,34 +69,35 @@
     projectId: "project-955237504610034331",
     storageBucket: "project-955237504610034331.appspot.com",
     messagingSenderId: "76212939677",
-    appId: "1:76212939677:web:ef498bc1e4e480ab6e5d74",
-    measurementId: "G-WXBEP1LXTX"
+    appId: "1:76212939677:web:ef498bc1e4e480ab6e5d74"
   };
 
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
 
-  // Elements
+  const emojiAvatars = ["😀","😎","🤖","🐱","🐶","🦊","🐼","🐸","🦄","🐵","🐯","🐷","🐰","🐨","🐔","🦉"];
+  const getAvatarEmoji = (id) => {
+    let sum = 0;
+    for (const c of id) sum += c.charCodeAt(0);
+    return emojiAvatars[sum % emojiAvatars.length];
+  };
+
   const loginSection = document.getElementById("login");
   const registerSection = document.getElementById("register");
   const chatSection = document.getElementById("chat");
-
   const loginBtn = document.getElementById("loginBtn");
   const registerBtn = document.getElementById("registerBtn");
   const toRegisterBtn = document.getElementById("toRegisterBtn");
   const toLoginBtn = document.getElementById("toLoginBtn");
   const logoutBtn = document.getElementById("logoutBtn");
-
   const loginEmail = document.getElementById("loginEmail");
   const loginPassword = document.getElementById("loginPassword");
   const registerEmail = document.getElementById("registerEmail");
   const registerPassword = document.getElementById("registerPassword");
-
   const displayNameInput = document.getElementById("displayNameInput");
   const saveProfileBtn = document.getElementById("saveProfileBtn");
   const sendBtn = document.getElementById("sendBtn");
-
   const messagesDiv = document.getElementById("messages");
   const chatSelect = document.getElementById("chatSelect");
   const userOptions = document.getElementById("userOptions");
@@ -122,32 +111,11 @@
   let messagesRef = null;
   let typingTimeout;
 
-  // Predefined list of anime avatar URLs
-  const animeAvatars = [
-    "https://i.pravatar.cc/150?u=anime1",
-    "https://i.pravatar.cc/150?u=anime2",
-    "https://i.pravatar.cc/150?u=anime3",
-    "https://i.pravatar.cc/150?u=anime4",
-    "https://i.pravatar.cc/150?u=anime5",
-    "https://i.pravatar.cc/150?u=anime6",
-    "https://i.pravatar.cc/150?u=anime7",
-    "https://i.pravatar.cc/150?u=anime8",
-  ];
-
-  // Return deterministic avatar URL based on userId
-  function getAvatarUrl(userId) {
-    if (!userId) return animeAvatars[0];
-    const index = [...userId].reduce((acc, c) => acc + c.charCodeAt(0), 0) % animeAvatars.length;
-    return animeAvatars[index];
-  }
-
-  // Auth state listener
   auth.onAuthStateChanged(user => {
     if (user) {
       currentUser = user;
       showSection(chatSection);
       logoutBtn.style.display = "block";
-
       loadUserProfile(user.uid);
       joinEveryoneGroup(user.uid);
       populateChatList();
@@ -170,39 +138,26 @@
     section.classList.add("active");
   }
 
-  // Login
   loginBtn.onclick = () => {
-    auth.signInWithEmailAndPassword(loginEmail.value.trim(), loginPassword.value)
-      .catch(e => alert("Login failed: " + e.message));
+    auth.signInWithEmailAndPassword(loginEmail.value.trim(), loginPassword.value).catch(e => alert("Login failed: " + e.message));
   };
 
-  // Register
   registerBtn.onclick = () => {
     const email = registerEmail.value.trim();
     const password = registerPassword.value;
-    if (!email || !password) {
-      alert("Please enter email and password");
-      return;
-    }
-    auth.createUserWithEmailAndPassword(email, password)
-      .then(cred => {
-        // Initialize user data in DB
-        db.ref("users/" + cred.user.uid).set({
-          email: email,
-          displayName: email.split('@')[0],
-          // No avatarUrl stored anymore
-        });
-      })
-      .catch(e => alert("Registration failed: " + e.message));
+    if (!email || !password) return alert("Enter email and password");
+    auth.createUserWithEmailAndPassword(email, password).then(cred => {
+      db.ref("users/" + cred.user.uid).set({
+        email: email,
+        displayName: email.split('@')[0]
+      });
+    }).catch(e => alert("Registration failed: " + e.message));
   };
 
-  // Logout
   logoutBtn.onclick = () => auth.signOut();
-
   toRegisterBtn.onclick = () => showSection(registerSection);
   toLoginBtn.onclick = () => showSection(loginSection);
 
-  // Load user profile (only displayName now)
   function loadUserProfile(uid) {
     db.ref("users/" + uid).once("value").then(snap => {
       const userData = snap.val();
@@ -211,35 +166,25 @@
     });
   }
 
-  // Save profile updates (only displayName)
-  saveProfileBtn.onclick = async () => {
+  saveProfileBtn.onclick = () => {
     if (!currentUser) return alert("Not logged in");
     const newName = displayNameInput.value.trim() || currentUser.email.split("@")[0];
-
-    await db.ref("users/" + currentUser.uid).update({
-      displayName: newName,
-    });
+    db.ref("users/" + currentUser.uid).update({ displayName: newName });
     alert("Profile saved!");
     populateChatList();
   };
 
-  // Join 'Everyone' group chat (add user to members list)
   function joinEveryoneGroup(uid) {
-    const groupId = "group_everyone";
-    db.ref("groups/" + groupId + "/members/" + uid).set(true);
+    db.ref("groups/group_everyone/members/" + uid).set(true);
   }
 
-  // Populate chat list (users + group)
   async function populateChatList() {
     userOptions.innerHTML = "";
     groupOptions.innerHTML = "";
-
     const usersSnap = await db.ref("users").once("value");
     const users = usersSnap.val() || {};
-
     for (const uid in users) {
       if (uid === currentUser.uid) continue;
-
       const option = document.createElement("option");
       option.value = getPrivateChatId(currentUser.uid, uid);
       option.textContent = users[uid].displayName || users[uid].email || "User";
@@ -247,8 +192,6 @@
       option.dataset.userId = uid;
       userOptions.appendChild(option);
     }
-
-    // Group "Everyone"
     const groupOption = document.createElement("option");
     groupOption.value = "group_everyone";
     groupOption.textContent = "Everyone (Group Chat)";
@@ -256,164 +199,76 @@
     groupOptions.appendChild(groupOption);
   }
 
-  // Consistent private chat ID
   function getPrivateChatId(uid1, uid2) {
     return [uid1, uid2].sort().join("_");
   }
 
-  // Clear messages listener
   function clearMessagesListener() {
-    if (messagesRef) {
-      messagesRef.off();
-      messagesRef = null;
-    }
+    if (messagesRef) messagesRef.off();
+    messagesRef = null;
     typingIndicator.textContent = "";
   }
 
-  // Listen messages (sorted ascending by timestamp)
   function listenMessages(chatId, group) {
     clearMessagesListener();
     if (!chatId) return;
     selectedChatId = chatId;
     isGroupChat = group;
     messagesDiv.innerHTML = "";
-
     messagesRef = db.ref("messages/" + chatId);
-
-    // Load all messages once, then listen for new ones
-    messagesRef.off();
-
-    messagesRef.orderByChild("timestamp").on("child_added", async snap => {
+    messagesRef.orderByChild("timestamp").on("child_added", snap => {
       const msg = snap.val();
-      await displayMessage(msg);
+      const div = document.createElement("div");
+      div.className = "message" + (msg.sender === currentUser.uid ? " self" : "");
+      const avatar = document.createElement("div");
+      avatar.className = "avatar";
+      avatar.textContent = getAvatarEmoji(msg.sender);
+      const senderInfo = document.createElement("div");
+      senderInfo.className = "sender-info";
+      senderInfo.innerHTML = `<div class="sender">${msg.senderName || "User"}</div><div>${msg.text}</div><div class="timestamp">${new Date(msg.timestamp).toLocaleTimeString()}</div>`;
+      div.appendChild(avatar);
+      div.appendChild(senderInfo);
+      messagesDiv.appendChild(div);
+      messagesDiv.scrollTop = messagesDiv.scrollHeight;
     });
-
-    // Listen for message changes and child_removed if needed
-    messagesRef.orderByChild("timestamp").on("child_changed", snap => {
-      // optional: update message if edited - not implemented now
-    });
-
-    // Typing indicator listener
     const typingRef = db.ref("typing/" + chatId);
-    typingRef.off();
     typingRef.on("value", snap => {
-      const typingUser = snap.val();
-      if (!typingUser || typingUser === (currentUser.displayName || currentUser.email)) {
-        typingIndicator.textContent = "";
-      } else {
-        typingIndicator.textContent = `${typingUser} is typing...`;
-      }
+      const typingUsers = snap.val() || {};
+      const names = Object.entries(typingUsers).filter(([uid, isTyping]) => isTyping && uid !== currentUser.uid).map(([uid]) => uid);
+      typingIndicator.textContent = names.length > 0 ? "Someone is typing..." : "";
     });
   }
 
-  // Display message (append, scroll bottom)
-  async function displayMessage(msg) {
-    const div = document.createElement("div");
-    div.classList.add("message");
-    if (msg.sender === currentUser.uid) div.classList.add("self");
-
-    // Get user info for sender
-    let senderName = "Unknown";
-    let avatarUrl = getAvatarUrl(msg.sender);
-
-    try {
-      const userSnap = await db.ref("users/" + msg.sender).once("value");
-      const userData = userSnap.val();
-      if (userData) {
-        senderName = userData.displayName || userData.email || senderName;
-        // Avatar from anime list always, no custom avatars stored anymore
-      }
-    } catch {}
-
-    const avatar = document.createElement("img");
-    avatar.className = "avatar";
-    avatar.src = avatarUrl;
-
-    const senderInfo = document.createElement("div");
-    senderInfo.className = "sender-info";
-
-    const senderNameDiv = document.createElement("div");
-    senderNameDiv.className = "sender";
-    senderNameDiv.textContent = senderName;
-
-    const timestamp = document.createElement("div");
-    timestamp.className = "timestamp";
-    timestamp.textContent = new Date(msg.timestamp).toLocaleTimeString();
-
-    senderInfo.appendChild(senderNameDiv);
-    senderInfo.appendChild(timestamp);
-
-    const textDiv = document.createElement("div");
-    textDiv.className = "message-text";
-    textDiv.textContent = msg.text;
-
-    div.appendChild(avatar);
-    div.appendChild(senderInfo);
-    div.appendChild(textDiv);
-
-    messagesDiv.appendChild(div);
-    messagesDiv.scrollTop = messagesDiv.scrollHeight;
-  }
-
-  // Send message
   sendBtn.onclick = () => {
-    sendMessage();
-  };
-
-  // Enter key sends message (without Shift)
-  messageInput.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendMessage();
-    }
-  });
-
-  async function sendMessage() {
-    if (!selectedChatId) return alert("Select a chat first.");
     const text = messageInput.value.trim();
-    if (!text) return;
-
-    const newMsg = {
+    if (!text || !selectedChatId || !currentUser) return;
+    const msg = {
+      text,
       sender: currentUser.uid,
-      text: text,
+      senderName: displayNameInput.value || currentUser.email.split("@")[0],
       timestamp: Date.now(),
     };
+    db.ref("messages/" + selectedChatId).push(msg);
+    messageInput.value = "";
+    db.ref("typing/" + selectedChatId + "/" + currentUser.uid).set(false);
+  };
 
-    try {
-      await db.ref("messages/" + selectedChatId).push(newMsg);
-      messageInput.value = "";
-      // Remove typing indicator after send
-      db.ref("typing/" + selectedChatId).set(null);
-    } catch (e) {
-      alert("Send failed: " + e.message);
-    }
-  }
-
-  // Typing indicator (only for private chats)
   messageInput.addEventListener("input", () => {
-    if (!selectedChatId || isGroupChat) return;
-
-    const typingRef = db.ref("typing/" + selectedChatId);
-    typingRef.set(currentUser.displayName || currentUser.email);
-
+    if (!selectedChatId || !currentUser) return;
+    db.ref("typing/" + selectedChatId + "/" + currentUser.uid).set(true);
     clearTimeout(typingTimeout);
     typingTimeout = setTimeout(() => {
-      typingRef.set(null);
-    }, 1500);
+      db.ref("typing/" + selectedChatId + "/" + currentUser.uid).set(false);
+    }, 2000);
   });
 
-  // On chat select change
-  chatSelect.addEventListener("change", e => {
-    const val = e.target.value;
-    if (!val) return;
-
-    isGroupChat = e.target.selectedOptions[0].dataset.isGroup === "true";
-    selectedChatId = val;
-
-    messagesDiv.innerHTML = "";
-    listenMessages(selectedChatId, isGroupChat);
-  });
+  chatSelect.onchange = () => {
+    const selected = chatSelect.selectedOptions[0];
+    if (!selected) return;
+    const isGroup = selected.dataset.isGroup === "true";
+    const chatId = selected.value;
+    listenMessages(chatId, isGroup);
+  };
 </script>
-
 </body>
 </html>
