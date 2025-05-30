@@ -9,11 +9,8 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
 
   <style>
-    /* Existing CSS stays the same */
     html, body {
       margin: 0;
       padding: 0;
@@ -56,7 +53,6 @@
       margin-bottom: 0.8rem;
       border-radius: 4px;
       border: 1px solid #ccc;
-      width: 100%;
       box-sizing: border-box;
     }
     textarea {
@@ -112,14 +108,6 @@
       height: 20px;
       margin-bottom: 0.5rem;
     }
-    .media-link {
-      display: block;
-      margin-top: 0.2rem;
-      color: #0066cc;
-      text-decoration: underline;
-      font-size: 0.85rem;
-      word-break: break-word;
-    }
     footer {
       font-size: 0.85rem;
       text-align: center;
@@ -163,9 +151,11 @@
 
     <div id="messages"></div>
     <div id="typingIndicator" class="typing"></div>
-    <textarea id="messageInput" placeholder="Type a message... (Enter to send)"></textarea>
-    <input type="file" id="mediaInput" />
-    <button id="sendBtn">Send</button>
+
+    <div style="display: flex; gap: 0.5rem;">
+      <textarea id="messageInput" placeholder="Type a message..." style="flex: 1;"></textarea>
+      <button id="sendBtn" style="width: 100px;">Send</button>
+    </div>
   </section>
 </div>
 
@@ -186,7 +176,6 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
-  const storage = firebase.storage();
 
   const loginSection = document.getElementById("login");
   const registerSection = document.getElementById("register");
@@ -212,7 +201,6 @@
   const userOptions = document.getElementById("userOptions");
   const groupOptions = document.getElementById("groupOptions");
   const messageInput = document.getElementById("messageInput");
-  const mediaInput = document.getElementById("mediaInput");
   const typingIndicator = document.getElementById("typingIndicator");
 
   let currentUser = null;
@@ -227,6 +215,13 @@
       showSection(chatSection);
       logoutBtn.style.display = "block";
       joinEveryoneGroup(user.uid);
+      db.ref("users/" + user.uid).once("value").then(snap => {
+        const userData = snap.val();
+        if (userData && userData.displayName) {
+          currentUser.updateProfile({ displayName: userData.displayName });
+          displayNameInput.value = userData.displayName;
+        }
+      });
       populateChatList();
     } else {
       showSection(loginSection);
@@ -314,30 +309,20 @@
     });
   };
 
-  sendBtn.onclick = async () => {
+  sendBtn.onclick = () => {
     if (!selectedChatId) return;
     const text = messageInput.value.trim();
-    const file = mediaInput.files[0];
-
-    if (!text && !file) return;
+    if (!text) return;
 
     const msg = {
       sender: currentUser.uid,
       senderName: currentUser.displayName || currentUser.email,
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      text: text
     };
-
-    if (text) msg.text = text;
-
-    if (file) {
-      const fileRef = storage.ref().child("media/" + Date.now() + "_" + file.name);
-      await fileRef.put(file);
-      msg.mediaUrl = await fileRef.getDownloadURL();
-    }
 
     db.ref((isGroupChat ? "groupMessages" : "messages") + "/" + selectedChatId).push(msg);
     messageInput.value = "";
-    mediaInput.value = "";
   };
 
   messageInput.addEventListener("input", () => {
@@ -365,15 +350,6 @@
       div.appendChild(text);
     }
 
-    if (msg.mediaUrl) {
-      const link = document.createElement("a");
-      link.href = msg.mediaUrl;
-      link.target = "_blank";
-      link.className = "media-link";
-      link.textContent = "📎 Media file";
-      div.appendChild(link);
-    }
-
     if (msg.timestamp) {
       const ts = document.createElement("div");
       ts.className = "timestamp";
@@ -398,3 +374,6 @@
     }
   };
 </script>
+
+</body>
+</html>
