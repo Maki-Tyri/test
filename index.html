@@ -1,9 +1,9 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en" >
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Firebase Messenger with Group Chat</title>
+  <title>Firebase Messenger with Group Chat & Push</title>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
@@ -143,6 +143,30 @@
     #displayNameBtn:hover {
       background-color: #1e7e34;
     }
+    #createRoomForm {
+      display: flex;
+      gap: 0.5rem;
+      margin-bottom: 1rem;
+    }
+    #roomNameInput {
+      flex: 1;
+      padding: 0.5rem;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    #createRoomBtn {
+      background-color: #17a2b8;
+      border: none;
+      color: white;
+      cursor: pointer;
+      padding: 0.5rem 1rem;
+      border-radius: 4px;
+      transition: background-color 0.3s;
+    }
+    #createRoomBtn:hover {
+      background-color: #117a8b;
+    }
   </style>
 </head>
 <body>
@@ -173,8 +197,13 @@
       <button type="submit" id="displayNameBtn">Save</button>
     </form>
 
+    <form id="createRoomForm" title="Create new chat room">
+      <input type="text" id="roomNameInput" placeholder="New chat room name" />
+      <button type="submit" id="createRoomBtn">Create Room</button>
+    </form>
+
     <select id="chatRoomSelect" title="Choose chat room">
-      <option value="global" selected>Group Chat (Global)</option>
+      <!-- rooms loaded dynamically -->
     </select>
 
     <select id="userSelect" title="Choose user to chat with">
@@ -236,6 +265,9 @@
   const displayNameForm = document.getElementById("displayNameForm");
   const displayNameInput = document.getElementById("displayNameInput");
 
+  const createRoomForm = document.getElementById("createRoomForm");
+  const roomNameInput = document.getElementById("roomNameInput");
+
   // Show/hide helper
   function showSection(section) {
     loginSection.style.display = "none";
@@ -244,41 +276,96 @@
     section.style.display = "flex";
   }
 
-  // Store users in memory
   let allUsers = {};
-  let currentChatUserId = null;
-  let currentChatRoom = 'global'; // default to group chat
+  let allRooms = {};
+  let currentChatRoom = "global"; // default room
+  let privateChatUser = null; // null if no private chat, else uid
+  let messagesListener = null;
+  let typingListener = null;
 
-  // Update user select options
-  function updateUserSelect() {
-    userSelect.innerHTML = '';
-    // Current user disabled option
-    const meOption = document.createElement('option');
-    meOption.textContent = `You: ${auth.currentUser.email}`;
-    meOption.disabled = true;
-    userSelect.appendChild(meOption);
-
-    Object.entries(allUsers).forEach(([uid, u]) => {
-      if (uid === auth.currentUser.uid) return; // skip yourself
-      const opt = document.createElement('option');
-      opt.value = uid;
-      opt.textContent = u.displayName || u.email || 'Unknown user';
-      userSelect.appendChild(opt);
-    });
-    userSelect.insertAdjacentHTML('afterbegin', '<option value="" selected>Group Chat (Global)</option>');
+  // For notifications permission & token
+  async function initMessaging() {
+    try {
+      await messaging.requestPermission();
+      const token = await messaging.getToken({ vapidKey: 'BFPm-wYi0HK1svJo5HP6tfq5DMoE_xAg8XPlDbhTqB8ajk7VJPOlU5vvGL8bncEm-3IEIvl9vI3iLUzC9XV2eg' });
+      console.log("FCM Token:", token);
+      // Save token in DB for current user
+      if (auth.currentUser) {
+        await db.ref('fcmTokens/' + auth.currentUser.uid + '/' + token).set(true);
+      }
+    } catch (err) {
+      console.warn("FCM permission or token failed:", err.message);
+    }
   }
 
-  // Save or update user profile in DB
+  // Listen to incoming messages to show notifications
+  function listenForPushNotifications() {
+    messaging.onMessage(payload => {
+      console.log("Message received. ", payload);
+      // Show notification only if app not focused or user not in that chat room
+      if (document.hidden || payload.data.room !== currentChatRoom) {
+        const notificationTitle = payload.notification.title || "New message";
+        const notificationOptions = {
+          body: payload.notification.body || '',
+          icon: payload.notification.icon || '',
+        };
+        if (Notification.permission === "granted") {
+          new Notification(notificationTitle, notificationOptions);
+        }
+      }
+    });
+  }
+
+  // Update user select dropdown
+  function updateUserSelect() {
+    userSelect.innerHTML = '<option value="">Select user for private chat (optional)</option>';
+    for (const uid in allUsers) {
+      if (uid === auth.currentUser.uid) continue;
+      const user = allUsers[uid];
+      const option = document.createElement('option');
+      option.value = uid;
+      option.textContent = user.displayName || user.email || 'User';
+      userSelect.appendChild(option);
+    }
+  }
+
+  // Update chat rooms dropdown
+  function updateRoomsSelect() {
+    chatRoomSelect.innerHTML = '';
+    // Add the global room first
+    const globalOption = document.createElement('option');
+    globalOption.value = 'global';
+    globalOption.textContent = 'Group Chat (Global)';
+    chatRoomSelect.appendChild(globalOption);
+
+    for (const roomId in allRooms) {
+      if (roomId === 'global') continue; // skip global, already added
+      const room = allRooms[roomId];
+      const option = document.createElement('option');
+      option.value = roomId;
+      option.textContent = room.name || roomId;
+      chatRoomSelect.appendChild(option);
+    }
+    // Select current room or fallback
+    if (allRooms[currentChatRoom] || currentChatRoom === 'global') {
+      chatRoomSelect.value = currentChatRoom;
+    } else {
+      currentChatRoom = 'global';
+      chatRoomSelect.value = 'global';
+    }
+  }
+
+  // Save user profile to DB
   function saveUserProfile(user) {
     const userRef = db.ref('users/' + user.uid);
-    userRef.set({
+    userRef.update({
       email: user.email,
       displayName: user.displayName || '',
       lastSeen: Date.now(),
     });
   }
 
-  // Fetch all users from DB and update select
+  // Fetch all users from DB and update user select
   function fetchUsers() {
     db.ref('users').on('value', snapshot => {
       allUsers = snapshot.val() || {};
@@ -286,7 +373,19 @@
     });
   }
 
-  // Display messages
+  // Fetch all chat rooms from DB and update room select
+  function fetchChatRooms() {
+    db.ref('chatRooms').on('value', snapshot => {
+      allRooms = snapshot.val() || {};
+      // Always have global room
+      if (!allRooms.global) {
+        db.ref('chatRooms/global').set({ name: "Global Chat" });
+      }
+      updateRoomsSelect();
+    });
+  }
+
+  // Display messages in UI
   function addMessageToUI(msgId, msg) {
     const div = document.createElement('div');
     div.classList.add('message');
@@ -300,12 +399,10 @@
     senderSpan.textContent = senderName;
     div.appendChild(senderSpan);
 
-    // Show text message or media
     if (msg.type === 'text') {
       div.appendChild(document.createTextNode(msg.text));
     } else if (msg.type === 'media') {
       if (msg.mediaUrl) {
-        // Show a clickable link to media
         const link = document.createElement('a');
         link.href = msg.mediaUrl;
         link.target = "_blank";
@@ -326,34 +423,31 @@
     messagesDiv.innerHTML = '';
   }
 
-  // Listen to messages in current chat (room or direct)
-  let messagesListener = null;
+  // Listen to messages for current chat room or private chat
   function listenToMessages() {
     if (messagesListener) {
       messagesListener.off();
     }
     clearMessagesUI();
-    if (currentChatRoom === 'global') {
-      // Group chat room 'global'
-      messagesListener = db.ref('messages/global');
-      messagesListener.off();
+
+    if (privateChatUser) {
+      // Private chat between current user and selected user
+      const ids = [auth.currentUser.uid, privateChatUser].sort();
+      const chatId = ids.join('_');
+      messagesListener = db.ref('privateMessages/' + chatId);
       messagesListener.on('child_added', snapshot => {
         addMessageToUI(snapshot.key, snapshot.val());
       });
     } else {
-      // Private chat between current user and selected user
-      // Use a deterministic chatId (smallerId_biggerId)
-      const ids = [auth.currentUser.uid, currentChatRoom].sort();
-      const chatId = ids.join('_');
-      messagesListener = db.ref('privateMessages/' + chatId);
-      messagesListener.off();
+      // Group chat room
+      messagesListener = db.ref('messages/' + currentChatRoom);
       messagesListener.on('child_added', snapshot => {
         addMessageToUI(snapshot.key, snapshot.val());
       });
     }
   }
 
-  // Send message function
+  // Send message function (text and/or media)
   async function sendMessage(text, mediaFile = null) {
     if (!text && !mediaFile) return;
 
@@ -366,7 +460,6 @@
 
     if (mediaFile) {
       messageData.type = 'media';
-      // Upload media and get URL
       const storageRef = storage.ref();
       const fileRef = storageRef.child(`media/${auth.currentUser.uid}/${Date.now()}_${mediaFile.name}`);
       try {
@@ -379,33 +472,40 @@
       }
     }
 
-    if (currentChatRoom === 'global') {
-      await db.ref('messages/global').push(messageData);
-    } else {
-      const ids = [auth.currentUser.uid, currentChatRoom].sort();
+    if (privateChatUser) {
+      const ids = [auth.currentUser.uid, privateChatUser].sort();
       const chatId = ids.join('_');
       await db.ref('privateMessages/' + chatId).push(messageData);
+      sendPushNotification(privateChatUser, messageData, chatId);
+    } else {
+      await db.ref('messages/' + currentChatRoom).push(messageData);
+      sendPushNotificationToRoom(currentChatRoom, messageData);
     }
   }
 
   // Typing indicator
   let typingTimeout = null;
   function setTyping(typing) {
-    if (currentChatRoom === 'global') {
-      db.ref(`typing/global/${auth.currentUser.uid}`).set(typing);
-    } else {
-      const ids = [auth.currentUser.uid, currentChatRoom].sort();
+    if (privateChatUser) {
+      const ids = [auth.currentUser.uid, privateChatUser].sort();
       const chatId = ids.join('_');
       db.ref(`typing/${chatId}/${auth.currentUser.uid}`).set(typing);
+    } else {
+      db.ref(`typing/${currentChatRoom}/${auth.currentUser.uid}`).set(typing);
     }
   }
 
   function listenToTyping() {
+    if (typingListener) typingListener.off();
     typingIndicator.textContent = '';
-    if (currentChatRoom === 'global') {
-      db.ref(`typing/global`).on('value', snapshot => {
+
+    if (privateChatUser) {
+      const ids = [auth.currentUser.uid, privateChatUser].sort();
+      const chatId = ids.join('_');
+      typingListener = db.ref(`typing/${chatId}`);
+      typingListener.on('value', snapshot => {
         const typingUsers = snapshot.val() || {};
-        let usersTyping = Object.keys(typingUsers).filter(uid => uid !== auth.currentUser.uid && typingUsers[uid]);
+        const usersTyping = Object.keys(typingUsers).filter(uid => uid !== auth.currentUser.uid && typingUsers[uid]);
         if (usersTyping.length > 0) {
           const names = usersTyping.map(uid => allUsers[uid]?.displayName || allUsers[uid]?.email || 'Someone');
           typingIndicator.textContent = names.join(', ') + ' is typing...';
@@ -414,11 +514,10 @@
         }
       });
     } else {
-      const ids = [auth.currentUser.uid, currentChatRoom].sort();
-      const chatId = ids.join('_');
-      db.ref(`typing/${chatId}`).on('value', snapshot => {
+      typingListener = db.ref(`typing/${currentChatRoom}`);
+      typingListener.on('value', snapshot => {
         const typingUsers = snapshot.val() || {};
-        let usersTyping = Object.keys(typingUsers).filter(uid => uid !== auth.currentUser.uid && typingUsers[uid]);
+        const usersTyping = Object.keys(typingUsers).filter(uid => uid !== auth.currentUser.uid && typingUsers[uid]);
         if (usersTyping.length > 0) {
           const names = usersTyping.map(uid => allUsers[uid]?.displayName || allUsers[uid]?.email || 'Someone');
           typingIndicator.textContent = names.join(', ') + ' is typing...';
@@ -429,58 +528,118 @@
     }
   }
 
-  // Event Listeners
-
-  loginBtn.onclick = async () => {
+  // Send push notification to single user
+  async function sendPushNotification(toUserId, messageData, chatId) {
     try {
-      await auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value);
-    } catch (err) {
-      alert("Login failed: " + err.message);
-    }
-  };
+      const tokensSnap = await db.ref('fcmTokens/' + toUserId).once('value');
+      const tokens = tokensSnap.val();
+      if (!tokens) return;
 
-  registerBtn.onclick = async () => {
+      // For demonstration, we store notification request in DB. 
+      // In real use, your backend should call Firebase Cloud Messaging API with server key.
+      const payload = {
+        notification: {
+          title: `New message from ${allUsers[messageData.sender]?.displayName || 'User'}`,
+          body: messageData.type === 'text' ? messageData.text : 'Sent a media attachment',
+        },
+        data: {
+          room: chatId,
+        }
+      };
+      for (const token in tokens) {
+        // Normally send to FCM endpoint with this token
+        console.log("Send notification to token:", token, payload);
+      }
+    } catch (err) {
+      console.warn("Error sending push notification:", err);
+    }
+  }
+
+  // Send push notification to all users in a room except sender
+  async function sendPushNotificationToRoom(roomId, messageData) {
     try {
-      await auth.createUserWithEmailAndPassword(registerEmail.value, registerPassword.value);
+      const userIdsSnap = await db.ref('chatRooms/' + roomId + '/members').once('value');
+      const userIds = userIdsSnap.val() || {};
+
+      // For demo: fetch all tokens for all users in this room
+      for (const uid in userIds) {
+        if (uid === auth.currentUser.uid) continue; // no notify sender
+        await sendPushNotification(uid, messageData, roomId);
+      }
     } catch (err) {
-      alert("Registration failed: " + err.message);
+      console.warn("Error sending room push notifications:", err);
     }
+  }
+
+  // Handle UI events
+
+  loginBtn.onclick = () => {
+    const email = loginEmail.value.trim();
+    const password = loginPassword.value;
+    auth.signInWithEmailAndPassword(email, password)
+      .catch(err => alert("Login failed: " + err.message));
   };
 
-  toRegisterBtn.onclick = () => {
-    showSection(registerSection);
+  toRegisterBtn.onclick = () => showSection(registerSection);
+
+  registerBtn.onclick = () => {
+    const email = registerEmail.value.trim();
+    const password = registerPassword.value;
+    auth.createUserWithEmailAndPassword(email, password)
+      .catch(err => alert("Registration failed: " + err.message));
   };
 
-  toLoginBtn.onclick = () => {
-    showSection(loginSection);
+  toLoginBtn.onclick = () => showSection(loginSection);
+
+  logoutBtn.onclick = () => auth.signOut();
+
+  displayNameForm.onsubmit = e => {
+    e.preventDefault();
+    const displayName = displayNameInput.value.trim();
+    if (!displayName) return alert("Display name can't be empty");
+    auth.currentUser.updateProfile({ displayName })
+      .then(() => {
+        saveUserProfile(auth.currentUser);
+        alert("Display name updated");
+      }).catch(err => alert("Failed to update name: " + err.message));
   };
 
-  logoutBtn.onclick = () => {
-    auth.signOut();
+  createRoomForm.onsubmit = e => {
+    e.preventDefault();
+    const name = roomNameInput.value.trim();
+    if (!name) return alert("Room name cannot be empty");
+    const newRoomRef = db.ref('chatRooms').push();
+    newRoomRef.set({ name, members: { [auth.currentUser.uid]: true } });
+    roomNameInput.value = '';
   };
 
   userSelect.onchange = () => {
-    const val = userSelect.value;
-    if (!val) {
-      currentChatRoom = 'global';
+    const uid = userSelect.value;
+    if (uid) {
+      privateChatUser = uid;
+      currentChatRoom = null;
+      listenToMessages();
+      listenToTyping();
     } else {
-      currentChatRoom = val;
+      privateChatUser = null;
+      if (!currentChatRoom) currentChatRoom = 'global';
+      listenToMessages();
+      listenToTyping();
     }
-    listenToMessages();
-    listenToTyping();
   };
 
   chatRoomSelect.onchange = () => {
-    // Not used since only global for group chat, but placeholder for future rooms
     currentChatRoom = chatRoomSelect.value;
+    privateChatUser = null;
+    userSelect.value = '';
     listenToMessages();
     listenToTyping();
   };
 
   sendBtn.onclick = async () => {
     const text = messageInput.value.trim();
-    const file = mediaInput.files[0] || null;
-    await sendMessage(text, file);
+    const mediaFile = mediaInput.files[0] || null;
+    await sendMessage(text, mediaFile);
     messageInput.value = '';
     mediaInput.value = '';
     setTyping(false);
@@ -488,8 +647,8 @@
 
   messageInput.addEventListener('input', () => {
     setTyping(true);
-    if (typingTimeout) clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => setTyping(false), 1500);
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => setTyping(false), 2000);
   });
 
   messageInput.addEventListener('keydown', e => {
@@ -499,55 +658,30 @@
     }
   });
 
-  displayNameForm.onsubmit = async (e) => {
-    e.preventDefault();
-    const newName = displayNameInput.value.trim();
-    if (!newName) {
-      alert("Display name cannot be empty");
-      return;
-    }
-    try {
-      await db.ref(`users/${auth.currentUser.uid}/displayName`).set(newName);
-      alert("Display name saved");
-    } catch (err) {
-      alert("Failed to save display name: " + err.message);
-    }
-  };
-
-  // On Auth state change
+  // Auth state listener
   auth.onAuthStateChanged(user => {
     if (user) {
-      logoutBtn.style.display = "inline-block";
       showSection(chatSection);
-      // Load user profile display name
-      db.ref('users/' + user.uid + '/displayName').once('value').then(snap => {
-        displayNameInput.value = snap.val() || '';
-      });
-
-      // Update user profile on login
-      saveUserProfile({
-        uid: user.uid,
-        email: user.email,
-        displayName: displayNameInput.value,
-      });
-
+      logoutBtn.style.display = 'inline-block';
+      displayNameInput.value = user.displayName || '';
+      saveUserProfile(user);
       fetchUsers();
+      fetchChatRooms();
       currentChatRoom = 'global';
+      privateChatUser = null;
+      userSelect.value = '';
+      chatRoomSelect.value = 'global';
       listenToMessages();
       listenToTyping();
-
-      // Update lastSeen timestamp every 5 minutes
-      setInterval(() => {
-        db.ref('users/' + user.uid + '/lastSeen').set(Date.now());
-      }, 300000);
-
+      initMessaging();
+      listenForPushNotifications();
     } else {
-      logoutBtn.style.display = "none";
       showSection(loginSection);
-      allUsers = {};
-      updateUserSelect();
+      logoutBtn.style.display = 'none';
       if (messagesListener) messagesListener.off();
-      clearMessagesUI();
+      if (typingListener) typingListener.off();
+      messagesDiv.innerHTML = '';
+      typingIndicator.textContent = '';
     }
   });
 
