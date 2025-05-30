@@ -9,6 +9,7 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
 
   <style>
     html, body {
@@ -142,6 +143,9 @@
   <section id="chat">
     <input type="text" id="displayNameInput" placeholder="Change Display Name" />
     <button id="saveDisplayNameBtn">Save Name</button>
+    <input type="file" id="avatarInput" accept="image/*" />
+    <button id="uploadAvatarBtn" style="background: #6c757d;">Upload Avatar</button>
+    <img id="avatarPreview" style="width: 60px; height: 60px; border-radius: 50%; margin-top: 0.5rem; object-fit: cover;" />
 
     <select id="chatSelect">
       <option value="" disabled selected>Select user or group chat</option>
@@ -176,165 +180,45 @@
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
+  const storage = firebase.storage();
 
-  const loginSection = document.getElementById("login");
-  const registerSection = document.getElementById("register");
-  const chatSection = document.getElementById("chat");
+  const avatarInput = document.getElementById("avatarInput");
+  const uploadAvatarBtn = document.getElementById("uploadAvatarBtn");
+  const avatarPreview = document.getElementById("avatarPreview");
 
-  const loginBtn = document.getElementById("loginBtn");
-  const registerBtn = document.getElementById("registerBtn");
-  const toRegisterBtn = document.getElementById("toRegisterBtn");
-  const toLoginBtn = document.getElementById("toLoginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
+  // ... keep your full existing JS here (unchanged), then update:
 
-  const loginEmail = document.getElementById("loginEmail");
-  const loginPassword = document.getElementById("loginPassword");
-  const registerEmail = document.getElementById("registerEmail");
-  const registerPassword = document.getElementById("registerPassword");
+  uploadAvatarBtn.onclick = () => {
+    const file = avatarInput.files[0];
+    if (!file || !currentUser) return alert("Select a file first.");
 
-  const displayNameInput = document.getElementById("displayNameInput");
-  const saveDisplayNameBtn = document.getElementById("saveDisplayNameBtn");
-  const sendBtn = document.getElementById("sendBtn");
-
-  const messagesDiv = document.getElementById("messages");
-  const chatSelect = document.getElementById("chatSelect");
-  const userOptions = document.getElementById("userOptions");
-  const groupOptions = document.getElementById("groupOptions");
-  const messageInput = document.getElementById("messageInput");
-  const typingIndicator = document.getElementById("typingIndicator");
-
-  let currentUser = null;
-  let selectedChatId = null;
-  let isGroupChat = false;
-  let messagesRef = null;
-  let typingTimeout;
-
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      showSection(chatSection);
-      logoutBtn.style.display = "block";
-      joinEveryoneGroup(user.uid);
-      db.ref("users/" + user.uid).once("value").then(snap => {
-        const userData = snap.val();
-        if (userData && userData.displayName) {
-          currentUser.updateProfile({ displayName: userData.displayName });
-          displayNameInput.value = userData.displayName;
-        }
-      });
-      populateChatList();
-    } else {
-      showSection(loginSection);
-      logoutBtn.style.display = "none";
-    }
-  });
-
-  function showSection(section) {
-    loginSection.classList.remove("active");
-    registerSection.classList.remove("active");
-    chatSection.classList.remove("active");
-    section.classList.add("active");
-  }
-
-  loginBtn.onclick = () => {
-    auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value)
-      .catch(e => alert("Login failed: " + e.message));
+    const storageRef = storage.ref("avatars/" + currentUser.uid);
+    storageRef.put(file).then(snapshot => snapshot.ref.getDownloadURL())
+      .then(url => {
+        db.ref("users/" + currentUser.uid).update({ avatarUrl: url });
+        avatarPreview.src = url;
+        alert("Avatar uploaded!");
+      }).catch(err => alert("Upload failed: " + err.message));
   };
-
-  registerBtn.onclick = () => {
-    auth.createUserWithEmailAndPassword(registerEmail.value, registerPassword.value)
-      .catch(e => alert("Registration failed: " + e.message));
-  };
-
-  logoutBtn.onclick = () => auth.signOut();
-
-  toRegisterBtn.onclick = () => showSection(registerSection);
-  toLoginBtn.onclick = () => showSection(loginSection);
-
-  function joinEveryoneGroup(uid) {
-    const everyoneRef = db.ref("groups/everyone");
-    everyoneRef.once("value").then(snap => {
-      let group = snap.val();
-      if (!group) {
-        everyoneRef.set({ name: "Everyone", members: [uid] });
-      } else if (!group.members.includes(uid)) {
-        group.members.push(uid);
-        everyoneRef.child("members").set(group.members);
-      }
-    });
-  }
-
-  function populateChatList() {
-    userOptions.innerHTML = "";
-    groupOptions.innerHTML = "";
-
-    db.ref("users").once("value", snap => {
-      snap.forEach(child => {
-        if (child.key !== currentUser.uid) {
-          const opt = document.createElement("option");
-          opt.value = child.key;
-          opt.textContent = child.val().displayName || child.val().email || child.key;
-          userOptions.appendChild(opt);
-        }
-      });
-    });
-
-    db.ref("groups").once("value", snap => {
-      snap.forEach(child => {
-        const group = child.val();
-        if (group.members && group.members.includes(currentUser.uid)) {
-          const opt = document.createElement("option");
-          opt.value = "group:" + child.key;
-          opt.textContent = group.name || child.key;
-          groupOptions.appendChild(opt);
-        }
-      });
-    });
-  }
-
-  chatSelect.onchange = () => {
-    const val = chatSelect.value;
-    if (!val) return;
-
-    isGroupChat = val.startsWith("group:");
-    selectedChatId = isGroupChat ? val.slice(6) : val;
-
-    if (messagesRef) messagesRef.off();
-
-    messagesDiv.innerHTML = "";
-
-    messagesRef = db.ref((isGroupChat ? "groupMessages" : "messages") + "/" + selectedChatId);
-    messagesRef.on("child_added", snap => {
-      displayMessage(snap.val());
-    });
-  };
-
-  sendBtn.onclick = () => {
-    if (!selectedChatId) return;
-    const text = messageInput.value.trim();
-    if (!text) return;
-
-    const msg = {
-      sender: currentUser.uid,
-      senderName: currentUser.displayName || currentUser.email,
-      timestamp: Date.now(),
-      text: text
-    };
-
-    db.ref((isGroupChat ? "groupMessages" : "messages") + "/" + selectedChatId).push(msg);
-    messageInput.value = "";
-  };
-
-  messageInput.addEventListener("input", () => {
-    if (!selectedChatId || isGroupChat) return;
-    db.ref("typing/" + selectedChatId).set(currentUser.displayName || currentUser.email);
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      db.ref("typing/" + selectedChatId).remove();
-    }, 2000);
-  });
 
   function displayMessage(msg) {
+    const container = document.createElement("div");
+    container.style.display = "flex";
+    container.style.gap = "0.5rem";
+    container.style.alignItems = "flex-start";
+
+    const avatarImg = document.createElement("img");
+    avatarImg.style.width = "32px";
+    avatarImg.style.height = "32px";
+    avatarImg.style.borderRadius = "50%";
+    avatarImg.style.objectFit = "cover";
+    avatarImg.src = "";
+
+    db.ref("users/" + msg.sender).once("value").then(snap => {
+      const senderData = snap.val();
+      if (senderData && senderData.avatarUrl) avatarImg.src = senderData.avatarUrl;
+    });
+
     const div = document.createElement("div");
     div.className = "message";
     if (msg.sender === currentUser.uid) div.classList.add("self");
@@ -358,22 +242,11 @@
       div.appendChild(ts);
     }
 
-    messagesDiv.appendChild(div);
+    container.appendChild(avatarImg);
+    container.appendChild(div);
+    messagesDiv.appendChild(container);
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
-
-  saveDisplayNameBtn.onclick = () => {
-    const name = displayNameInput.value.trim();
-    if (name && currentUser) {
-      currentUser.updateProfile({ displayName: name });
-      db.ref("users/" + currentUser.uid).set({
-        email: currentUser.email,
-        displayName: name
-      });
-      alert("Display name updated!");
-    }
-  };
 </script>
-
 </body>
 </html>
