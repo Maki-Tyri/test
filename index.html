@@ -1,177 +1,3 @@
-<!-- Save this as index.html -->
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Firebase Messenger</title>
-
-  <!-- Firebase SDKs -->
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
-
-  <style>
-    /* Existing CSS stays the same */
-    html, body {
-      margin: 0;
-      padding: 0;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: #f0f2f5;
-      height: 100%;
-    }
-    #app {
-      display: flex;
-      flex-direction: column;
-      height: 100vh;
-      max-width: 600px;
-      margin: auto;
-      background: #fff;
-      box-shadow: 0 0 15px rgba(0,0,0,0.1);
-    }
-    header {
-      padding: 1rem;
-      border-bottom: 1px solid #ddd;
-      font-weight: bold;
-      font-size: 1.2rem;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #f9f9f9;
-    }
-    section {
-      padding: 1rem;
-      flex: 1;
-      display: none;
-      flex-direction: column;
-      overflow: hidden;
-    }
-    section.active {
-      display: flex;
-    }
-    input, button, textarea, select {
-      font-size: 1rem;
-      padding: 0.5rem;
-      margin-bottom: 0.8rem;
-      border-radius: 4px;
-      border: 1px solid #ccc;
-      width: 100%;
-      box-sizing: border-box;
-    }
-    textarea {
-      resize: vertical;
-      height: 60px;
-    }
-    button {
-      cursor: pointer;
-      background-color: #007bff;
-      border: none;
-      color: white;
-      transition: background-color 0.3s;
-    }
-    button:hover {
-      background-color: #0056b3;
-    }
-    #messages {
-      flex: 1;
-      overflow-y: auto;
-      border: 1px solid #ddd;
-      padding: 0.5rem;
-      border-radius: 4px;
-      background: #fafafa;
-      display: flex;
-      flex-direction: column;
-      gap: 0.5rem;
-    }
-    .message {
-      max-width: 80%;
-      padding: 0.5rem;
-      border-radius: 6px;
-      background: #e1ffc7;
-      word-wrap: break-word;
-      white-space: pre-wrap;
-    }
-    .message.self {
-      background: #c7dfff;
-      align-self: flex-end;
-    }
-    .sender {
-      font-weight: bold;
-      font-size: 0.85rem;
-      margin-bottom: 0.2rem;
-    }
-    .timestamp {
-      font-size: 0.7rem;
-      color: #777;
-      margin-top: 0.2rem;
-    }
-    .typing {
-      font-style: italic;
-      color: #666;
-      height: 20px;
-      margin-bottom: 0.5rem;
-    }
-    .media-link {
-      display: block;
-      margin-top: 0.2rem;
-      color: #0066cc;
-      text-decoration: underline;
-      font-size: 0.85rem;
-      word-break: break-word;
-    }
-    footer {
-      font-size: 0.85rem;
-      text-align: center;
-      padding: 0.5rem;
-      color: #666;
-      background: #f9f9f9;
-    }
-  </style>
-</head>
-<body>
-
-<div id="app">
-  <header>
-    <div>Firebase Messenger</div>
-    <button id="logoutBtn" style="display: none;">Logout</button>
-  </header>
-
-  <section id="login" class="active">
-    <input type="email" id="loginEmail" placeholder="Email" />
-    <input type="password" id="loginPassword" placeholder="Password" />
-    <button id="loginBtn">Login</button>
-    <button id="toRegisterBtn" style="background: gray;">Register Instead</button>
-  </section>
-
-  <section id="register">
-    <input type="email" id="registerEmail" placeholder="Email" />
-    <input type="password" id="registerPassword" placeholder="Password" />
-    <button id="registerBtn">Register</button>
-    <button id="toLoginBtn" style="background: gray;">Back to Login</button>
-  </section>
-
-  <section id="chat">
-    <input type="text" id="displayNameInput" placeholder="Change Display Name" />
-    <button id="saveDisplayNameBtn">Save Name</button>
-
-    <select id="chatSelect">
-      <option value="" disabled selected>Select user or group chat</option>
-      <optgroup label="Users" id="userOptions"></optgroup>
-      <optgroup label="Groups" id="groupOptions"></optgroup>
-    </select>
-
-    <div id="messages"></div>
-    <div id="typingIndicator" class="typing"></div>
-    <textarea id="messageInput" placeholder="Type a message... (Enter to send)"></textarea>
-    <input type="file" id="mediaInput" />
-    <button id="sendBtn">Send</button>
-  </section>
-</div>
-
-<footer>&copy; 2025 Maki Web. All rights reserved.</footer>
-
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
@@ -189,25 +15,73 @@
   const db = firebase.database();
   const storage = firebase.storage();
 
+  const loginSection = document.getElementById("login");
+  const registerSection = document.getElementById("register");
+  const chatSection = document.getElementById("chat");
+
+  const loginBtn = document.getElementById("loginBtn");
+  const registerBtn = document.getElementById("registerBtn");
+  const toRegisterBtn = document.getElementById("toRegisterBtn");
+  const toLoginBtn = document.getElementById("toLoginBtn");
+  const logoutBtn = document.getElementById("logoutBtn");
+
+  const loginEmail = document.getElementById("loginEmail");
+  const loginPassword = document.getElementById("loginPassword");
+  const registerEmail = document.getElementById("registerEmail");
+  const registerPassword = document.getElementById("registerPassword");
+
+  const displayNameInput = document.getElementById("displayNameInput");
+  const saveDisplayNameBtn = document.getElementById("saveDisplayNameBtn");
+  const sendBtn = document.getElementById("sendBtn");
+
   const messagesDiv = document.getElementById("messages");
   const chatSelect = document.getElementById("chatSelect");
   const userOptions = document.getElementById("userOptions");
   const groupOptions = document.getElementById("groupOptions");
   const messageInput = document.getElementById("messageInput");
   const mediaInput = document.getElementById("mediaInput");
+  const typingIndicator = document.getElementById("typingIndicator");
 
   let currentUser = null;
   let selectedChatId = null;
   let isGroupChat = false;
   let messagesRef = null;
+  let typingTimeout;
 
   auth.onAuthStateChanged(user => {
     if (user) {
       currentUser = user;
+      showSection(chatSection);
+      logoutBtn.style.display = "block";
       joinEveryoneGroup(user.uid);
       populateChatList();
+    } else {
+      showSection(loginSection);
+      logoutBtn.style.display = "none";
     }
   });
+
+  function showSection(section) {
+    loginSection.classList.remove("active");
+    registerSection.classList.remove("active");
+    chatSection.classList.remove("active");
+    section.classList.add("active");
+  }
+
+  loginBtn.onclick = () => {
+    auth.signInWithEmailAndPassword(loginEmail.value, loginPassword.value)
+      .catch(e => alert("Login failed: " + e.message));
+  };
+
+  registerBtn.onclick = () => {
+    auth.createUserWithEmailAndPassword(registerEmail.value, registerPassword.value)
+      .catch(e => alert("Registration failed: " + e.message));
+  };
+
+  logoutBtn.onclick = () => auth.signOut();
+
+  toRegisterBtn.onclick = () => showSection(registerSection);
+  toLoginBtn.onclick = () => showSection(loginSection);
 
   function joinEveryoneGroup(uid) {
     const everyoneRef = db.ref("groups/everyone");
@@ -221,6 +95,86 @@
       }
     });
   }
+
+  function populateChatList() {
+    userOptions.innerHTML = "";
+    groupOptions.innerHTML = "";
+
+    db.ref("users").once("value", snap => {
+      snap.forEach(child => {
+        if (child.key !== currentUser.uid) {
+          const opt = document.createElement("option");
+          opt.value = child.key;
+          opt.textContent = child.val().displayName || child.val().email || child.key;
+          userOptions.appendChild(opt);
+        }
+      });
+    });
+
+    db.ref("groups").once("value", snap => {
+      snap.forEach(child => {
+        const group = child.val();
+        if (group.members && group.members.includes(currentUser.uid)) {
+          const opt = document.createElement("option");
+          opt.value = "group:" + child.key;
+          opt.textContent = group.name || child.key;
+          groupOptions.appendChild(opt);
+        }
+      });
+    });
+  }
+
+  chatSelect.onchange = () => {
+    const val = chatSelect.value;
+    if (!val) return;
+
+    isGroupChat = val.startsWith("group:");
+    selectedChatId = isGroupChat ? val.slice(6) : val;
+
+    if (messagesRef) messagesRef.off();
+
+    messagesDiv.innerHTML = "";
+
+    messagesRef = db.ref((isGroupChat ? "groupMessages" : "messages") + "/" + selectedChatId);
+    messagesRef.on("child_added", snap => {
+      displayMessage(snap.val());
+    });
+  };
+
+  sendBtn.onclick = async () => {
+    if (!selectedChatId) return;
+    const text = messageInput.value.trim();
+    const file = mediaInput.files[0];
+
+    if (!text && !file) return;
+
+    const msg = {
+      sender: currentUser.uid,
+      senderName: currentUser.displayName || currentUser.email,
+      timestamp: Date.now()
+    };
+
+    if (text) msg.text = text;
+
+    if (file) {
+      const fileRef = storage.ref().child("media/" + Date.now() + "_" + file.name);
+      await fileRef.put(file);
+      msg.mediaUrl = await fileRef.getDownloadURL();
+    }
+
+    db.ref((isGroupChat ? "groupMessages" : "messages") + "/" + selectedChatId).push(msg);
+    messageInput.value = "";
+    mediaInput.value = "";
+  };
+
+  messageInput.addEventListener("input", () => {
+    if (!selectedChatId || isGroupChat) return;
+    db.ref("typing/" + selectedChatId).set(currentUser.displayName || currentUser.email);
+    clearTimeout(typingTimeout);
+    typingTimeout = setTimeout(() => {
+      db.ref("typing/" + selectedChatId).remove();
+    }, 2000);
+  });
 
   function displayMessage(msg) {
     const div = document.createElement("div");
@@ -259,8 +213,15 @@
     messagesDiv.scrollTop = messagesDiv.scrollHeight;
   }
 
-  // Add message display and other functions here like populateChatList, sendMessage, etc.
-  // Your original script continues from here...
+  saveDisplayNameBtn.onclick = () => {
+    const name = displayNameInput.value.trim();
+    if (name && currentUser) {
+      currentUser.updateProfile({ displayName: name });
+      db.ref("users/" + currentUser.uid).set({
+        email: currentUser.email,
+        displayName: name
+      });
+      alert("Display name updated!");
+    }
+  };
 </script>
-</body>
-</html>
