@@ -1,472 +1,183 @@
-<!DOCTYPE html> 
-<html lang="en" >
+<!DOCTYPE html>
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Firebase 1-on-1 Messenger</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Firebase 1-on-1 Chat</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
   <style>
-    body {
+    html, body {
+      margin: 0;
+      padding: 0;
+      height: 100%;
+      width: 100%;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       background: #f0f2f5;
-      margin: 0; padding: 0;
-      display: flex; justify-content: center; align-items: center; height: 100vh;
-      flex-direction: column;
     }
+
+    body {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
     #app {
-      background: white;
-      width: 450px;
-      max-width: 95vw;
-      border-radius: 8px;
-      box-shadow: 0 0 15px rgb(0 0 0 / 0.2);
       display: flex;
       flex-direction: column;
-      height: 650px;
-      overflow: hidden;
-      margin-bottom: 0.5rem;
-    }
-    header {
-      padding: 1rem;
-      border-bottom: 1px solid #ddd;
-      font-weight: bold;
-      font-size: 1.2rem;
-      display: flex; justify-content: space-between; align-items: center;
-    }
-    #login, #register, #chat {
-      padding: 1rem;
-      flex: 1;
-      display: none;
-      flex-direction: column;
-    }
-    input, button, textarea, select {
-      font-size: 1rem;
-      padding: 0.5rem;
-      margin-bottom: 0.8rem;
-      border-radius: 4px;
-      border: 1px solid #ccc;
       width: 100%;
-      box-sizing: border-box;
+      max-width: 600px;
+      height: 100vh;
+      background: #fff;
+      box-shadow: 0 0 15px rgb(0 0 0 / 0.15);
+      overflow: hidden;
     }
-    textarea {
-      resize: vertical;
-      height: 60px;
+
+    #users {
+      padding: 10px;
+      border-bottom: 1px solid #ccc;
     }
-    button {
-      cursor: pointer;
-      background-color: #007bff;
-      border: none;
-      color: white;
-      transition: background-color 0.3s;
+
+    #chat {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      overflow: hidden;
     }
-    button:hover {
-      background-color: #0056b3;
-    }
+
     #messages {
       flex: 1;
       overflow-y: auto;
-      border: 1px solid #ddd;
       padding: 0.5rem;
-      margin-bottom: 0.5rem;
-      border-radius: 4px;
       background: #fafafa;
+      border: 1px solid #ddd;
+      border-radius: 4px;
       display: flex;
       flex-direction: column;
       gap: 0.5rem;
-      scrollbar-width: thin;
+      min-height: 0;
     }
-    .message {
-      max-width: 70%;
+
+    textarea {
+      width: 100%;
       padding: 0.5rem;
-      border-radius: 6px;
+      font-size: 16px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+      margin: 0.5rem 0;
+      resize: vertical;
+      min-height: 50px;
+      max-height: 120px;
+    }
+
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 16px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+
+    .message {
+      padding: 0.5rem;
       background: #e1ffc7;
-      word-wrap: break-word;
-      white-space: pre-wrap;
-      position: relative;
-      font-size: 0.9rem;
+      border-radius: 5px;
+      max-width: 75%;
     }
-    .message.self {
-      background: #c7dfff;
+
+    .own {
       align-self: flex-end;
-    }
-    .message .sender {
-      font-weight: bold;
-      font-size: 0.85rem;
-      margin-bottom: 0.3rem;
-      color: #333;
-    }
-    .message .timestamp {
-      position: absolute;
-      bottom: 3px;
-      right: 6px;
-      font-size: 0.7rem;
-      color: #666;
-    }
-    .typing {
-      font-style: italic;
-      color: #666;
-      height: 20px;
-      margin-bottom: 0.3rem;
-    }
-    #userSelect {
-      margin-bottom: 0.8rem;
-    }
-    footer {
-      font-size: 0.85rem;
-      color: #888;
-      text-align: center;
-      margin-top: 0.3rem;
-      user-select: none;
+      background: #d1e7ff;
     }
   </style>
 </head>
 <body>
+  <div id="app">
+    <div id="users">
+      <label>Your ID: <input id="userId" /></label>
+      <label>Chat with: <input id="peerId" /></label>
+    </div>
+    <div id="chat">
+      <div id="messages"></div>
+      <textarea id="messageInput" placeholder="Type a message..."></textarea>
+      <button onclick="sendMessage()">Send</button>
+    </div>
+  </div>
 
-<div id="app">
-  <header>
-    <div>Firebase Messenger</div>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-  </header>
+  <script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
+  authDomain: "project-955237504610034331.firebaseapp.com",
+  databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
+  projectId: "project-955237504610034331",
+  storageBucket: "project-955237504610034331.firebasestorage.app",
+  messagingSenderId: "76212939677",
+  appId: "1:76212939677:web:ef498bc1e4e480ab6e5d74",
+  measurementId: "G-WXBEP1LXTX"
+};
 
-  <section id="login">
-    <input type="email" id="loginEmail" placeholder="Email" />
-    <input type="password" id="loginPassword" placeholder="Password" />
-    <button id="loginBtn">Login</button>
-    <button id="toRegisterBtn" style="margin-top: 10px; background: gray;">Register Instead</button>
-  </section>
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-  <section id="register">
-    <input type="email" id="registerEmail" placeholder="Email" />
-    <input type="password" id="registerPassword" placeholder="Password" />
-    <button id="registerBtn">Register</button>
-    <button id="toLoginBtn" style="margin-top: 10px; background: gray;">Back to Login</button>
-  </section>
+    const userIdInput = document.getElementById("userId");
+    const peerIdInput = document.getElementById("peerId");
+    const messagesDiv = document.getElementById("messages");
+    const messageInput = document.getElementById("messageInput");
 
-  <section id="chat">
-    <select id="userSelect" title="Choose user to chat with">
-      <option value="" disabled selected>Loading users...</option>
-    </select>
+    let currentUserId = "";
+    let currentPeerId = "";
+    let messagesRef = null;
 
-    <input type="text" id="displayNameInput" placeholder="Set your display name" />
-    <button id="saveDisplayNameBtn" style="margin-bottom: 1rem; background: #28a745;">Save Display Name</button>
+    function setupListener() {
+      if (messagesRef) messagesRef.off();
 
-    <div id="messages"></div>
-    <div class="typing" id="typingIndicator"></div>
-    <textarea id="messageInput" placeholder="Type a message... (Enter to send, Shift+Enter new line)"></textarea>
-    <!-- Removed media input as per request -->
-    <button id="sendBtn">Send</button>
-  </section>
-</div>
-
-<footer>&copy; 2025 Maki Web. All rights reserved</footer>
-
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
-    authDomain: "project-955237504610034331.firebaseapp.com",
-    projectId: "project-955237504610034331",
-    storageBucket: "project-955237504610034331.appspot.com",
-    messagingSenderId: "76212939677",
-    appId: "1:76212939677:web:ef498bc1e4e480ab6e5d74",
-    measurementId: "G-WXBEP1LXTX"
-  };
-  firebase.initializeApp(firebaseConfig);
-
-  const auth = firebase.auth();
-  const db = firebase.database();
-  const messaging = firebase.messaging();
-
-  // UI refs
-  const loginSection = document.getElementById("login");
-  const registerSection = document.getElementById("register");
-  const chatSection = document.getElementById("chat");
-  const logoutBtn = document.getElementById("logoutBtn");
-
-  const loginEmail = document.getElementById("loginEmail");
-  const loginPassword = document.getElementById("loginPassword");
-  const loginBtn = document.getElementById("loginBtn");
-  const toRegisterBtn = document.getElementById("toRegisterBtn");
-
-  const registerEmail = document.getElementById("registerEmail");
-  const registerPassword = document.getElementById("registerPassword");
-  const registerBtn = document.getElementById("registerBtn");
-  const toLoginBtn = document.getElementById("toLoginBtn");
-
-  const messagesDiv = document.getElementById("messages");
-  const messageInput = document.getElementById("messageInput");
-  const sendBtn = document.getElementById("sendBtn");
-  const typingIndicator = document.getElementById("typingIndicator");
-  const userSelect = document.getElementById("userSelect");
-
-  const displayNameInput = document.getElementById("displayNameInput");
-  const saveDisplayNameBtn = document.getElementById("saveDisplayNameBtn");
-
-  // Show/hide helper
-  function showSection(section) {
-    loginSection.style.display = "none";
-    registerSection.style.display = "none";
-    chatSection.style.display = "none";
-    section.style.display = "flex";
-  }
-
-  // Store users in memory
-  let allUsers = {};
-  let currentChatUserId = null;
-  let currentUserDisplayName = null;
-
-  // Update user select options
-  function updateUserSelect() {
-    userSelect.innerHTML = '';
-    // Current user disabled option
-    const meOption = document.createElement('option');
-    meOption.textContent = `You: ${auth.currentUser.email}`;
-    meOption.disabled = true;
-    userSelect.appendChild(meOption);
-
-    Object.entries(allUsers).forEach(([uid, u]) => {
-      if (uid === auth.currentUser.uid) return; // skip self
-      const opt = document.createElement('option');
-      opt.value = uid;
-      opt.textContent = u.displayName || u.email || 'No Email';
-      userSelect.appendChild(opt);
-    });
-
-    if (userSelect.options.length > 1) {
-      userSelect.disabled = false;
-      if (!currentChatUserId) {
-        userSelect.selectedIndex = 1;
-        currentChatUserId = userSelect.value;
-      }
-    } else {
-      userSelect.disabled = true;
-      const noUsers = document.createElement('option');
-      noUsers.textContent = 'No other users found';
-      noUsers.disabled = true;
-      userSelect.appendChild(noUsers);
-    }
-  }
-
-  // Listen to all users in Realtime DB for chat selection
-  function listenUsers() {
-    db.ref("users").on("value", snapshot => {
-      allUsers = snapshot.val() || {};
-      updateUserSelect();
-      loadMessages();
-    });
-  }
-
-  // Save user data on registration/login including displayName
-  function saveUserToDB(user, displayName = null) {
-    const data = {
-      email: user.email
-    };
-    if (displayName) data.displayName = displayName;
-    db.ref("users/" + user.uid).update(data);
-  }
-
-  // Load current user's display name
-  function loadCurrentUserDisplayName() {
-    if (!auth.currentUser) return;
-    db.ref("users/" + auth.currentUser.uid + "/displayName").once("value").then(snap => {
-      currentUserDisplayName = snap.val() || null;
-      displayNameInput.value = currentUserDisplayName || "";
-    });
-  }
-
-  // Authentication state observer
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      logoutBtn.style.display = "inline-block";
-      showSection(chatSection);
-      saveUserToDB(user);
-      loadCurrentUserDisplayName();
-      listenUsers();
-      setTyping(false);
-      listenTyping();
-      requestNotificationPermission();
-    } else {
-      logoutBtn.style.display = "none";
-      showSection(loginSection);
-      messagesDiv.innerHTML = "";
-      typingIndicator.textContent = "";
-      allUsers = {};
-      currentChatUserId = null;
-      currentUserDisplayName = null;
-      displayNameInput.value = "";
-    }
-  });
-
-  // Register & login UI toggles
-  toRegisterBtn.onclick = () => showSection(registerSection);
-  toLoginBtn.onclick = () => showSection(loginSection);
-
-  // Register user
-  registerBtn.onclick = () => {
-    const email = registerEmail.value.trim();
-    const password = registerPassword.value.trim();
-    if (!email || !password) {
-      alert("Please enter email and password");
-      return;
-    }
-    auth.createUserWithEmailAndPassword(email, password)
-      .catch(e => alert("Register error: " + e.message));
-  };
-
-  // Login user
-  loginBtn.onclick = () => {
-    const email = loginEmail.value.trim();
-    const password = loginPassword.value.trim();
-    if (!email || !password) {
-      alert("Please enter email and password");
-      return;
-    }
-    auth.signInWithEmailAndPassword(email, password)
-      .catch(e => alert("Login error: " + e.message));
-  };
-
-  // Logout
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
-
-  // When user changes chat target
-  userSelect.onchange = () => {
-    currentChatUserId = userSelect.value;
-    loadMessages();
-    listenTyping();
-  };
-
-  // Save display name change
-  saveDisplayNameBtn.onclick = () => {
-    const newName = displayNameInput.value.trim();
-    if (!newName) {
-      alert("Display name cannot be empty");
-      return;
-    }
-    if (!auth.currentUser) return;
-    saveUserToDB(auth.currentUser, newName);
-    currentUserDisplayName = newName;
-    alert("Display name updated.");
-    listenUsers();
-  };
-
-  // Compose chat ID for 1-on-1 chat (sorted UIDs)
-  function chatId(uid1, uid2) {
-    return uid1 < uid2 ? uid1 + "_" + uid2 : uid2 + "_" + uid1;
-  }
-
-  // Format timestamp to human readable
-  function formatTimestamp(ts) {
-    const d = new Date(ts);
-    return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  }
-
-  // Listen messages for current chat only
-  function loadMessages() {
-    if (!currentChatUserId || !auth.currentUser) {
-      messagesDiv.innerHTML = '<i>Select a user to chat with</i>';
-      return;
-    }
-    db.ref("privateMessages/" + chatId(auth.currentUser.uid, currentChatUserId)).off();
-
-    db.ref("privateMessages/" + chatId(auth.currentUser.uid, currentChatUserId)).on("value", snapshot => {
-      const data = snapshot.val() || {};
-      messagesDiv.innerHTML = "";
-      Object.values(data).forEach(msg => {
-        const div = document.createElement("div");
-        div.classList.add("message");
-        if (msg.sender === auth.currentUser.uid) div.classList.add("self");
-        const senderName = msg.sender === auth.currentUser.uid
-          ? (currentUserDisplayName || auth.currentUser.email)
-          : (allUsers[msg.sender]?.displayName || allUsers[msg.sender]?.email || "Unknown");
-        div.innerHTML = `<div class="sender">${senderName}</div>${escapeHTML(msg.text)}<div class="timestamp">${formatTimestamp(msg.timestamp)}</div>`;
-        messagesDiv.appendChild(div);
+      const chatId = [currentUserId, currentPeerId].sort().join("_");
+      messagesRef = db.ref("messages/" + chatId);
+      messagesRef.on("child_added", (snap) => {
+        const msg = snap.val();
+        displayMessage(msg);
       });
+
+      messagesDiv.innerHTML = ""; // clear old messages
+    }
+
+    function displayMessage(msg) {
+      const div = document.createElement("div");
+      div.className = "message" + (msg.from === currentUserId ? " own" : "");
+      div.textContent = msg.text;
+      messagesDiv.appendChild(div);
       messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    function sendMessage() {
+      const text = messageInput.value.trim();
+      if (!text) return;
+
+      const msg = {
+        from: currentUserId,
+        to: currentPeerId,
+        text,
+        timestamp: Date.now()
+      };
+
+      const chatId = [currentUserId, currentPeerId].sort().join("_");
+      db.ref("messages/" + chatId).push(msg);
+      messageInput.value = "";
+    }
+
+    userIdInput.addEventListener("change", () => {
+      currentUserId = userIdInput.value.trim();
+      if (currentUserId && currentPeerId) setupListener();
     });
-  }
 
-  // Escape HTML to prevent XSS
-  function escapeHTML(text) {
-    const div = document.createElement('div');
-    div.textContent = text;
-    return div.innerHTML.replace(/\n/g, '<br>');
-  }
-
-  // Send message
-  sendBtn.onclick = () => {
-    if (!auth.currentUser || !currentChatUserId) return;
-    const text = messageInput.value.trim();
-    if (!text) return;
-    const msgRef = db.ref("privateMessages/" + chatId(auth.currentUser.uid, currentChatUserId)).push();
-    msgRef.set({
-      sender: auth.currentUser.uid,
-      text: text,
-      timestamp: Date.now(),
+    peerIdInput.addEventListener("change", () => {
+      currentPeerId = peerIdInput.value.trim();
+      if (currentUserId && currentPeerId) setupListener();
     });
-    messageInput.value = "";
-    setTyping(false);
-  };
-
-  // Press Enter to send, Shift+Enter new line
-  messageInput.addEventListener("keydown", e => {
-    if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
-      sendBtn.click();
-    }
-  });
-
-  // Typing indicator logic
-  let typingTimeout;
-  function setTyping(isTyping) {
-    if (!auth.currentUser || !currentChatUserId) return;
-    const typingRef = db.ref("typing/" + chatId(auth.currentUser.uid, currentChatUserId) + "/" + auth.currentUser.uid);
-    if (isTyping) {
-      typingRef.set(true);
-      if (typingTimeout) clearTimeout(typingTimeout);
-      typingTimeout = setTimeout(() => setTyping(false), 4000);
-    } else {
-      typingRef.remove();
-    }
-  }
-  messageInput.addEventListener("input", () => {
-    if (messageInput.value.length > 0) {
-      setTyping(true);
-    } else {
-      setTyping(false);
-    }
-  });
-
-  // Listen to typing status of other user
-  function listenTyping() {
-    if (!currentChatUserId) return;
-    db.ref("typing/" + chatId(auth.currentUser.uid, currentChatUserId)).off();
-    db.ref("typing/" + chatId(auth.currentUser.uid, currentChatUserId)).on("value", snap => {
-      const typingUsers = snap.val() || {};
-      // Other user typing?
-      const otherUserTyping = Object.keys(typingUsers).some(uid => uid !== auth.currentUser.uid);
-      typingIndicator.textContent = otherUserTyping ? "Typing..." : "";
-    });
-  }
-
-  // Request notification permission for push notifications (optional)
-  async function requestNotificationPermission() {
-    if (!messaging) return;
-    try {
-      await messaging.requestPermission();
-      const token = await messaging.getToken();
-      console.log("Notification token:", token);
-      if (auth.currentUser) {
-        db.ref("fcmTokens/" + auth.currentUser.uid).set(token);
-      }
-    } catch (e) {
-      console.warn("Notification permission denied:", e);
-    }
-  }
-</script>
-
+  </script>
 </body>
 </html>
