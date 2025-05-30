@@ -1,3 +1,177 @@
+ayaw mag log in .. pa check, tapos update mo na .. <!-- Save this as index.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Firebase Messenger</title>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-messaging-compat.js"></script>
+
+  <style>
+    /* Existing CSS stays the same */
+    html, body {
+      margin: 0;
+      padding: 0;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #f0f2f5;
+      height: 100%;
+    }
+    #app {
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: 600px;
+      margin: auto;
+      background: #fff;
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    header {
+      padding: 1rem;
+      border-bottom: 1px solid #ddd;
+      font-weight: bold;
+      font-size: 1.2rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #f9f9f9;
+    }
+    section {
+      padding: 1rem;
+      flex: 1;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+    }
+    section.active {
+      display: flex;
+    }
+    input, button, textarea, select {
+      font-size: 1rem;
+      padding: 0.5rem;
+      margin-bottom: 0.8rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    textarea {
+      resize: vertical;
+      height: 60px;
+    }
+    button {
+      cursor: pointer;
+      background-color: #007bff;
+      border: none;
+      color: white;
+      transition: background-color 0.3s;
+    }
+    button:hover {
+      background-color: #0056b3;
+    }
+    #messages {
+      flex: 1;
+      overflow-y: auto;
+      border: 1px solid #ddd;
+      padding: 0.5rem;
+      border-radius: 4px;
+      background: #fafafa;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+    .message {
+      max-width: 80%;
+      padding: 0.5rem;
+      border-radius: 6px;
+      background: #e1ffc7;
+      word-wrap: break-word;
+      white-space: pre-wrap;
+    }
+    .message.self {
+      background: #c7dfff;
+      align-self: flex-end;
+    }
+    .sender {
+      font-weight: bold;
+      font-size: 0.85rem;
+      margin-bottom: 0.2rem;
+    }
+    .timestamp {
+      font-size: 0.7rem;
+      color: #777;
+      margin-top: 0.2rem;
+    }
+    .typing {
+      font-style: italic;
+      color: #666;
+      height: 20px;
+      margin-bottom: 0.5rem;
+    }
+    .media-link {
+      display: block;
+      margin-top: 0.2rem;
+      color: #0066cc;
+      text-decoration: underline;
+      font-size: 0.85rem;
+      word-break: break-word;
+    }
+    footer {
+      font-size: 0.85rem;
+      text-align: center;
+      padding: 0.5rem;
+      color: #666;
+      background: #f9f9f9;
+    }
+  </style>
+</head>
+<body>
+
+<div id="app">
+  <header>
+    <div>Firebase Messenger</div>
+    <button id="logoutBtn" style="display: none;">Logout</button>
+  </header>
+
+  <section id="login" class="active">
+    <input type="email" id="loginEmail" placeholder="Email" />
+    <input type="password" id="loginPassword" placeholder="Password" />
+    <button id="loginBtn">Login</button>
+    <button id="toRegisterBtn" style="background: gray;">Register Instead</button>
+  </section>
+
+  <section id="register">
+    <input type="email" id="registerEmail" placeholder="Email" />
+    <input type="password" id="registerPassword" placeholder="Password" />
+    <button id="registerBtn">Register</button>
+    <button id="toLoginBtn" style="background: gray;">Back to Login</button>
+  </section>
+
+  <section id="chat">
+    <input type="text" id="displayNameInput" placeholder="Change Display Name" />
+    <button id="saveDisplayNameBtn">Save Name</button>
+
+    <select id="chatSelect">
+      <option value="" disabled selected>Select user or group chat</option>
+      <optgroup label="Users" id="userOptions"></optgroup>
+      <optgroup label="Groups" id="groupOptions"></optgroup>
+    </select>
+
+    <div id="messages"></div>
+    <div id="typingIndicator" class="typing"></div>
+    <textarea id="messageInput" placeholder="Type a message... (Enter to send)"></textarea>
+    <input type="file" id="mediaInput" />
+    <button id="sendBtn">Send</button>
+  </section>
+</div>
+
+<footer>&copy; 2025 Maki Web. All rights reserved.</footer>
+
 <script>
   const firebaseConfig = {
     apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
