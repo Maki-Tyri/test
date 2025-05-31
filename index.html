@@ -10,23 +10,28 @@
     body { font-family: sans-serif; padding: 10px; }
     #cy { width: 100%; height: 80vh; border: 1px solid #ccc; margin-top: 10px; }
     input, button { margin: 5px; padding: 5px; }
+    #auth, #main { max-width: 400px; margin: auto; }
   </style>
 </head>
 <body>
-  <h2>Family Tree</h2>
+  <h2 style="text-align:center;">Family Tree</h2>
   <div id="auth">
-    <input type="email" id="email" placeholder="Email">
-    <input type="password" id="password" placeholder="Password">
+    <input type="email" id="email" placeholder="Email" autocomplete="username">
+    <input type="password" id="password" placeholder="Password" autocomplete="current-password">
+    <br>
     <button onclick="login()">Login</button>
     <button onclick="signup()">Sign Up</button>
   </div>
   <div id="main" style="display:none;">
-    <button onclick="logout()">Logout</button>
-    <button onclick="addNode()">Add Member</button>
+    <div style="text-align:center; margin-bottom: 10px;">
+      <button onclick="logout()">Logout</button>
+      <button onclick="addNode()">Add Member</button>
+    </div>
     <div id="cy"></div>
   </div>
 
   <script>
+    // Firebase config - replace with your own if needed
     const firebaseConfig = {
       apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
       authDomain: "project-955237504610034331.firebaseapp.com",
@@ -37,52 +42,87 @@
       appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
       measurementId: "G-RCJ4P82PVM"
     };
+
+    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.database();
-    let cy;
+    let cy = null;
 
+    // UI toggle based on auth state
     auth.onAuthStateChanged(user => {
       document.getElementById('auth').style.display = user ? 'none' : 'block';
       document.getElementById('main').style.display = user ? 'block' : 'none';
       if (user) loadTree();
+      else if (cy) {
+        cy.destroy();
+        cy = null;
+      }
     });
 
+    // Login function
     function login() {
-      auth.signInWithEmailAndPassword(
-        document.getElementById('email').value,
-        document.getElementById('password').value
-      ).catch(error => alert(error.message));
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!email || !password) {
+        alert("Please enter email and password.");
+        return;
+      }
+      auth.signInWithEmailAndPassword(email, password)
+        .catch(e => alert("Login failed: " + e.message));
     }
 
+    // Signup function
     function signup() {
-      auth.createUserWithEmailAndPassword(
-        document.getElementById('email').value,
-        document.getElementById('password').value
-      ).catch(error => alert(error.message));
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
+      if (!email || !password) {
+        alert("Please enter email and password.");
+        return;
+      }
+      auth.createUserWithEmailAndPassword(email, password)
+        .catch(e => alert("Signup failed: " + e.message));
     }
 
+    // Logout function
     function logout() {
       auth.signOut();
     }
 
+    // Load and render family tree from DB
     function loadTree() {
-      db.ref("family").once("value").then(snap => {
-        const data = snap.val() || {};
+      db.ref("family").once("value").then(snapshot => {
+        const data = snapshot.val() || {};
         const elements = [];
+
+        // Create nodes and edges
         Object.keys(data).forEach(id => {
           const person = data[id];
-          elements.push({ data: { id, label: `${person.name}\n${person.birthday || ''}` }});
+          elements.push({
+            data: { id: id, label: `${person.name}\n${person.birthday || ''}` }
+          });
+
           if (person.parent) {
-            elements.push({ data: { id: id + '-parent', source: person.parent, target: id } });
+            elements.push({
+              data: { id: id + '-parent', source: person.parent, target: id }
+            });
           }
+
           if (person.spouse) {
-            elements.push({ data: { id: id + '-spouse', source: id, target: person.spouse }, classes: 'spouse' });
+            // Add spouse edge only once (from smaller id to larger id to avoid duplicates)
+            if (id < person.spouse) {
+              elements.push({
+                data: { id: id + '-' + person.spouse + '-spouse', source: id, target: person.spouse },
+                classes: 'spouse'
+              });
+            }
           }
         });
 
-        if (cy) cy.destroy(); // Clean up existing graph
+        // Destroy old graph if exists
+        if (cy) cy.destroy();
 
+        // Initialize Cytoscape graph
         cy = cytoscape({
           container: document.getElementById('cy'),
           elements,
@@ -96,42 +136,92 @@
                 'text-wrap': 'wrap',
                 'background-color': '#d6f0ff',
                 'shape': 'roundrectangle',
-                'padding': '10px'
+                'padding': '10px',
+                'font-size': 12,
+                'border-width': 1,
+                'border-color': '#999',
+                'width': 'label',
+                'height': 'label',
+                'min-width': 80,
+                'min-height': 40
               }
             },
             {
               selector: 'edge',
-              style: { 'width': 2, 'line-color': '#888' }
+              style: {
+                'width': 2,
+                'line-color': '#888',
+                'target-arrow-shape': 'triangle',
+                'target-arrow-color': '#888',
+                'curve-style': 'bezier'
+              }
             },
             {
               selector: '.spouse',
-              style: { 'line-style': 'dotted', 'target-arrow-shape': 'none' }
+              style: {
+                'line-style': 'dotted',
+                'target-arrow-shape': 'none',
+                'curve-style': 'straight',
+                'line-color': '#c00'
+              }
             }
           ]
         });
 
+        // Node tap handler for edit or delete
         cy.on('tap', 'node', evt => {
-          const id = evt.target.id();
-          const person = data[id];
+          const nodeId = evt.target.id();
+          const person = data[nodeId];
           if (!person) return;
-          const name = prompt("Edit name:", person.name);
-          const birthday = prompt("Edit birthday (YYYY-MM-DD):", person.birthday);
-          if (name !== null && birthday !== null) {
-            db.ref('family/' + id).update({ name, birthday });
-          } else if (confirm("Delete this member?")) {
-            db.ref('family/' + id).remove();
+
+          const newName = prompt("Edit name:", person.name);
+          if (newName === null) return; // Cancelled
+          const newBirthday = prompt("Edit birthday (YYYY-MM-DD):", person.birthday || '');
+          if (newBirthday === null) return; // Cancelled
+
+          if (newName.trim() === "") {
+            // Confirm deletion if name cleared
+            if (confirm("Name is empty. Delete this member?")) {
+              db.ref('family/' + nodeId).remove().then(() => {
+                alert("Member deleted.");
+                loadTree();
+              }).catch(e => alert("Delete failed: " + e.message));
+            }
+            return;
           }
+
+          // Update node info
+          db.ref('family/' + nodeId).update({
+            name: newName.trim(),
+            birthday: newBirthday.trim() || null
+          }).then(() => {
+            loadTree();
+          }).catch(e => alert("Update failed: " + e.message));
         });
+
       }).catch(error => alert("Error loading data: " + error.message));
     }
 
+    // Add new member
     function addNode() {
       const name = prompt("Enter full name:");
-      const birthday = prompt("Birthday (YYYY-MM-DD):");
+      if (!name || name.trim() === "") {
+        alert("Name is required.");
+        return;
+      }
+      const birthday = prompt("Birthday (YYYY-MM-DD, optional):");
       const parent = prompt("Parent ID (optional):");
       const spouse = prompt("Spouse ID (optional):");
+
       const id = db.ref().child("family").push().key;
-      db.ref("family/" + id).set({ name, birthday, parent: parent || null, spouse: spouse || null });
+      db.ref("family/" + id).set({
+        name: name.trim(),
+        birthday: birthday && birthday.trim() !== "" ? birthday.trim() : null,
+        parent: parent && parent.trim() !== "" ? parent.trim() : null,
+        spouse: spouse && spouse.trim() !== "" ? spouse.trim() : null
+      }).then(() => {
+        loadTree();
+      }).catch(e => alert("Add member failed: " + e.message));
     }
   </script>
 </body>
