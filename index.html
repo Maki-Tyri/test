@@ -1,142 +1,147 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <title>Family Tree Realtime</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.24.0/cytoscape.min.js"></script>
-  <style>
-    body { font-family: sans-serif; padding: 20px; }
-    #cy { width: 100%; height: 80vh; border: 1px solid #ccc; margin-top: 10px; }
-    input, button { margin: 5px; padding: 5px; }
-  </style>
-</head>
-<body>
-  <h2>Family Tree (Realtime)</h2>
+// Main React App with Firebase Realtime DB + Auth + Family Tree
+import React, { useEffect, useState } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, onAuthStateChanged, signInWithEmailAndPassword, signOut } from 'firebase/auth';
+import { getDatabase, ref, onValue, set, push, update, remove } from 'firebase/database';
+import Tree from 'react-d3-tree';
 
-  <input type="text" id="userId" placeholder="Enter Your User ID">
-  <button onclick="startListening()">Start Realtime Tree</button>
-  <button onclick="addMember()">Add Member</button>
-  <div id="cy"></div>
+const firebaseConfig = {
+  apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
+  authDomain: "project-955237504610034331.firebaseapp.com",
+  databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
+  projectId: "project-955237504610034331",
+  storageBucket: "project-955237504610034331.firebasestorage.app",
+  messagingSenderId: "76212939677",
+  appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
+  measurementId: "G-RCJ4P82PVM"
+};
 
-  <script>
-    const firebaseConfig = {
-      apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
-      authDomain: "project-955237504610034331.firebaseapp.com",
-      databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
-      projectId: "project-955237504610034331",
-      storageBucket: "project-955237504610034331.appspot.com",
-      messagingSenderId: "76212939677",
-      appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74"
-    };
+const app = initializeApp(firebaseConfig);
+const auth = getAuth();
+const db = getDatabase();
 
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
-    let cy;
-    let currentUserId = '';
-    let membersRef = null;
+export default function App() {
+  const [user, setUser] = useState(null);
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [treeData, setTreeData] = useState([]);
+  const [selectedNode, setSelectedNode] = useState(null);
+  const [nodeForm, setNodeForm] = useState({ name: '', birthday: '', children: [] });
 
-    function startListening() {
-      const uid = document.getElementById('userId').value.trim();
-      if (!uid) return alert("Please enter your User ID.");
-      currentUserId = uid;
+  useEffect(() => {
+    onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+      if (currentUser) {
+        const treeRef = ref(db, 'familyTree');
+        onValue(treeRef, (snapshot) => {
+          const data = snapshot.val();
+          setTreeData(data ? [data] : []);
+        });
+      }
+    });
+  }, []);
 
-      if (membersRef) membersRef.off(); // remove previous listener if exists
+  const login = () => signInWithEmailAndPassword(auth, email, password).catch(alert);
+  const logout = () => signOut(auth);
 
-      membersRef = db.ref("familyTree/members")
-        .orderByKey()
-        .startAt(uid + "_")
-        .endAt(uid + "_\uf8ff");
+  const handleNodeClick = (nodeData) => {
+    setSelectedNode(nodeData);
+    setNodeForm({ ...nodeData, name: nodeData.name || '', birthday: nodeData.birthday || '' });
+  };
 
-      membersRef.on("value", snap => {
-        const data = snap.val() || {};
-        renderTree(data);
+  const saveNode = () => {
+    if (!selectedNode) return;
+    const updates = { name: nodeForm.name, birthday: nodeForm.birthday };
+    const nodePath = selectedNode.__rd3t.id.split('.').join('/');
+    update(ref(db, `familyTree/${nodePath}`), updates);
+  };
+
+  const deleteNode = () => {
+    if (!selectedNode) return;
+    const nodePath = selectedNode.__rd3t.id.split('.').join('/');
+    remove(ref(db, `familyTree/${nodePath}`));
+  };
+
+  const addChild = () => {
+    if (!selectedNode) return;
+    const nodePath = selectedNode.__rd3t.id.split('.').join('/');
+    const newChild = { name: 'New Member', birthday: '', children: [] };
+    push(ref(db, `familyTree/${nodePath}/children`), newChild);
+  };
+
+  if (!user) {
+    return (
+      <div className="p-4">
+        <h1 className="text-xl">Login</h1>
+        <input placeholder="Email" onChange={e => setEmail(e.target.value)} className="block" />
+        <input placeholder="Password" type="password" onChange={e => setPassword(e.target.value)} className="block" />
+        <button onClick={login} className="bg-blue-500 text-white px-4 py-2 mt-2">Login</button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-4">
+      <button onClick={logout} className="bg-red-500 text-white px-4 py-2 mb-4">Logout</button>
+      <div className="w-full h-[600px] border">
+        {treeData.length > 0 && (
+          <Tree
+            data={treeData}
+            translate={{ x: 300, y: 100 }}
+            orientation="vertical"
+            onNodeClick={handleNodeClick}
+          />
+        )}
+      </div>
+      {selectedNode && (
+        <div className="mt-4">
+          <h2>Edit Node</h2>
+          <input value={nodeForm.name} onChange={e => setNodeForm({ ...nodeForm, name: e.target.value })} placeholder="Name" className="block" />
+          <input value={nodeForm.birthday} onChange={e => setNodeForm({ ...nodeForm, birthday: e.target.value })} placeholder="Birthday (YYYY-MM-DD)" className="block" />
+          <button onClick={saveNode} className="bg-green-500 text-white px-4 py-2 mr-2">Save</button>
+          <button onClick={deleteNode} className="bg-gray-500 text-white px-4 py-2 mr-2">Delete</button>
+          <button onClick={addChild} className="bg-blue-500 text-white px-4 py-2">Add Child</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Cloud Function (deploy separately with Firebase Functions)
+// Scheduled birthday check
+// Run this in Firebase Functions index.js
+
+/**
+const functions = require('firebase-functions');
+const admin = require('firebase-admin');
+admin.initializeApp();
+const db = admin.database();
+
+exports.checkBirthdays = functions.pubsub.schedule('every 24 hours').onRun(async (context) => {
+  const today = new Date();
+  const monthDay = `${today.getMonth() + 1}-${today.getDate()}`;
+
+  const snapshot = await db.ref('familyTree').once('value');
+
+  function traverse(node) {
+    if (!node) return [];
+    let birthdays = [];
+    if (node.birthday && node.birthday.slice(5) === monthDay) {
+      birthdays.push(node.name);
+    }
+    if (node.children) {
+      Object.values(node.children).forEach(child => {
+        birthdays = birthdays.concat(traverse(child));
       });
     }
+    return birthdays;
+  }
 
-    function renderTree(data) {
-      const elements = [];
-
-      Object.keys(data).forEach(id => {
-        const person = data[id];
-        elements.push({ data: { id, label: `${person.name}\n${person.birthday || ''}` } });
-
-        if (person.parent && data[person.parent]) {
-          elements.push({ data: { id: id + '-parent', source: person.parent, target: id } });
-        }
-
-        if (person.spouse && data[person.spouse]) {
-          if (id < person.spouse) {
-            elements.push({
-              data: { id: id + '-' + person.spouse + '-spouse', source: id, target: person.spouse },
-              classes: 'spouse'
-            });
-          }
-        }
-      });
-
-      if (cy) cy.destroy();
-
-      cy = cytoscape({
-        container: document.getElementById('cy'),
-        elements,
-        layout: { name: 'breadthfirst', spacingFactor: 1.5, directed: true },
-        style: [
-          {
-            selector: 'node',
-            style: {
-              'label': 'data(label)',
-              'text-valign': 'center',
-              'text-wrap': 'wrap',
-              'background-color': '#cceeff',
-              'shape': 'roundrectangle',
-              'padding': '10px'
-            }
-          },
-          {
-            selector: 'edge',
-            style: { 'width': 2, 'line-color': '#999' }
-          },
-          {
-            selector: '.spouse',
-            style: { 'line-style': 'dotted', 'target-arrow-shape': 'none' }
-          }
-        ]
-      });
-
-      cy.on('tap', 'node', evt => {
-        const id = evt.target.id();
-        const person = data[id];
-        if (!person) return;
-
-        const name = prompt("Edit name:", person.name);
-        const birthday = prompt("Edit birthday (YYYY-MM-DD):", person.birthday);
-        if (name !== null && birthday !== null) {
-          db.ref('familyTree/members/' + id).update({ name, birthday });
-        } else if (confirm("Delete this member?")) {
-          db.ref('familyTree/members/' + id).remove();
-        }
-      });
-    }
-
-    function addMember() {
-      const uid = document.getElementById('userId').value.trim();
-      if (!uid) return alert("Please enter your User ID first.");
-
-      const name = prompt("Full name:");
-      const birthday = prompt("Birthday (YYYY-MM-DD):");
-      const parent = prompt("Parent ID (optional):");
-      const spouse = prompt("Spouse ID (optional):");
-
-      const id = uid + "_" + db.ref().push().key;
-      db.ref("familyTree/members/" + id).set({
-        name,
-        birthday,
-        parent: parent || null,
-        spouse: spouse || null
-      });
-    }
-  </script>
-</body>
-</html>
+  const birthdaysToday = traverse(snapshot.val());
+  if (birthdaysToday.length) {
+    console.log('Birthdays today:', birthdaysToday);
+    // Add notification logic here (e.g., send email, Firebase Messaging, etc.)
+  }
+  return null;
+});
+*/
