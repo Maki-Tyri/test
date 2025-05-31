@@ -1,97 +1,240 @@
-<!-- Updated HTML and JS code for Family Tree -->
-<!-- This version hides spouse info by default and puts it in a collapsible section -->
-
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Family Tree with Spouse - Updated</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-auth.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/8.10.0/firebase-database.js"></script>
   <style>
-    .spouse-toggle {
-      margin-left: 10px;
-      font-size: 0.85rem;
-      color: #2563eb;
-      cursor: pointer;
-      background: none;
-      border: none;
-      padding: 2px 6px;
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background-color: #f4f4f4;
     }
-    .spouse-container {
-      margin-left: 24px;
-      margin-top: 6px;
-      padding-left: 10px;
-      border-left: 2px solid #cbd5e1;
+    .container {
+      padding: 2rem;
+      max-width: 1000px;
+      margin: auto;
+    }
+    #loginDiv, #treeContainer {
+      display: none;
+    }
+    .tree-node {
+      border: 1px solid #ccc;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 10px;
+      background-color: #fff;
+      word-wrap: break-word;
+    }
+    .tree-node h3 {
+      margin: 0 0 0.5rem 0;
+    }
+    .actions button {
+      margin-right: 0.5rem;
+    }
+    .children, .spouses {
+      margin-left: 2rem;
+    }
+    .collapsible {
+      background-color: #eee;
+      cursor: pointer;
+      padding: 0.5rem;
+      width: 100%;
+      border: none;
+      text-align: left;
+      outline: none;
+      font-size: 1rem;
+      margin-top: 0.5rem;
+    }
+    .active, .collapsible:hover {
+      background-color: #ccc;
+    }
+    .content {
+      padding: 0 1rem;
+      display: none;
+      overflow: hidden;
+      background-color: #f9f9f9;
+    }
+    @media (max-width: 600px) {
+      .tree-node, .container {
+        padding: 1rem;
+      }
+      .actions button {
+        display: block;
+        margin-bottom: 0.5rem;
+      }
+    }
+    .login-container {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      background-color: #fff;
+      padding: 2rem;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+    }
+    .login-container input, .login-container button {
+      margin: 0.5rem 0;
+      padding: 0.75rem;
+      width: 100%;
+      max-width: 300px;
+    }
+    .notification {
+      background-color: #fffae6;
+      border-left: 4px solid #ffc107;
+      padding: 1rem;
+      margin: 1rem 0;
     }
   </style>
 </head>
 <body>
-  <!-- Assume login/auth code and container elements are already present -->
+  <div id="loginDiv" class="login-container">
+    <h2>Family Tree Login</h2>
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
+    <button onclick="login()">Login</button>
+  </div>
+
+  <div id="treeContainer" class="container">
+    <h1>Family Tree</h1>
+    <div>
+      <input type="text" id="rootName" placeholder="Root Name">
+      <input type="date" id="rootBirthday">
+      <button onclick="addRootMember()">Add Root Member</button>
+    </div>
+    <div id="notifications"></div>
+    <div id="tree"></div>
+  </div>
 
   <script>
-    // Function to create tree node (simplified for spouse handling only)
-    function createTreeNode(nodeId) {
-      const nodeData = nodesById[nodeId];
-      const container = document.createElement('div');
-      container.classList.add('tree-node');
-      const header = document.createElement('div');
-      header.classList.add('node-header');
-
-      const nameInput = document.createElement('input');
-      nameInput.type = 'text';
-      nameInput.value = nodeData.name;
-      nameInput.classList.add('name-input');
-
-      const birthdayInput = document.createElement('input');
-      birthdayInput.type = 'date';
-      birthdayInput.value = nodeData.birthday || '';
-      birthdayInput.classList.add('birthday-input');
-
-      const spouseToggle = document.createElement('button');
-      spouseToggle.textContent = 'Show Spouse';
-      spouseToggle.classList.add('spouse-toggle');
-
-      const spouseSection = document.createElement('div');
-      spouseSection.classList.add('spouse-container');
-      spouseSection.style.display = 'none';
-
-      const spouseId = findSpouseId(nodeId);
-      if (spouseId) {
-        const spouseData = nodesById[spouseId];
-        const spouseNameInput = document.createElement('input');
-        spouseNameInput.type = 'text';
-        spouseNameInput.value = spouseData.name;
-        spouseNameInput.classList.add('name-input');
-
-        const spouseBirthdayInput = document.createElement('input');
-        spouseBirthdayInput.type = 'date';
-        spouseBirthdayInput.value = spouseData.birthday || '';
-        spouseBirthdayInput.classList.add('birthday-input');
-
-        spouseSection.appendChild(document.createTextNode('Spouse: '));
-        spouseSection.appendChild(spouseNameInput);
-        spouseSection.appendChild(spouseBirthdayInput);
+    var firebaseConfig = {
+      apiKey: "AIzaSyA9OAiLXqkdbj0-o0v-GCf55t9L8DdXk9Y",
+      authDomain: "tree-71f3d.firebaseapp.com",
+      databaseURL: "https://tree-71f3d-default-rtdb.firebaseio.com",
+      projectId: "tree-71f3d",
+      storageBucket: "tree-71f3d.appspot.com",
+      messagingSenderId: "720925500846",
+      appId: "1:720925500846:web:29dbe3c91ae94e3a2d1c3b"
+    };
+    firebase.initializeApp(firebaseConfig);
+    firebase.auth().onAuthStateChanged(user => {
+      if (user) {
+        document.getElementById('loginDiv').style.display = 'none';
+        document.getElementById('treeContainer').style.display = 'block';
+        loadTree();
+        checkBirthdays();
+      } else {
+        document.getElementById('loginDiv').style.display = 'flex';
+        document.getElementById('treeContainer').style.display = 'none';
       }
+    });
 
-      spouseToggle.addEventListener('click', () => {
-        if (spouseSection.style.display === 'none') {
-          spouseSection.style.display = 'block';
-          spouseToggle.textContent = 'Hide Spouse';
-        } else {
-          spouseSection.style.display = 'none';
-          spouseToggle.textContent = 'Show Spouse';
+    function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      firebase.auth().signInWithEmailAndPassword(email, password)
+        .catch(error => alert(error.message));
+    }
+
+    function addRootMember() {
+      const name = document.getElementById("rootName").value;
+      const birthday = document.getElementById("rootBirthday").value;
+      firebase.database().ref("family/root").set({ name, birthday });
+    }
+
+    function loadTree() {
+      firebase.database().ref("family/root").on("value", snapshot => {
+        const root = snapshot.val();
+        if (root) {
+          document.getElementById("tree").innerHTML = renderNode(root, "root");
         }
       });
-
-      header.appendChild(nameInput);
-      header.appendChild(birthdayInput);
-      if (spouseId) header.appendChild(spouseToggle);
-
-      container.appendChild(header);
-      if (spouseId) container.appendChild(spouseSection);
-
-      return container;
     }
+
+    function renderNode(member, path) {
+      let deceasedMarker = member.deceased ? "<strong> (Deceased)</strong>" : "";
+      let html = `<div class='tree-node'><h3>${member.name}${deceasedMarker}</h3>
+        <p>Birthday: ${member.birthday || "N/A"}</p>
+        <div class='actions'>
+          <button onclick="addChild('${path}')">+ Child</button>
+          <button onclick="addSpouse('${path}')">+ Spouse</button>
+          <button onclick="deleteMember('${path}')">Delete</button>
+        </div>`;
+
+      if (member.spouses) {
+        html += `<button class='collapsible'>Show Spouses</button><div class='content spouses'>`;
+        member.spouses.forEach((spouse, i) => {
+          html += renderNode(spouse, `${path}/spouses/${i}`);
+        });
+        html += `</div>`;
+      }
+
+      if (member.children) {
+        html += `<div class='children'>`;
+        member.children.forEach((child, i) => {
+          html += renderNode(child, `${path}/children/${i}`);
+        });
+        html += `</div>`;
+      }
+      html += `</div>`;
+      return html;
+    }
+
+    function addChild(path) {
+      const name = prompt("Child's Name");
+      const birthday = prompt("Child's Birthday (YYYY-MM-DD)");
+      if (name && birthday) {
+        firebase.database().ref(`family/${path}/children`).once("value", snapshot => {
+          const children = snapshot.val() || [];
+          children.push({ name, birthday });
+          firebase.database().ref(`family/${path}/children`).set(children);
+        });
+      }
+    }
+
+    function addSpouse(path) {
+      const name = prompt("Spouse's Name");
+      const birthday = prompt("Spouse's Birthday (YYYY-MM-DD)");
+      if (name && birthday) {
+        firebase.database().ref(`family/${path}/spouses`).once("value", snapshot => {
+          const spouses = snapshot.val() || [];
+          spouses.push({ name, birthday });
+          firebase.database().ref(`family/${path}/spouses`).set(spouses);
+        });
+      }
+    }
+
+    function deleteMember(path) {
+      if (confirm("Are you sure you want to delete this member?")) {
+        firebase.database().ref(`family/${path}`).remove();
+      }
+    }
+
+    function checkBirthdays() {
+      firebase.database().ref("family").once("value", snapshot => {
+        const notifications = [];
+        function check(member) {
+          if (member.birthday && new Date(member.birthday).getMonth() === new Date().getMonth()) {
+            notifications.push(`${member.name}'s birthday is this month!`);
+          }
+          (member.children || []).forEach(check);
+          (member.spouses || []).forEach(check);
+        }
+        check(snapshot.val().root);
+        document.getElementById("notifications").innerHTML = notifications.map(msg => `<div class='notification'>${msg}</div>`).join('');
+      });
+    }
+
+    document.addEventListener("click", function(e) {
+      if (e.target && e.target.classList.contains("collapsible")) {
+        e.target.classList.toggle("active");
+        const content = e.target.nextElementSibling;
+        content.style.display = content.style.display === "block" ? "none" : "block";
+      }
+    });
   </script>
 </body>
 </html>
