@@ -2,95 +2,61 @@
 <html lang="en" >
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Family Tree</title>
   <style>
+    /* Base styles */
     body {
       font-family: Arial, sans-serif;
       background: #f9fafb;
       margin: 0;
       padding: 0;
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: flex-start;
-      padding: 20px;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
     }
-
-    /* Login container */
     #login-container, #app-container {
       max-width: 700px;
-      width: 100%;
+      margin: 40px auto;
       background: white;
-      border-radius: 12px;
-      box-shadow: 0 8px 20px rgba(0,0,0,0.1);
-      padding: 30px 25px 35px;
+      border-radius: 8px;
+      box-shadow: 0 4px 12px rgb(0 0 0 / 0.1);
+      padding: 20px;
+    }
+    input, select, button {
+      padding: 10px;
+      margin: 5px 0;
       box-sizing: border-box;
-    }
-
-    /* Login styling */
-    #login-container h2 {
-      margin-bottom: 25px;
-      font-weight: 700;
-      font-size: 1.8rem;
-      color: #1e293b;
-      text-align: center;
-    }
-    #login-container input {
-      width: 100%;
-      padding: 14px 12px;
-      margin-bottom: 16px;
       font-size: 1rem;
-      border-radius: 8px;
-      border: 1.8px solid #94a3b8;
-      outline-offset: 2px;
-      outline-color: transparent;
-      transition: border-color 0.25s ease;
-      box-sizing: border-box;
-      font-weight: 500;
+      border-radius: 4px;
+      border: 1px solid #ccc;
     }
-    #login-container input:focus {
-      border-color: #2563eb;
-      outline-color: #2563eb;
-      outline-offset: 2px;
-    }
-    #login-btn {
+    input[type="text"], input[type="date"], input[type="email"], input[type="password"], select {
       width: 100%;
-      padding: 14px;
-      font-size: 1.1rem;
-      font-weight: 700;
-      border-radius: 8px;
-      border: none;
-      background: linear-gradient(90deg, #2563eb 0%, #1e40af 100%);
-      color: white;
+      max-width: 300px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    button {
       cursor: pointer;
-      box-shadow: 0 4px 8px rgb(37 99 235 / 0.3);
-      transition: background 0.3s ease;
+      border: none;
+      background-color: #2563eb;
+      color: white;
+      font-weight: bold;
+      transition: background-color 0.2s;
+      border-radius: 4px;
     }
-    #login-btn:hover {
-      background: linear-gradient(90deg, #1e40af 0%, #2563eb 100%);
-      box-shadow: 0 6px 15px rgb(30 64 175 / 0.4);
+    button:hover:not(:disabled) {
+      background-color: #1e40af;
     }
-    #login-error {
-      margin-top: 6px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      color: #ef4444;
-      text-align: center;
-      min-height: 22px;
+    button:disabled {
+      background-color: #9ca3af;
+      cursor: not-allowed;
     }
-
-    /* App container */
-    #app-container h2 {
-      text-align: center;
-      margin-top: 0;
-      font-weight: 700;
-      font-size: 2rem;
-      color: #334155;
-      margin-bottom: 20px;
+    #login-btn, #logout-btn, #signup-btn {
+      width: 100%;
+      max-width: none;
     }
-
     #birthday-notifications {
       background: #d1fae5;
       color: #065f46;
@@ -98,71 +64,22 @@
       margin-bottom: 20px;
       border-radius: 6px;
       font-weight: bold;
-      font-size: 1rem;
-      text-align: center;
     }
-
-    #add-root-container {
-      margin-bottom: 25px;
-      border: 1px solid #cbd5e1;
-      padding: 18px;
-      border-radius: 10px;
-      background: #f3f4f6;
-    }
-    #add-root-container h3 {
-      margin-top: 0;
-      font-weight: 700;
-      color: #334155;
-      font-size: 1.4rem;
-      margin-bottom: 12px;
-    }
-    #add-root-form {
-      display: flex;
-      gap: 10px;
-      flex-wrap: wrap;
-      align-items: center;
-    }
-    #add-root-form input[type="text"], #add-root-form input[type="date"], #add-root-form select {
-      flex: 1 1 180px;
-      padding: 10px 12px;
-      font-size: 1rem;
-      border-radius: 6px;
-      border: 1.5px solid #94a3b8;
-      font-weight: 500;
-      box-sizing: border-box;
-    }
-    #add-root-form button {
-      flex: 0 0 auto;
-      background-color: #2563eb;
-      padding: 12px 25px;
-      font-size: 1.05rem;
-      font-weight: 700;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      color: white;
-      transition: background-color 0.25s ease;
-    }
-    #add-root-form button:hover {
-      background-color: #1e40af;
-    }
-
-    /* Tree node styling */
+    /* Tree Node */
     .tree-node {
       margin-left: 20px;
       position: relative;
-      border-left: 1px dashed #cbd5e1;
+      border-left: 1px dashed #ccc;
       padding-left: 12px;
-      margin-bottom: 14px;
-      word-wrap: break-word;
-      max-width: 100%;
+      margin-bottom: 8px;
     }
     .node-header {
       display: flex;
       align-items: center;
       gap: 8px;
-      margin-bottom: 6px;
+      margin-bottom: 4px;
       flex-wrap: wrap;
+      min-width: 0; /* for overflow */
     }
     .arrow {
       display: inline-block;
@@ -170,57 +87,49 @@
       user-select: none;
       cursor: pointer;
       transition: transform 0.2s ease;
-      color: #475569;
-      font-weight: 700;
       flex-shrink: 0;
     }
     .arrow.collapsed {
       transform: rotate(-90deg);
     }
-    input[type="text"].name-input,
-    select.gender-select {
-      min-width: 150px;
-      max-width: 260px;
-      font-size: 1rem;
-      border-radius: 6px;
-      border: 1.5px solid #cbd5e1;
-      padding: 6px 8px;
-      font-weight: 600;
-      box-sizing: border-box;
+    input.name-input, select.gender-select {
+      width: 180px;
+      max-width: 100%;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
       flex-shrink: 1;
     }
-    input[type="text"].name-input {
-      /* full name visible */
-      width: 220px;
+    input.birthday-input, input.date-input {
+      width: 140px;
+      max-width: 100%;
     }
-    input[type="date"].birthday-input,
-    input[type="date"].deceased-input {
-      width: 135px;
-      padding: 6px 8px;
-      font-size: 0.9rem;
-      border-radius: 6px;
-      border: 1.5px solid #cbd5e1;
-      box-sizing: border-box;
-      font-weight: 500;
+    .deceased-label {
+      color: #ef4444;
+      font-weight: bold;
+      margin-left: 6px;
+      user-select: none;
+      flex-shrink: 0;
     }
-
+    .gender-label {
+      font-size: 0.85rem;
+      color: #555;
+      margin-left: 6px;
+      user-select: none;
+      flex-shrink: 0;
+    }
     .node-buttons {
       display: flex;
       gap: 8px;
       margin-left: auto;
       flex-wrap: nowrap;
+      flex-shrink: 0;
     }
     .node-buttons button {
       font-size: 0.85rem;
-      padding: 5px 12px;
+      padding: 4px 10px;
       width: auto;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      font-weight: 700;
-      color: white;
-      transition: filter 0.2s ease;
-      box-shadow: 0 2px 6px rgb(0 0 0 / 0.15);
+      border-radius: 4px;
     }
     .node-buttons button.add-child-btn {
       background-color: #10b981;
@@ -231,776 +140,827 @@
     .node-buttons button.delete-btn {
       background-color: #ef4444;
     }
-    .node-buttons button:hover {
+    .node-buttons button:hover:not(:disabled) {
       filter: brightness(85%);
     }
-
     .add-child-form, .add-spouse-form {
       margin-left: 36px;
       margin-bottom: 10px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      max-width: 100%;
+    }
+    .add-child-form input[type="text"], .add-spouse-form input[type="text"],
+    .add-child-form input[type="date"], .add-spouse-form input[type="date"],
+    .add-child-form select, .add-spouse-form select {
+      font-size: 0.9rem;
+      padding: 5px 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      max-width: 180px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .add-child-form button, .add-spouse-form button {
+      background-color: #10b981;
+      padding: 6px 12px;
+      font-size: 0.9rem;
+      border-radius: 4px;
+      border: none;
+      cursor: pointer;
+      color: white;
+      flex-shrink: 0;
+      max-width: 100px;
+    }
+    .add-child-form button:hover, .add-spouse-form button:hover {
+      filter: brightness(90%);
+    }
+    #add-root-container {
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 6px;
+      background: #f3f4f6;
+    }
+    #add-root-container h3 {
+      margin-top: 0;
+    }
+    #add-root-form {
       display: flex;
       gap: 10px;
       flex-wrap: wrap;
       align-items: center;
     }
-    .add-child-form input[type="text"], .add-spouse-form input[type="text"] {
+    #add-root-form input[type="text"], #add-root-form input[type="date"], #add-root-form select {
       flex: 1 1 180px;
-      padding: 6px 10px;
+      padding: 8px;
       font-size: 1rem;
-      border-radius: 6px;
-      border: 1.5px solid #cbd5e1;
-      font-weight: 600;
-      box-sizing: border-box;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
-    .add-child-form button, .add-spouse-form button {
+    #add-root-form button {
+      flex: 0 0 auto;
       background-color: #2563eb;
-      padding: 7px 18px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      border-radius: 6px;
+      padding: 10px 20px;
+      font-size: 1rem;
+      border-radius: 4px;
       border: none;
       cursor: pointer;
       color: white;
-      transition: background-color 0.25s ease;
     }
-    .add-child-form button:hover, .add-spouse-form button:hover {
-      background-color: #1e40af;
-    }
-
-    /* Collapsible spouse and marriages */
-    .spouse-section {
+    /* Marriages section */
+    .marriages-container {
       margin-left: 36px;
-      margin-top: 8px;
       margin-bottom: 10px;
-      font-weight: 600;
+      border-left: 2px solid #3b82f6;
+      padding-left: 10px;
     }
-    .marriages-toggle {
-      background: none;
-      border: none;
-      color: #2563eb;
-      font-weight: 700;
-      font-size: 1rem;
+    .marriages-header {
+      font-weight: bold;
       cursor: pointer;
       user-select: none;
-      margin-bottom: 6px;
-      padding: 0;
-    }
-    .marriages-content {
-      margin-left: 12px;
-      border-left: 2px solid #e0e7ff;
-      padding-left: 12px;
-      margin-bottom: 12px;
-    }
-
-    .spouse-entry {
+      color: #2563eb;
       display: flex;
       align-items: center;
-      gap: 8px;
+      gap: 4px;
+    }
+    .marriages-arrow {
+      transition: transform 0.2s ease;
+    }
+    .marriages-arrow.collapsed {
+      transform: rotate(-90deg);
+    }
+    .marriage-item {
+      margin-left: 20px;
+      margin-top: 6px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
       flex-wrap: wrap;
-      margin-bottom: 6px;
     }
-    .spouse-entry input[type="text"], .spouse-entry select {
-      width: 190px;
+    .marriage-item input.name-input,
+    .marriage-item input.birthday-input,
+    .marriage-item select.gender-select {
+      width: 160px;
+      max-width: 100%;
     }
-    .spouse-entry input[type="date"] {
-      width: 130px;
+    .marriage-item .deceased-label {
+      margin-left: 0;
     }
-    .spouse-entry button.delete-spouse-btn {
-      background-color: #ef4444;
-      font-weight: 700;
-      font-size: 0.85rem;
-      padding: 5px 10px;
-      border-radius: 6px;
-      border: none;
-      cursor: pointer;
-      color: white;
-      box-shadow: 0 1px 4px rgb(0 0 0 / 0.15);
-      transition: filter 0.15s ease;
+    .marriage-item button.delete-btn {
+      padding: 3px 8px;
+      font-size: 0.75rem;
     }
-    .spouse-entry button.delete-spouse-btn:hover {
-      filter: brightness(85%);
-    }
-
-    /* If deceased - strikethrough and red */
-    .deceased .name-input {
-      color: #b91c1c;
-      text-decoration: line-through;
-    }
-    .deceased .deceased-label {
-      color: #b91c1c;
-      font-weight: 700;
-      font-size: 0.9rem;
-      margin-left: 6px;
-    }
-
-    /* Birthday notification styling */
-    .birthday-highlight {
-      background-color: #fef3c7;
-      font-weight: 700;
-      border-radius: 6px;
-      padding: 2px 6px;
-      color: #92400e;
-    }
-
-    /* Responsive */
+    /* Responsive for mobile */
     @media (max-width: 600px) {
-      body {
-        padding: 15px 10px;
-      }
       #login-container, #app-container {
-        padding: 20px 16px 24px;
+        margin: 20px 10px;
+        padding: 15px;
       }
-      .tree-node {
-        margin-left: 12px;
-        padding-left: 10px;
-        margin-bottom: 14px;
+      input.name-input, select.gender-select {
+        width: 100%;
+        max-width: none;
       }
-      input[type="text"].name-input {
-        width: 140px;
-        font-size: 0.95rem;
-      }
-      input[type="date"].birthday-input,
-      input[type="date"].deceased-input {
-        width: 110px;
-      }
-      select.gender-select {
-        min-width: 90px;
-      }
-      .node-header {
-        gap: 6px;
+      input.birthday-input, input.date-input {
+        width: 100%;
+        max-width: none;
       }
       .node-buttons {
-        flex-wrap: wrap;
+        margin-top: 8px;
         margin-left: 0;
-        gap: 6px;
-        margin-top: 6px;
+        flex-wrap: wrap;
       }
       .node-buttons button {
-        flex: 1 1 48%;
+        flex: 1 1 45%;
+        margin-bottom: 6px;
       }
       .add-child-form, .add-spouse-form {
-        margin-left: 20px;
-        gap: 6px;
+        flex-direction: column;
+        align-items: stretch;
+      }
+      .add-child-form input, .add-spouse-form input,
+      .add-child-form select, .add-spouse-form select {
+        width: 100%;
+        max-width: none;
+      }
+      .add-child-form button, .add-spouse-form button {
+        width: 100%;
+        max-width: none;
       }
       #add-root-form {
         flex-direction: column;
-        gap: 12px;
+        align-items: stretch;
       }
-      #add-root-form input[type="text"], #add-root-form select, #add-root-form input[type="date"], #add-root-form button {
+      #add-root-form input, #add-root-form select, #add-root-form button {
         width: 100%;
+        max-width: none;
+        margin-bottom: 10px;
       }
-      .spouse-entry {
-        flex-direction: column;
-        gap: 6px;
-      }
-      .spouse-entry input[type="text"], .spouse-entry select, .spouse-entry input[type="date"] {
+      .marriage-item input, .marriage-item select {
         width: 100%;
+        max-width: none;
       }
-      .spouse-entry button.delete-spouse-btn {
-        width: 100%;
-      }
+    }
+    /* Login form */
+    #login-container h2 {
+      margin-top: 0;
+      text-align: center;
+    }
+    #login-form, #signup-form {
+      display: flex;
+      flex-direction: column;
+      gap: 15px;
+    }
+    #login-form input, #signup-form input {
+      font-size: 1rem;
+      padding: 10px;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    #signup-form {
+      margin-top: 20px;
+      border-top: 1px solid #ddd;
+      padding-top: 20px;
+    }
+    #signup-form h3 {
+      margin: 0 0 10px 0;
+      text-align: center;
+      color: #2563eb;
+    }
+    #error-msg {
+      color: #ef4444;
+      text-align: center;
+      margin-bottom: 12px;
     }
   </style>
 </head>
 <body>
 
-<!-- LOGIN -->
-<div id="login-container" aria-label="Login form">
-  <h2>Login to Family Tree</h2>
-  <input type="text" id="username" placeholder="Enter username" aria-label="Username" autocomplete="username" />
-  <input type="password" id="password" placeholder="Enter password" aria-label="Password" autocomplete="current-password" />
-  <button id="login-btn" aria-label="Login">Login</button>
-  <div id="login-error" role="alert" aria-live="assertive"></div>
+<div id="login-container" style="display:none;">
+  <h2>Login</h2>
+  <div id="error-msg"></div>
+  <form id="login-form">
+    <input type="email" id="login-email" placeholder="Email" required autocomplete="username" />
+    <input type="password" id="login-password" placeholder="Password" required autocomplete="current-password" />
+    <button type="submit" id="login-btn">Login</button>
+  </form>
+
+  <form id="signup-form">
+    <h3>Create an Account</h3>
+    <input type="email" id="signup-email" placeholder="Email" required autocomplete="email" />
+    <input type="password" id="signup-password" placeholder="Password (min 6 chars)" required autocomplete="new-password" minlength="6" />
+    <input type="password" id="signup-password-confirm" placeholder="Confirm Password" required autocomplete="new-password" minlength="6" />
+    <button type="submit" id="signup-btn">Sign Up</button>
+  </form>
 </div>
 
-<!-- APP -->
 <div id="app-container" style="display:none;">
-  <h2>Your Family Tree</h2>
-  <div id="birthday-notifications" aria-live="polite"></div>
-  <div id="add-root-container" aria-label="Add root family member">
+  <button id="logout-btn" style="margin-bottom: 20px;">Logout</button>
+  <div id="birthday-notifications"></div>
+
+  <div id="add-root-container">
     <h3>Add Root Family Member</h3>
-    <form id="add-root-form" autocomplete="off">
-      <input type="text" id="root-name" placeholder="Full Name" required aria-label="Full Name" />
-      <select id="root-gender" aria-label="Gender" required>
-        <option value="" disabled selected>Select gender</option>
+    <form id="add-root-form">
+      <input type="text" id="root-name" placeholder="Full Name" required />
+      <select id="root-gender" required>
+        <option value="" disabled selected>Select Gender</option>
         <option value="Male">Male</option>
         <option value="Female">Female</option>
         <option value="Other">Other</option>
       </select>
-      <input type="date" id="root-birthday" placeholder="Birthday" aria-label="Birthday" />
-      <button type="submit" aria-label="Add root family member">Add</button>
+      <input type="date" id="root-birthday" placeholder="Birthday" required />
+      <label style="display:flex; align-items:center; gap:5px;">
+        <input type="checkbox" id="root-deceased" />
+        Deceased
+      </label>
+      <button type="submit">Add Root Member</button>
     </form>
   </div>
-  <div id="family-tree" aria-label="Family tree"></div>
+
+  <div id="family-tree"></div>
 </div>
 
 <script>
-  // Simulated user authentication for demo purposes
-  const usersDB = [
-    { username: "user1", password: "password1" },
-    { username: "user2", password: "password2" }
-  ];
+  // Firebase config + initialization
+  // Replace with your Firebase config
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "SENDER_ID",
+    appId: "APP_ID"
+  };
+  // Initialize Firebase
+  // Since we can't import Firebase libraries here, user must include Firebase scripts in HTML or this won't run.
+  // This example will keep UI logic ready, you should add Firebase SDK scripts and initialize as needed.
 
-  // Initial family data: empty
-  let familyTreeData = [];
+  // -- MOCK AUTH AND STORAGE for demo purposes (since no Firebase scripts loaded) --
+  // Replace this with actual Firebase auth and Firestore code for real app
 
-  // Currently logged in username (if needed)
-  let currentUser = null;
+  let loggedInUser = null;
 
-  // Helper: save family tree to localStorage per user
-  function saveFamilyTree() {
-    if (!currentUser) return;
-    localStorage.setItem(`familyTree_${currentUser}`, JSON.stringify(familyTreeData));
+  // Simple mock login/signup/logout:
+  function mockLogin(email, password) {
+    return new Promise((resolve, reject) => {
+      if(email && password) {
+        loggedInUser = { email };
+        resolve(loggedInUser);
+      } else {
+        reject(new Error("Invalid credentials"));
+      }
+    });
+  }
+  function mockSignup(email, password) {
+    return new Promise((resolve, reject) => {
+      if(email && password.length >= 6) {
+        loggedInUser = { email };
+        resolve(loggedInUser);
+      } else {
+        reject(new Error("Signup failed"));
+      }
+    });
+  }
+  function mockLogout() {
+    loggedInUser = null;
+    return Promise.resolve();
   }
 
-  // Helper: load family tree from localStorage per user
-  function loadFamilyTree() {
-    if (!currentUser) return;
-    const saved = localStorage.getItem(`familyTree_${currentUser}`);
-    if (saved) {
-      try {
-        familyTreeData = JSON.parse(saved);
-      } catch {
-        familyTreeData = [];
-      }
+  // --- App State ---
+  let familyData = [];
+  // familyData is array of members:
+  // Each member: { id, name, birthday (YYYY-MM-DD), gender, deceased (bool), spouses: [], children: [] }
+  // spouses: array of members with same structure (except children usually empty)
+  // children: array of members
+
+  // ID generation
+  function generateId() {
+    return 'id-' + Math.random().toString(36).slice(2, 10);
+  }
+
+  // --- Load/save from localStorage for demo ---
+  function loadFamilyData() {
+    const saved = localStorage.getItem('familyData');
+    if(saved) {
+      familyData = JSON.parse(saved);
     } else {
-      familyTreeData = [];
+      familyData = [];
     }
   }
-
-  // Unique ID generator for nodes
-  function generateId() {
-    return 'id-' + Math.random().toString(36).substr(2, 9);
+  function saveFamilyData() {
+    localStorage.setItem('familyData', JSON.stringify(familyData));
   }
 
-  // LOGIN HANDLING
+  // --- Birthday notifications ---
+  function checkTodaysBirthdays() {
+    const todayStr = new Date().toISOString().slice(5,10); // MM-DD
+    let bdays = [];
+    function checkMember(member) {
+      if(member.birthday && !member.deceased) {
+        let m = member.birthday.slice(5,10);
+        if(m === todayStr) {
+          bdays.push(member.name);
+        }
+      }
+      if(member.spouses) member.spouses.forEach(checkMember);
+      if(member.children) member.children.forEach(checkMember);
+    }
+    familyData.forEach(checkMember);
+    return bdays;
+  }
+
+  // --- UI Rendering ---
+  const familyTreeEl = document.getElementById('family-tree');
+  const birthdayNotificationEl = document.getElementById('birthday-notifications');
+
+  function render() {
+    familyTreeEl.innerHTML = '';
+    if(familyData.length === 0) {
+      familyTreeEl.textContent = "No family members added yet.";
+      birthdayNotificationEl.textContent = "";
+      return;
+    }
+    // Show birthday notifications
+    const birthdays = checkTodaysBirthdays();
+    if(birthdays.length > 0) {
+      birthdayNotificationEl.textContent = `🎉 Happy Birthday to: ${birthdays.join(', ')}`;
+    } else {
+      birthdayNotificationEl.textContent = "";
+    }
+
+    familyData.forEach(member => {
+      const nodeEl = createMemberNode(member);
+      familyTreeEl.appendChild(nodeEl);
+    });
+  }
+
+  // Helper: create DOM elements for members recursively
+  function createMemberNode(member) {
+    const node = document.createElement('div');
+    node.className = 'tree-node';
+
+    // Header row
+    const header = document.createElement('div');
+    header.className = 'node-header';
+
+    // Collapse arrow for children
+    const arrow = document.createElement('span');
+    arrow.className = 'arrow';
+    arrow.textContent = '▼';
+    arrow.style.userSelect = 'none';
+
+    // Collapsible state stored on element
+    arrow.collapsed = false;
+
+    // Toggle children visibility
+    arrow.addEventListener('click', () => {
+      arrow.collapsed = !arrow.collapsed;
+      arrow.classList.toggle('collapsed', arrow.collapsed);
+      if(childrenContainer.style.display === 'none') {
+        childrenContainer.style.display = 'block';
+      } else {
+        childrenContainer.style.display = 'none';
+      }
+    });
+
+    header.appendChild(arrow);
+
+    // Name input
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.className = 'name-input';
+    nameInput.value = member.name;
+    nameInput.title = member.name;
+    nameInput.disabled = member.deceased;
+    nameInput.addEventListener('change', () => {
+      member.name = nameInput.value.trim();
+      saveFamilyData();
+      render();
+    });
+    header.appendChild(nameInput);
+
+    // Gender select
+    const genderSelect = document.createElement('select');
+    genderSelect.className = 'gender-select';
+    ['Male', 'Female', 'Other'].forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g;
+      opt.textContent = g;
+      if(member.gender === g) opt.selected = true;
+      genderSelect.appendChild(opt);
+    });
+    genderSelect.disabled = member.deceased;
+    genderSelect.addEventListener('change', () => {
+      member.gender = genderSelect.value;
+      saveFamilyData();
+      render();
+    });
+    header.appendChild(genderSelect);
+
+    // Birthday input
+    const birthdayInput = document.createElement('input');
+    birthdayInput.type = 'date';
+    birthdayInput.className = 'birthday-input';
+    birthdayInput.value = member.birthday || '';
+    birthdayInput.disabled = member.deceased;
+    birthdayInput.addEventListener('change', () => {
+      member.birthday = birthdayInput.value;
+      saveFamilyData();
+      render();
+    });
+    header.appendChild(birthdayInput);
+
+    // Deceased checkbox label
+    if(member.deceased) {
+      const deadLabel = document.createElement('span');
+      deadLabel.className = 'deceased-label';
+      deadLabel.textContent = '💀 Deceased';
+      header.appendChild(deadLabel);
+    }
+
+    // Node buttons container
+    const buttonsDiv = document.createElement('div');
+    buttonsDiv.className = 'node-buttons';
+
+    // Add child button
+    const addChildBtn = document.createElement('button');
+    addChildBtn.textContent = 'Add Child';
+    addChildBtn.className = 'add-child-btn';
+    addChildBtn.disabled = member.deceased;
+    buttonsDiv.appendChild(addChildBtn);
+
+    // Add spouse button
+    const addSpouseBtn = document.createElement('button');
+    addSpouseBtn.textContent = 'Add Spouse';
+    addSpouseBtn.className = 'add-spouse-btn';
+    addSpouseBtn.disabled = member.deceased;
+    buttonsDiv.appendChild(addSpouseBtn);
+
+    // Delete button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.disabled = false;
+    buttonsDiv.appendChild(deleteBtn);
+
+    header.appendChild(buttonsDiv);
+
+    node.appendChild(header);
+
+    // Children container
+    const childrenContainer = document.createElement('div');
+    childrenContainer.style.marginLeft = '24px';
+
+    // Add child form container (hidden initially)
+    let addChildFormEl = null;
+    addChildBtn.addEventListener('click', () => {
+      if(addChildFormEl) {
+        addChildFormEl.remove();
+        addChildFormEl = null;
+        return;
+      }
+      addChildFormEl = createAddMemberForm('child', (newMember) => {
+        if(!member.children) member.children = [];
+        member.children.push(newMember);
+        saveFamilyData();
+        render();
+      });
+      childrenContainer.appendChild(addChildFormEl);
+    });
+
+    // Add spouse form container (hidden initially)
+    let addSpouseFormEl = null;
+    addSpouseBtn.addEventListener('click', () => {
+      if(addSpouseFormEl) {
+        addSpouseFormEl.remove();
+        addSpouseFormEl = null;
+        return;
+      }
+      addSpouseFormEl = createAddMemberForm('spouse', (newMember) => {
+        if(!member.spouses) member.spouses = [];
+        member.spouses.push(newMember);
+        saveFamilyData();
+        render();
+      });
+      childrenContainer.appendChild(addSpouseFormEl);
+    });
+
+    // Delete logic
+    deleteBtn.addEventListener('click', () => {
+      if(confirm(`Delete member "${member.name}" and all descendants?`)) {
+        // Remove from familyData or parent's children or spouse list
+        const removed = removeMemberById(member.id);
+        if(removed) {
+          saveFamilyData();
+          render();
+        }
+      }
+    });
+
+    // Show children
+    if(member.children && member.children.length > 0) {
+      member.children.forEach(child => {
+        const childNode = createMemberNode(child);
+        childrenContainer.appendChild(childNode);
+      });
+    }
+
+    node.appendChild(childrenContainer);
+
+    // Marriages section (if spouses exist)
+    if(member.spouses && member.spouses.length > 0) {
+      const marriagesContainer = document.createElement('div');
+      marriagesContainer.className = 'marriages-container';
+
+      const marriagesHeader = document.createElement('div');
+      marriagesHeader.className = 'marriages-header';
+
+      const marriagesArrow = document.createElement('span');
+      marriagesArrow.className = 'marriages-arrow';
+      marriagesArrow.textContent = '▼';
+      marriagesArrow.collapsed = false;
+      marriagesHeader.appendChild(marriagesArrow);
+
+      const headerText = document.createElement('span');
+      headerText.textContent = `Marriages (${member.spouses.length})`;
+      marriagesHeader.appendChild(headerText);
+
+      marriagesContainer.appendChild(marriagesHeader);
+
+      const spousesList = document.createElement('div');
+      spousesList.style.marginLeft = '20px';
+
+      // Toggle spouses visibility
+      marriagesHeader.addEventListener('click', () => {
+        marriagesArrow.collapsed = !marriagesArrow.collapsed;
+        marriagesArrow.classList.toggle('collapsed', marriagesArrow.collapsed);
+        spousesList.style.display = marriagesArrow.collapsed ? 'none' : 'block';
+      });
+
+      member.spouses.forEach((spouse, idx) => {
+        const spouseDiv = document.createElement('div');
+        spouseDiv.className = 'marriage-item';
+
+        // Spouse name input
+        const spouseNameInput = document.createElement('input');
+        spouseNameInput.type = 'text';
+        spouseNameInput.className = 'name-input';
+        spouseNameInput.value = spouse.name;
+        spouseNameInput.title = spouse.name;
+        spouseNameInput.disabled = spouse.deceased;
+        spouseNameInput.addEventListener('change', () => {
+          spouse.name = spouseNameInput.value.trim();
+          saveFamilyData();
+          render();
+        });
+        spouseDiv.appendChild(spouseNameInput);
+
+        // Spouse gender select
+        const spouseGenderSelect = document.createElement('select');
+        spouseGenderSelect.className = 'gender-select';
+        ['Male', 'Female', 'Other'].forEach(g => {
+          const opt = document.createElement('option');
+          opt.value = g;
+          opt.textContent = g;
+          if(spouse.gender === g) opt.selected = true;
+          spouseGenderSelect.appendChild(opt);
+        });
+        spouseGenderSelect.disabled = spouse.deceased;
+        spouseGenderSelect.addEventListener('change', () => {
+          spouse.gender = spouseGenderSelect.value;
+          saveFamilyData();
+          render();
+        });
+        spouseDiv.appendChild(spouseGenderSelect);
+
+        // Spouse birthday input
+        const spouseBirthdayInput = document.createElement('input');
+        spouseBirthdayInput.type = 'date';
+        spouseBirthdayInput.className = 'birthday-input';
+        spouseBirthdayInput.value = spouse.birthday || '';
+        spouseBirthdayInput.disabled = spouse.deceased;
+        spouseBirthdayInput.addEventListener('change', () => {
+          spouse.birthday = spouseBirthdayInput.value;
+          saveFamilyData();
+          render();
+        });
+        spouseDiv.appendChild(spouseBirthdayInput);
+
+        // Deceased label
+        if(spouse.deceased) {
+          const deadLabel = document.createElement('span');
+          deadLabel.className = 'deceased-label';
+          deadLabel.textContent = '💀 Deceased';
+          spouseDiv.appendChild(deadLabel);
+        }
+
+        // Delete spouse button
+        const delSpouseBtn = document.createElement('button');
+        delSpouseBtn.className = 'delete-btn';
+        delSpouseBtn.textContent = 'Delete Spouse';
+        delSpouseBtn.addEventListener('click', () => {
+          if(confirm(`Remove spouse "${spouse.name}"?`)) {
+            member.spouses.splice(idx,1);
+            saveFamilyData();
+            render();
+          }
+        });
+        spouseDiv.appendChild(delSpouseBtn);
+
+        spousesList.appendChild(spouseDiv);
+      });
+
+      marriagesContainer.appendChild(spousesList);
+      node.appendChild(marriagesContainer);
+    }
+
+    return node;
+  }
+
+  // Create form for adding child or spouse
+  function createAddMemberForm(type, onAdd) {
+    const form = document.createElement('form');
+    form.className = type === 'child' ? 'add-child-form' : 'add-spouse-form';
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.placeholder = `New ${type} full name`;
+    nameInput.required = true;
+    form.appendChild(nameInput);
+
+    const genderSelect = document.createElement('select');
+    genderSelect.required = true;
+    ['Male', 'Female', 'Other'].forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g;
+      opt.textContent = g;
+      genderSelect.appendChild(opt);
+    });
+    form.appendChild(genderSelect);
+
+    const birthdayInput = document.createElement('input');
+    birthdayInput.type = 'date';
+    birthdayInput.placeholder = 'Birthday';
+    birthdayInput.required = true;
+    form.appendChild(birthdayInput);
+
+    const deceasedLabel = document.createElement('label');
+    deceasedLabel.style.display = 'flex';
+    deceasedLabel.style.alignItems = 'center';
+    deceasedLabel.style.gap = '4px';
+    const deceasedCheckbox = document.createElement('input');
+    deceasedCheckbox.type = 'checkbox';
+    deceasedLabel.appendChild(deceasedCheckbox);
+    deceasedLabel.appendChild(document.createTextNode('Deceased'));
+    form.appendChild(deceasedLabel);
+
+    const addBtn = document.createElement('button');
+    addBtn.type = 'submit';
+    addBtn.textContent = `Add ${type}`;
+    form.appendChild(addBtn);
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const newMember = {
+        id: generateId(),
+        name: nameInput.value.trim(),
+        gender: genderSelect.value,
+        birthday: birthdayInput.value,
+        deceased: deceasedCheckbox.checked,
+        spouses: [],
+        children: []
+      };
+      onAdd(newMember);
+      form.remove();
+    });
+
+    return form;
+  }
+
+  // Remove member by ID from familyData or recursively from children or spouses
+  function removeMemberById(id) {
+    // Try remove from top level
+    for(let i = 0; i < familyData.length; i++) {
+      if(familyData[i].id === id) {
+        familyData.splice(i,1);
+        return true;
+      }
+      // Try remove from children recursively
+      if(removeMemberFromChildren(familyData[i], id)) return true;
+      // Try remove from spouses
+      if(removeMemberFromSpouses(familyData[i], id)) return true;
+    }
+    return false;
+  }
+  function removeMemberFromChildren(member, id) {
+    if(!member.children) return false;
+    for(let i = 0; i < member.children.length; i++) {
+      if(member.children[i].id === id) {
+        member.children.splice(i,1);
+        return true;
+      }
+      if(removeMemberFromChildren(member.children[i], id)) return true;
+      if(removeMemberFromSpouses(member.children[i], id)) return true;
+    }
+    return false;
+  }
+  function removeMemberFromSpouses(member, id) {
+    if(!member.spouses) return false;
+    for(let i = 0; i < member.spouses.length; i++) {
+      if(member.spouses[i].id === id) {
+        member.spouses.splice(i,1);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // --- Login/Signup handlers ---
   const loginContainer = document.getElementById('login-container');
   const appContainer = document.getElementById('app-container');
-  const loginBtn = document.getElementById('login-btn');
-  const loginError = document.getElementById('login-error');
+  const loginForm = document.getElementById('login-form');
+  const signupForm = document.getElementById('signup-form');
+  const errorMsg = document.getElementById('error-msg');
+  const logoutBtn = document.getElementById('logout-btn');
 
-  loginBtn.addEventListener('click', () => {
-    const username = document.getElementById('username').value.trim();
-    const password = document.getElementById('password').value;
-    loginError.textContent = '';
-
-    if (!username || !password) {
-      loginError.textContent = 'Please enter username and password.';
-      return;
-    }
-
-    const user = usersDB.find(u => u.username === username && u.password === password);
-    if (!user) {
-      loginError.textContent = 'Invalid username or password.';
-      return;
-    }
-
-    // Login success
-    currentUser = username;
-    loadFamilyTree();
-    renderFamilyTree();
-    loginContainer.style.display = 'none';
-    appContainer.style.display = 'block';
-    updateBirthdayNotifications();
+  loginForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    errorMsg.textContent = '';
+    const email = document.getElementById('login-email').value.trim();
+    const password = document.getElementById('login-password').value;
+    mockLogin(email, password).then(user => {
+      loggedInUser = user;
+      loginContainer.style.display = 'none';
+      appContainer.style.display = 'block';
+      loadFamilyData();
+      render();
+    }).catch(err => {
+      errorMsg.textContent = 'Login failed: ' + err.message;
+    });
   });
 
-  // LOGOUT (optional)
-  // TODO: add logout button if desired
+  signupForm.addEventListener('submit', (e) => {
+    e.preventDefault();
+    errorMsg.textContent = '';
+    const email = document.getElementById('signup-email').value.trim();
+    const password = document.getElementById('signup-password').value;
+    const passwordConfirm = document.getElementById('signup-password-confirm').value;
+    if(password !== passwordConfirm) {
+      errorMsg.textContent = "Passwords do not match";
+      return;
+    }
+    mockSignup(email, password).then(user => {
+      loggedInUser = user;
+      loginContainer.style.display = 'none';
+      appContainer.style.display = 'block';
+      loadFamilyData();
+      render();
+    }).catch(err => {
+      errorMsg.textContent = 'Signup failed: ' + err.message;
+    });
+  });
 
-  // FAMILY TREE LOGIC
+  logoutBtn.addEventListener('click', () => {
+    mockLogout().then(() => {
+      loggedInUser = null;
+      loginContainer.style.display = 'block';
+      appContainer.style.display = 'none';
+    });
+  });
 
-  // Add root family member form
+  // Add root member form
   const addRootForm = document.getElementById('add-root-form');
   addRootForm.addEventListener('submit', (e) => {
     e.preventDefault();
     const name = document.getElementById('root-name').value.trim();
     const gender = document.getElementById('root-gender').value;
     const birthday = document.getElementById('root-birthday').value;
-
-    if (!name || !gender) return;
-
-    const newRoot = {
+    const deceased = document.getElementById('root-deceased').checked;
+    if(!name || !gender || !birthday) return;
+    const newMember = {
       id: generateId(),
       name,
       gender,
-      birthday: birthday || null,
-      dateOfDeath: null,
-      spouseOf: [], // array of spouse ids this member is spouse of
-      spouses: [], // list of spouse objects { id, name, gender, birthday, dateOfDeath }
+      birthday,
+      deceased,
+      spouses: [],
       children: []
     };
-    familyTreeData.push(newRoot);
-    saveFamilyTree();
-    renderFamilyTree();
-
-    // reset form
+    familyData.push(newMember);
+    saveFamilyData();
+    render();
     addRootForm.reset();
   });
 
-  // Add spouse form for a member
-  function createAddSpouseForm(member) {
-    const form = document.createElement('form');
-    form.className = 'add-spouse-form';
-    form.autocomplete = "off";
+  // Show login form initially
+  loginContainer.style.display = 'block';
 
-    const inputName = document.createElement('input');
-    inputName.type = 'text';
-    inputName.placeholder = 'Spouse Full Name';
-    inputName.required = true;
-    inputName.setAttribute('aria-label', `Add spouse name for ${member.name}`);
-
-    const selectGender = document.createElement('select');
-    selectGender.required = true;
-    selectGender.setAttribute('aria-label', `Add spouse gender for ${member.name}`);
-    selectGender.innerHTML = `
-      <option value="" disabled selected>Select gender</option>
-      <option value="Male">Male</option>
-      <option value="Female">Female</option>
-      <option value="Other">Other</option>
-    `;
-
-    const inputBirthday = document.createElement('input');
-    inputBirthday.type = 'date';
-    inputBirthday.placeholder = 'Birthday';
-    inputBirthday.setAttribute('aria-label', `Add spouse birthday for ${member.name}`);
-
-    const inputDateOfDeath = document.createElement('input');
-    inputDateOfDeath.type = 'date';
-    inputDateOfDeath.placeholder = 'Date of Death (optional)';
-    inputDateOfDeath.setAttribute('aria-label', `Add spouse date of death for ${member.name}`);
-
-    const addBtn = document.createElement('button');
-    addBtn.type = 'submit';
-    addBtn.textContent = 'Add Spouse';
-
-    form.appendChild(inputName);
-    form.appendChild(selectGender);
-    form.appendChild(inputBirthday);
-    form.appendChild(inputDateOfDeath);
-    form.appendChild(addBtn);
-
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const spouseName = inputName.value.trim();
-      const spouseGender = selectGender.value;
-      const spouseBirthday = inputBirthday.value || null;
-      const spouseDateOfDeath = inputDateOfDeath.value || null;
-      if (!spouseName || !spouseGender) return;
-
-      // Create spouse object with unique id
-      const spouseId = generateId();
-      const spouse = {
-        id: spouseId,
-        name: spouseName,
-        gender: spouseGender,
-        birthday: spouseBirthday,
-        dateOfDeath: spouseDateOfDeath,
-        spouseOf: [member.id],
-        spouses: [],
-        children: []
-      };
-
-      // Add spouse to familyTreeData
-      familyTreeData.push(spouse);
-
-      // Add spouse reference to member.spouses
-      member.spouses.push({
-        id: spouseId,
-        name: spouseName,
-        gender: spouseGender,
-        birthday: spouseBirthday,
-        dateOfDeath: spouseDateOfDeath
-      });
-
-      saveFamilyTree();
-      renderFamilyTree();
-    });
-
-    return form;
-  }
-
-  // Add child form for a member
-  function createAddChildForm(member) {
-    const form = document.createElement('form');
-    form.className = 'add-child-form';
-    form.autocomplete = "off";
-
-    const inputName = document.createElement('input');
-    inputName.type = 'text';
-    inputName.placeholder = 'Child Full Name';
-    inputName.required = true;
-    inputName.setAttribute('aria-label', `Add child name for ${member.name}`);
-
-    const selectGender = document.createElement('select');
-    selectGender.required = true;
-    selectGender.setAttribute('aria-label', `Add child gender for ${member.name}`);
-    selectGender.innerHTML = `
-      <option value="" disabled selected>Select gender</option>
-      <option value="Male">Male</option>
-      <option value="Female">Female</option>
-      <option value="Other">Other</option>
-    `;
-
-    const inputBirthday = document.createElement('input');
-    inputBirthday.type = 'date';
-    inputBirthday.placeholder = 'Birthday';
-    inputBirthday.setAttribute('aria-label', `Add child birthday for ${member.name}`);
-
-    const inputDateOfDeath = document.createElement('input');
-    inputDateOfDeath.type = 'date';
-    inputDateOfDeath.placeholder = 'Date of Death (optional)';
-    inputDateOfDeath.setAttribute('aria-label', `Add child date of death for ${member.name}`);
-
-    const addBtn = document.createElement('button');
-    addBtn.type = 'submit';
-    addBtn.textContent = 'Add Child';
-
-    form.appendChild(inputName);
-    form.appendChild(selectGender);
-    form.appendChild(inputBirthday);
-    form.appendChild(inputDateOfDeath);
-    form.appendChild(addBtn);
-
-    form.addEventListener('submit', e => {
-      e.preventDefault();
-      const childName = inputName.value.trim();
-      const childGender = selectGender.value;
-      const childBirthday = inputBirthday.value || null;
-      const childDateOfDeath = inputDateOfDeath.value || null;
-      if (!childName || !childGender) return;
-
-      // Create child object with unique id
-      const childId = generateId();
-      const child = {
-        id: childId,
-        name: childName,
-        gender: childGender,
-        birthday: childBirthday,
-        dateOfDeath: childDateOfDeath,
-        spouseOf: [],
-        spouses: [],
-        children: []
-      };
-
-      member.children.push(child);
-      saveFamilyTree();
-      renderFamilyTree();
-    });
-
-    return form;
-  }
-
-  // Render the entire family tree container
-  function renderFamilyTree() {
-    const container = document.getElementById('family-tree');
-    container.innerHTML = '';
-
-    if (familyTreeData.length === 0) {
-      container.textContent = 'No family members yet. Add a root member to start your tree.';
-      return;
-    }
-
-    familyTreeData.forEach(member => {
-      // Only render root nodes (nodes not spouse of anyone)
-      if (!member.spouseOf || member.spouseOf.length === 0) {
-        const node = createMemberNode(member);
-        container.appendChild(node);
-      }
-    });
-  }
-
-  // Create single member node element (recursive for children)
-  function createMemberNode(member) {
-    const nodeDiv = document.createElement('div');
-    nodeDiv.className = 'tree-node';
-    if (member.dateOfDeath) {
-      nodeDiv.classList.add('deceased');
-    }
-
-    // Header line with arrow (if children), name input, gender select, birthday input, deceased input, buttons
-    const header = document.createElement('div');
-    header.className = 'node-header';
-
-    // Arrow toggle for children
-    const hasChildren = member.children && member.children.length > 0;
-    const arrow = document.createElement('span');
-    arrow.className = 'arrow';
-    arrow.setAttribute('aria-label', hasChildren ? `Toggle children for ${member.name}` : `No children for ${member.name}`);
-    arrow.setAttribute('role', 'button');
-    arrow.setAttribute('tabindex', hasChildren ? '0' : '-1');
-    arrow.textContent = '▾';
-    if (!hasChildren) {
-      arrow.style.visibility = 'hidden';
-    }
-    header.appendChild(arrow);
-
-    // Name input
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.value = member.name;
-    nameInput.className = 'name-input';
-    nameInput.setAttribute('aria-label', `Full name of ${member.name}`);
-    header.appendChild(nameInput);
-
-    // Gender select
-    const genderSelect = document.createElement('select');
-    genderSelect.className = 'gender-select';
-    genderSelect.setAttribute('aria-label', `Gender of ${member.name}`);
-    genderSelect.innerHTML = `
-      <option value="Male"${member.gender === 'Male' ? ' selected' : ''}>Male</option>
-      <option value="Female"${member.gender === 'Female' ? ' selected' : ''}>Female</option>
-      <option value="Other"${member.gender === 'Other' ? ' selected' : ''}>Other</option>
-    `;
-    header.appendChild(genderSelect);
-
-    // Birthday input
-    const birthdayInput = document.createElement('input');
-    birthdayInput.type = 'date';
-    birthdayInput.value = member.birthday || '';
-    birthdayInput.className = 'birthday-input';
-    birthdayInput.setAttribute('aria-label', `Birthday of ${member.name}`);
-    header.appendChild(birthdayInput);
-
-    // Date of Death input
-    const deathInput = document.createElement('input');
-    deathInput.type = 'date';
-    deathInput.value = member.dateOfDeath || '';
-    deathInput.className = 'deceased-input';
-    deathInput.setAttribute('aria-label', `Date of death of ${member.name} (leave empty if alive)`);
-    header.appendChild(deathInput);
-
-    // If deceased, show label next to name input
-    if (member.dateOfDeath) {
-      const deceasedLabel = document.createElement('span');
-      deceasedLabel.className = 'deceased-label';
-      const deathDateDisplay = new Date(member.dateOfDeath).toLocaleDateString();
-      deceasedLabel.textContent = `Deceased: ${deathDateDisplay}`;
-      header.appendChild(deceasedLabel);
-    }
-
-    // Buttons container
-    const buttonsDiv = document.createElement('div');
-    buttonsDiv.className = 'node-buttons';
-
-    // Add Child button
-    const addChildBtn = document.createElement('button');
-    addChildBtn.textContent = 'Add Child';
-    addChildBtn.setAttribute('aria-label', `Add child to ${member.name}`);
-    buttonsDiv.appendChild(addChildBtn);
-
-    // Add Spouse button
-    const addSpouseBtn = document.createElement('button');
-    addSpouseBtn.textContent = 'Add Spouse';
-    addSpouseBtn.setAttribute('aria-label', `Add spouse to ${member.name}`);
-    buttonsDiv.appendChild(addSpouseBtn);
-
-    header.appendChild(buttonsDiv);
-
-    nodeDiv.appendChild(header);
-
-    // Container for children nodes (collapsible)
-    const childrenContainer = document.createElement('div');
-    childrenContainer.className = 'children-container';
-    childrenContainer.style.marginLeft = '24px';
-
-    if (hasChildren) {
-      member.children.forEach(child => {
-        const childNode = createMemberNode(child);
-        childrenContainer.appendChild(childNode);
-      });
-    }
-    nodeDiv.appendChild(childrenContainer);
-
-    // Spouses section with toggle
-    if (member.spouses && member.spouses.length > 0) {
-      const spousesSection = document.createElement('div');
-      spousesSection.className = 'spouse-section';
-
-      const toggleBtn = document.createElement('button');
-      toggleBtn.className = 'marriages-toggle';
-      toggleBtn.setAttribute('aria-expanded', 'false');
-      toggleBtn.textContent = `Show Spouses (${member.spouses.length})`;
-      spousesSection.appendChild(toggleBtn);
-
-      const spousesContent = document.createElement('div');
-      spousesContent.className = 'marriages-content';
-      spousesContent.style.display = 'none';
-
-      member.spouses.forEach(spouse => {
-        const spouseDiv = document.createElement('div');
-        spouseDiv.className = 'spouse-entry';
-
-        const spouseName = document.createElement('input');
-        spouseName.type = 'text';
-        spouseName.value = spouse.name;
-        spouseName.disabled = true;
-        spouseName.setAttribute('aria-label', `Spouse name of ${member.name}`);
-        spouseDiv.appendChild(spouseName);
-
-        const spouseGender = document.createElement('select');
-        spouseGender.disabled = true;
-        spouseGender.setAttribute('aria-label', `Spouse gender of ${member.name}`);
-        spouseGender.innerHTML = `
-          <option value="Male"${spouse.gender === 'Male' ? ' selected' : ''}>Male</option>
-          <option value="Female"${spouse.gender === 'Female' ? ' selected' : ''}>Female</option>
-          <option value="Other"${spouse.gender === 'Other' ? ' selected' : ''}>Other</option>
-        `;
-        spouseDiv.appendChild(spouseGender);
-
-        const spouseBirthday = document.createElement('input');
-        spouseBirthday.type = 'date';
-        spouseBirthday.value = spouse.birthday || '';
-        spouseBirthday.disabled = true;
-        spouseBirthday.setAttribute('aria-label', `Spouse birthday of ${member.name}`);
-        spouseDiv.appendChild(spouseBirthday);
-
-        const spouseDeath = document.createElement('input');
-        spouseDeath.type = 'date';
-        spouseDeath.value = spouse.dateOfDeath || '';
-        spouseDeath.disabled = true;
-        spouseDeath.setAttribute('aria-label', `Spouse date of death of ${member.name}`);
-        spouseDiv.appendChild(spouseDeath);
-
-        spousesContent.appendChild(spouseDiv);
-      });
-
-      spousesSection.appendChild(spousesContent);
-      nodeDiv.appendChild(spousesSection);
-
-      // Toggle handler
-      toggleBtn.addEventListener('click', () => {
-        const expanded = toggleBtn.getAttribute('aria-expanded') === 'true';
-        if (expanded) {
-          spousesContent.style.display = 'none';
-          toggleBtn.textContent = `Show Spouses (${member.spouses.length})`;
-          toggleBtn.setAttribute('aria-expanded', 'false');
-        } else {
-          spousesContent.style.display = 'block';
-          toggleBtn.textContent = `Hide Spouses (${member.spouses.length})`;
-          toggleBtn.setAttribute('aria-expanded', 'true');
-        }
-      });
-    }
-
-    // Arrow toggle children
-    arrow.addEventListener('click', () => {
-      if (childrenContainer.style.display === 'none' || childrenContainer.style.display === '') {
-        childrenContainer.style.display = 'block';
-        arrow.textContent = '▾';
-      } else {
-        childrenContainer.style.display = 'none';
-        arrow.textContent = '▸';
-      }
-    });
-
-    // Also allow keyboard toggle on arrow
-    arrow.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        arrow.click();
-      }
-    });
-
-    // Add Child button event: show/hide add child form below this member
-    addChildBtn.addEventListener('click', () => {
-      // Check if form already exists
-      if (nodeDiv.querySelector('.add-child-form')) {
-        // Remove it
-        const form = nodeDiv.querySelector('.add-child-form');
-        form.remove();
-      } else {
-        const form = createAddChildForm(member);
-        nodeDiv.appendChild(form);
-      }
-    });
-
-    // Add Spouse button event: show/hide add spouse form below this member
-    addSpouseBtn.addEventListener('click', () => {
-      if (nodeDiv.querySelector('.add-spouse-form')) {
-        const form = nodeDiv.querySelector('.add-spouse-form');
-        form.remove();
-      } else {
-        const form = createAddSpouseForm(member);
-        nodeDiv.appendChild(form);
-      }
-    });
-
-    // Update member name on input change
-    nameInput.addEventListener('input', () => {
-      member.name = nameInput.value.trim();
-      saveFamilyTree();
-      renderFamilyTree();
-    });
-
-    // Update gender on change
-    genderSelect.addEventListener('change', () => {
-      member.gender = genderSelect.value;
-      saveFamilyTree();
-      renderFamilyTree();
-    });
-
-    // Update birthday on change
-    birthdayInput.addEventListener('change', () => {
-      member.birthday = birthdayInput.value || null;
-      saveFamilyTree();
-      renderFamilyTree();
-      updateBirthdayNotifications();
-    });
-
-    // Update date of death on change
-    deathInput.addEventListener('change', () => {
-      member.dateOfDeath = deathInput.value || null;
-      saveFamilyTree();
-      renderFamilyTree();
-      updateBirthdayNotifications();
-    });
-
-    return nodeDiv;
-  }
-
-  // Birthday notifications: show list of family members with birthdays today
-  function updateBirthdayNotifications() {
-    const container = document.getElementById('birthday-notifications');
-    container.innerHTML = '';
-    if (familyTreeData.length === 0) return;
-
-    // Flatten all members (root + children + spouses)
-    const allMembers = [];
-
-    function traverse(member) {
-      allMembers.push(member);
-      member.children.forEach(c => traverse(c));
-      // spouses are separate nodes in familyTreeData and handled elsewhere
-    }
-
-    familyTreeData.forEach(rootMember => {
-      traverse(rootMember);
-    });
-
-    const today = new Date();
-    const todayMonthDay = `${today.getMonth()+1}-${today.getDate()}`;
-
-    const birthdayMembers = allMembers.filter(m => {
-      if (!m.birthday) return false;
-      const bd = new Date(m.birthday);
-      return (bd.getMonth()+1) === (today.getMonth()+1) && bd.getDate() === today.getDate();
-    });
-
-    if (birthdayMembers.length > 0) {
-      const title = document.createElement('strong');
-      title.textContent = `🎉 Birthdays Today (${birthdayMembers.length}):`;
-      container.appendChild(title);
-
-      const list = document.createElement('ul');
-      birthdayMembers.forEach(m => {
-        const li = document.createElement('li');
-        li.textContent = `${m.name} (${m.birthday})`;
-        li.className = 'birthday-highlight';
-        list.appendChild(li);
-      });
-      container.appendChild(list);
-    }
-  }
 </script>
 
 </body>
