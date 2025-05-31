@@ -1,34 +1,35 @@
-<!-- index.html -->
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Family Tree</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-  <script src="https://unpkg.com/cytoscape@3.26.0/dist/cytoscape.min.js"></script>
+  <title>Family Tree App</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/cytoscape/3.24.0/cytoscape.min.js"></script>
   <style>
-    #cy { width: 100%; height: 80vh; border: 1px solid #ccc; }
-    #login { margin-bottom: 10px; }
+    body { font-family: Arial, sans-serif; margin: 0; padding: 20px; }
+    #cy { width: 100%; height: 80vh; border: 1px solid #ccc; margin-top: 10px; }
+    #login, #form { margin-bottom: 20px; }
+    input { padding: 8px; margin: 4px; }
+    button { padding: 8px 12px; margin: 4px; }
   </style>
 </head>
 <body>
   <div id="login">
-    <input type="email" id="email" placeholder="Email" />
-    <input type="password" id="password" placeholder="Password" />
+    <input type="email" id="email" placeholder="Email">
+    <input type="password" id="password" placeholder="Password">
     <button onclick="login()">Login</button>
-    <button onclick="signup()">Signup</button>
+    <button onclick="signup()">Sign Up</button>
+  </div>
+
+  <div id="form" style="display:none;">
     <button onclick="logout()">Logout</button>
+    <button onclick="addNode()">Add Member</button>
+    <div id="cy"></div>
   </div>
-  <div>
-    <button onclick="addMember()">Add Member</button>
-    <button onclick="checkBirthdays()">Check Birthdays</button>
-  </div>
-  <div id="cy"></div>
 
   <script>
+    // Firebase config
     const firebaseConfig = {
       apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
       authDomain: "project-955237504610034331.firebaseapp.com",
@@ -40,134 +41,105 @@
       measurementId: "G-RCJ4P82PVM"
     };
     firebase.initializeApp(firebaseConfig);
-    const db = firebase.database();
     const auth = firebase.auth();
-
+    const db = firebase.database();
     let cy;
 
-    function initCytoscape(familyData) {
-      const elements = [];
-      for (const key in familyData) {
-        const member = familyData[key];
-        elements.push({ data: { id: key, label: `${member.name}\n${member.birthday}` } });
-        if (member.parentId) {
-          elements.push({ data: { id: `${member.parentId}-${key}`, source: member.parentId, target: key } });
-        }
-      }
-      cy = cytoscape({
-        container: document.getElementById('cy'),
-        elements: elements,
-        layout: { name: 'breadthfirst' },
-        style: [
-          {
-            selector: 'node',
-            style: {
-              'label': 'data(label)',
-              'text-valign': 'center',
-              'text-halign': 'center',
-              'background-color': '#61bffc'
-            }
-          },
-          {
-            selector: 'edge',
-            style: { 'width': 3, 'line-color': '#ccc' }
-          }
-        ]
-      });
-
-      cy.on('tap', 'node', function(evt){
-        const id = evt.target.id();
-        const member = familyData[id];
-        const newName = prompt("Edit name", member.name);
-        const newBday = prompt("Edit birthday (YYYY-MM-DD)", member.birthday);
-        if (newName && newBday) {
-          db.ref('family/' + id).update({ name: newName, birthday: newBday });
-        }
-        if (confirm("Delete this member?")) {
-          db.ref('family/' + id).remove();
-        }
-      });
-    }
-
-    function loadFamilyTree() {
-      db.ref('family').on('value', (snap) => {
-        const data = snap.val() || {};
-        if (cy) cy.destroy();
-        initCytoscape(data);
-      });
-    }
-
-    function addMember() {
-      const name = prompt("Name:");
-      const birthday = prompt("Birthday (YYYY-MM-DD):");
-      const parentId = prompt("Parent ID (optional):");
-      if (name && birthday) {
-        const newRef = db.ref('family').push();
-        newRef.set({ name, birthday, parentId: parentId || null });
-      }
-    }
+    auth.onAuthStateChanged(user => {
+      document.getElementById('login').style.display = user ? 'none' : 'block';
+      document.getElementById('form').style.display = user ? 'block' : 'none';
+      if (user) loadTree();
+    });
 
     function login() {
       const email = document.getElementById('email').value;
       const pass = document.getElementById('password').value;
-      auth.signInWithEmailAndPassword(email, pass).catch(err => alert(err.message));
+      auth.signInWithEmailAndPassword(email, pass).catch(alert);
     }
 
     function signup() {
       const email = document.getElementById('email').value;
       const pass = document.getElementById('password').value;
-      auth.createUserWithEmailAndPassword(email, pass).catch(err => alert(err.message));
+      auth.createUserWithEmailAndPassword(email, pass).catch(alert);
     }
 
     function logout() {
       auth.signOut();
     }
 
-    auth.onAuthStateChanged(user => {
-      if (user) loadFamilyTree();
-      else { if (cy) cy.destroy(); }
-    });
-
-    function checkBirthdays() {
-      db.ref('family').once('value').then(snap => {
+    function loadTree() {
+      db.ref("family").on("value", snap => {
         const data = snap.val() || {};
-        const today = new Date().toISOString().slice(5, 10);
-        const birthdays = [];
-        for (const key in data) {
-          const bday = data[key].birthday?.slice(5, 10);
-          if (bday === today) birthdays.push(data[key].name);
+        const elements = [];
+        for (const id in data) {
+          const person = data[id];
+          elements.push({ data: { id, label: `${person.name}\n${person.birthday}` } });
+          if (person.parent) {
+            elements.push({ data: { id: `${person.parent}-${id}`, source: person.parent, target: id } });
+          }
         }
-        if (birthdays.length) alert("Today's Birthdays:\n" + birthdays.join('\n'));
-        else alert("No birthdays today.");
+
+        cy = cytoscape({
+          container: document.getElementById('cy'),
+          elements,
+          layout: { name: 'breadthfirst' },
+          style: [
+            { selector: 'node', style: { 'label': 'data(label)', 'text-valign': 'center', 'text-wrap': 'wrap', 'background-color': '#61bffc', 'padding': '10px', 'shape': 'roundrectangle' }},
+            { selector: 'edge', style: { 'width': 2, 'line-color': '#ccc' }}
+          ]
+        });
+
+        cy.on('tap', 'node', evt => {
+          const id = evt.target.id();
+          const name = prompt("Edit name:", data[id].name);
+          const birthday = prompt("Edit birthday (YYYY-MM-DD):", data[id].birthday);
+          if (name && birthday) {
+            db.ref("family/" + id).update({ name, birthday });
+          } else if (confirm("Delete this member?")) {
+            db.ref("family/" + id).remove();
+          }
+        });
       });
     }
+
+    function addNode() {
+      const name = prompt("Enter member's name:");
+      const birthday = prompt("Enter birthday (YYYY-MM-DD):");
+      const parent = prompt("Enter parent ID (optional):");
+      if (name && birthday) {
+        const id = db.ref().child("family").push().key;
+        db.ref("family/" + id).set({ name, birthday, parent: parent || null });
+      }
+    }
   </script>
+
+  <!-- Firebase Cloud Function (DEPLOY SEPARATELY IN FUNCTIONS FOLDER)
+  // functions/index.js
+
+  const functions = require("firebase-functions");
+  const admin = require("firebase-admin");
+  admin.initializeApp();
+
+  exports.checkBirthdays = functions.pubsub.schedule("every 24 hours").onRun(async () => {
+    const now = new Date();
+    const today = `${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    const snap = await admin.database().ref("family").once("value");
+    const members = snap.val();
+    let matches = [];
+
+    for (const id in members) {
+      if (members[id].birthday?.slice(5) === today) {
+        matches.push(members[id].name);
+      }
+    }
+
+    if (matches.length) {
+      console.log("Birthday today:", matches.join(", "));
+      // Optionally send push/email notifications here
+    }
+
+    return null;
+  });
+  -->
 </body>
 </html>
-
-<!-- Firebase Cloud Function (index.js) -->
-// Deploy using: firebase deploy --only functions
-const functions = require("firebase-functions");
-const admin = require("firebase-admin");
-admin.initializeApp();
-
-exports.dailyBirthdayNotifier = functions.pubsub.schedule("every day 09:00").timeZone("Asia/Manila").onRun(async (context) => {
-  const snapshot = await admin.database().ref("family").once("value");
-  const members = snapshot.val() || {};
-  const today = new Date().toISOString().slice(5, 10);
-  const names = [];
-
-  for (const key in members) {
-    const bday = members[key].birthday?.slice(5, 10);
-    if (bday === today) names.push(members[key].name);
-  }
-
-  if (names.length) {
-    console.log("Today's birthdays:", names.join(", "));
-    // Extend here to send email/push notifications
-  } else {
-    console.log("No birthdays today.");
-  }
-
-  return null;
-});
