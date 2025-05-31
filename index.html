@@ -24,7 +24,7 @@
       margin: 5px 0;
       box-sizing: border-box;
     }
-    input[type="text"], input[type="date"] {
+    input[type="text"], input[type="date"], input[type="email"], input[type="password"] {
       font-size: 1rem;
       border-radius: 4px;
       border: 1px solid #ccc;
@@ -127,6 +127,36 @@
     .add-child-form button:hover {
       filter: brightness(90%);
     }
+    /* New styles for Add Root Member form */
+    #add-root-container {
+      margin-bottom: 20px;
+      border: 1px solid #ccc;
+      padding: 15px;
+      border-radius: 6px;
+      background: #f3f4f6;
+    }
+    #add-root-container h3 {
+      margin-top: 0;
+    }
+    #add-root-form {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    #add-root-form input[type="text"], #add-root-form input[type="date"] {
+      flex: 1 1 180px;
+      padding: 8px;
+      font-size: 1rem;
+      border-radius: 4px;
+      border: 1px solid #ccc;
+    }
+    #add-root-form button {
+      flex: 0 0 auto;
+      background-color: #2563eb;
+      padding: 10px 20px;
+      font-size: 1rem;
+    }
   </style>
 
   <!-- Firebase SDKs -->
@@ -146,8 +176,21 @@
 
 <div id="app-container" style="display:none;">
   <h2>Family Tree</h2>
+
   <div id="birthday-notifications"></div>
+
+  <!-- ADD ROOT MEMBER FORM -->
+  <div id="add-root-container">
+    <h3>Add Root Member (No Parent)</h3>
+    <form id="add-root-form">
+      <input type="text" id="root-name" placeholder="Name" required />
+      <input type="date" id="root-birthday" required />
+      <button type="submit">+ Add Root Member</button>
+    </form>
+  </div>
+
   <div id="tree-root"></div>
+
   <button id="logout-btn" style="margin-top: 20px; background:#ef4444;">Logout</button>
 </div>
 
@@ -179,6 +222,10 @@
   const logoutBtn = document.getElementById('logout-btn');
   const birthdayNotifications = document.getElementById('birthday-notifications');
   const treeRoot = document.getElementById('tree-root');
+
+  const addRootForm = document.getElementById('add-root-form');
+  const rootNameInput = document.getElementById('root-name');
+  const rootBirthdayInput = document.getElementById('root-birthday');
 
   // Login handler
   loginBtn.addEventListener('click', () => {
@@ -217,21 +264,34 @@
     }
   });
 
+  // Add root member form submit
+  addRootForm.addEventListener('submit', e => {
+    e.preventDefault();
+    const name = rootNameInput.value.trim();
+    const birthday = rootBirthdayInput.value;
+    if (!name || !birthday) return alert('Please enter name and birthday.');
+
+    // Add new root node with parentId null
+    const newRef = db.ref('familyTree').push();
+    newRef.set({
+      name,
+      birthday,
+      parentId: null
+    }).then(() => {
+      rootNameInput.value = '';
+      rootBirthdayInput.value = '';
+      checkBirthdaysToday();
+    }).catch(err => alert('Error adding root member: ' + err.message));
+  });
+
   // Listen to whole family tree from DB
   function loadFamilyTree() {
-    // We expect data structured like:
-    // familyTree: {
-    //   nodeId: { name, birthday, parentId (nullable), children: { childId: true, ... } }
-    // }
-
     db.ref('familyTree').off(); // remove old listeners
     db.ref('familyTree').on('value', snapshot => {
       const data = snapshot.val() || {};
-      // Build tree structure from flat data
       const nodesById = data;
       const rootNodes = [];
 
-      // Find roots (nodes with no parentId)
       for (const id in nodesById) {
         if (!nodesById[id].parentId) rootNodes.push(id);
       }
@@ -252,21 +312,18 @@
     const container = document.createElement('div');
     container.classList.add('tree-node');
 
-    // Node header (arrow + inputs + buttons)
     const header = document.createElement('div');
     header.classList.add('node-header');
 
-    // Arrow
     const arrow = document.createElement('span');
     arrow.classList.add('arrow');
     arrow.innerHTML = '&#9654;'; // ► right arrow by default
-    // Check if has children
+
     const hasChildren = Object.keys(nodesById).some(id => nodesById[id].parentId === nodeId);
     if (!hasChildren) {
       arrow.style.visibility = 'hidden';
     }
 
-    // Arrow toggle expand/collapse children
     arrow.addEventListener('click', () => {
       if (childrenContainer.style.display === 'none') {
         childrenContainer.style.display = 'block';
@@ -277,172 +334,175 @@
       }
     });
 
-    header.appendChild(arrow);
-
-    // Name input
     const nameInput = document.createElement('input');
     nameInput.type = 'text';
-    nameInput.value = nodeData.name || '';
-    nameInput.placeholder = 'Name';
-    nameInput.addEventListener('change', () => {
-      db.ref('familyTree/' + nodeId).update({ name: nameInput.value });
+    nameInput.value = nodeData.name;
+    nameInput.style.width = '160px';
+    nameInput.addEventListener('change', e => {
+      const newName = e.target.value.trim();
+      if (newName) {
+        db.ref(`familyTree/${nodeId}/name`).set(newName);
+      } else {
+        alert('Name cannot be empty.');
+        e.target.value = nodeData.name;
+      }
     });
-    header.appendChild(nameInput);
 
-    // Birthday input
     const birthdayInput = document.createElement('input');
     birthdayInput.type = 'date';
     birthdayInput.value = nodeData.birthday || '';
-    birthdayInput.addEventListener('change', () => {
-      db.ref('familyTree/' + nodeId).update({ birthday: birthdayInput.value });
-      checkBirthdaysToday();
+    birthdayInput.addEventListener('change', e => {
+      const newDate = e.target.value;
+      if (newDate) {
+        db.ref(`familyTree/${nodeId}/birthday`).set(newDate);
+        checkBirthdaysToday();
+      } else {
+        alert('Invalid date.');
+        e.target.value = nodeData.birthday;
+      }
     });
-    header.appendChild(birthdayInput);
 
     // Buttons container
-    const buttonsDiv = document.createElement('div');
-    buttonsDiv.classList.add('node-buttons');
-
-    // Add child button
-    const addChildBtn = document.createElement('button');
-    addChildBtn.textContent = '+Child';
-    addChildBtn.classList.add('add-child-btn');
-    buttonsDiv.appendChild(addChildBtn);
+    const btnsContainer = document.createElement('div');
+    btnsContainer.classList.add('node-buttons');
 
     // Delete button
     const deleteBtn = document.createElement('button');
     deleteBtn.textContent = 'Delete';
-    buttonsDiv.appendChild(deleteBtn);
+    deleteBtn.title = 'Delete this member and all descendants';
+    deleteBtn.addEventListener('click', () => {
+      if (confirm(`Delete ${nodeData.name} and ALL their descendants?`)) {
+        deleteNodeAndDescendants(nodeId);
+      }
+    });
+    btnsContainer.appendChild(deleteBtn);
 
-    header.appendChild(buttonsDiv);
+    // Add Child button
+    const addChildBtn = document.createElement('button');
+    addChildBtn.textContent = '+Child';
+    addChildBtn.title = 'Add child to this member';
+    addChildBtn.classList.add('add-child-btn');
+    btnsContainer.appendChild(addChildBtn);
+
+    header.appendChild(arrow);
+    header.appendChild(nameInput);
+    header.appendChild(birthdayInput);
+    header.appendChild(btnsContainer);
 
     container.appendChild(header);
 
-    // Add child form (hidden by default)
+    // Add child form (hidden initially)
     const addChildForm = document.createElement('form');
     addChildForm.classList.add('add-child-form');
     addChildForm.style.display = 'none';
 
     const childNameInput = document.createElement('input');
     childNameInput.type = 'text';
-    childNameInput.placeholder = "Child's name";
+    childNameInput.placeholder = 'Child name';
     childNameInput.required = true;
-    addChildForm.appendChild(childNameInput);
 
     const childBirthdayInput = document.createElement('input');
     childBirthdayInput.type = 'date';
     childBirthdayInput.required = true;
-    addChildForm.appendChild(childBirthdayInput);
 
-    const submitBtn = document.createElement('button');
-    submitBtn.type = 'submit';
-    submitBtn.textContent = 'Add';
-    addChildForm.appendChild(submitBtn);
+    const addChildSubmit = document.createElement('button');
+    addChildSubmit.type = 'submit';
+    addChildSubmit.textContent = 'Add';
+
+    addChildForm.appendChild(childNameInput);
+    addChildForm.appendChild(childBirthdayInput);
+    addChildForm.appendChild(addChildSubmit);
 
     container.appendChild(addChildForm);
 
-    // Children container
-    const childrenContainer = document.createElement('div');
-    childrenContainer.style.marginLeft = '20px';
-    container.appendChild(childrenContainer);
-
-    // Initially collapsed
-    childrenContainer.style.display = 'none';
-
-    // Add child button toggles addChildForm
     addChildBtn.addEventListener('click', () => {
       addChildForm.style.display = addChildForm.style.display === 'none' ? 'flex' : 'none';
+      childNameInput.focus();
     });
 
-    // Handle add child submission
     addChildForm.addEventListener('submit', e => {
       e.preventDefault();
-      const newName = childNameInput.value.trim();
-      const newBirthday = childBirthdayInput.value;
-      if (!newName || !newBirthday) return alert('Please enter child name and birthday.');
-
-      // Add new child node in DB
+      const childName = childNameInput.value.trim();
+      const childBirthday = childBirthdayInput.value;
+      if (!childName || !childBirthday) {
+        alert('Please enter child name and birthday.');
+        return;
+      }
       const newChildRef = db.ref('familyTree').push();
       newChildRef.set({
-        name: newName,
-        birthday: newBirthday,
+        name: childName,
+        birthday: childBirthday,
         parentId: nodeId
       }).then(() => {
+        addChildForm.style.display = 'none';
         childNameInput.value = '';
         childBirthdayInput.value = '';
-        addChildForm.style.display = 'none';
-        // Expand children container if collapsed
-        if (childrenContainer.style.display === 'none') {
-          childrenContainer.style.display = 'block';
-          arrow.style.transform = 'rotate(90deg)';
-        }
         checkBirthdaysToday();
       }).catch(err => alert('Error adding child: ' + err.message));
     });
 
-    // Delete button handler
-    deleteBtn.addEventListener('click', () => {
-      if (confirm(`Delete ${nodeData.name} and all descendants?`)) {
-        // Remove node and all descendants recursively
-        deleteNodeAndDescendants(nodeId);
-        checkBirthdaysToday();
-      }
+    // Children container
+    const childrenContainer = document.createElement('div');
+    childrenContainer.style.marginLeft = '20px';
+    childrenContainer.style.display = 'none'; // collapsed by default
+
+    const childrenIds = Object.keys(nodesById).filter(id => nodesById[id].parentId === nodeId);
+    childrenIds.forEach(childId => {
+      childrenContainer.appendChild(createTreeNode(childId, nodesById));
     });
 
-    // Render children recursively
-    for (const id in nodesById) {
-      if (nodesById[id].parentId === nodeId) {
-        const childNode = createTreeNode(id, nodesById);
-        childrenContainer.appendChild(childNode);
-      }
-    }
+    container.appendChild(childrenContainer);
 
     return container;
   }
 
-  // Recursive delete of node and its descendants
+  // Delete node and all descendants recursively
   function deleteNodeAndDescendants(nodeId) {
     db.ref('familyTree').once('value').then(snapshot => {
       const data = snapshot.val() || {};
-      // Find all descendants
-      const descendants = [];
-      function findDescendants(id) {
-        for (const k in data) {
-          if (data[k].parentId === id) {
-            descendants.push(k);
-            findDescendants(k);
+      const toDelete = [nodeId];
+      for (let i = 0; i < toDelete.length; i++) {
+        const currentId = toDelete[i];
+        for (const id in data) {
+          if (data[id].parentId === currentId) {
+            toDelete.push(id);
           }
         }
       }
-      descendants.push(nodeId);
-      findDescendants(nodeId);
-      // Remove all
       const updates = {};
-      descendants.forEach(id => updates[id] = null);
+      toDelete.forEach(id => {
+        updates[id] = null;
+      });
       return db.ref('familyTree').update(updates);
     });
   }
 
-  // Check for birthdays today and notify
+  // Check birthdays and show notifications
   function checkBirthdaysToday() {
-    const today = new Date();
-    const mmdd = ("0" + (today.getMonth() + 1)).slice(-2) + "-" + ("0" + today.getDate()).slice(-2);
     db.ref('familyTree').once('value').then(snapshot => {
       const data = snapshot.val() || {};
-      const birthdayPeople = [];
+      const today = new Date();
+      const todayMonthDay = (today.getMonth() + 1).toString().padStart(2, '0') + '-' + today.getDate().toString().padStart(2, '0');
+
+      const birthdaysToday = [];
       for (const id in data) {
-        const bday = data[id].birthday;
-        if (bday && bday.slice(5) === mmdd) {
-          birthdayPeople.push(data[id].name);
+        const node = data[id];
+        if (node.birthday) {
+          const bdMonthDay = node.birthday.slice(5, 10);
+          if (bdMonthDay === todayMonthDay) {
+            birthdaysToday.push(node.name);
+          }
         }
       }
-      if (birthdayPeople.length) {
-        birthdayNotifications.textContent = `🎉 Today's birthdays: ${birthdayPeople.join(', ')}`;
+
+      if (birthdaysToday.length) {
+        birthdayNotifications.textContent = `🎉 Birthday today: ${birthdaysToday.join(', ')}`;
       } else {
         birthdayNotifications.textContent = '';
       }
     });
   }
+
 </script>
 
 </body>
