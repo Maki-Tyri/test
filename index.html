@@ -1,287 +1,132 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Firebase Messenger with Emoji Avatars</title>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+  <meta charset="UTF-8">
+  <title>Media Playlist Player</title>
   <style>
-    html, body { margin:0; padding:0; font-family: Arial, sans-serif; background:#f5f5f5; height:100%; }
-    #app { max-width:600px; margin:auto; background:#fff; height:100vh; display:flex; flex-direction: column; box-shadow: 0 0 10px rgba(0,0,0,0.1); }
-    header { padding:1rem; border-bottom: 1px solid #ccc; display:flex; justify-content: space-between; align-items:center; background:#eee; }
-    section { flex:1; padding:1rem; overflow: hidden; display:none; flex-direction: column; }
-    section.active { display:flex; }
-    input, select, button, textarea { padding:0.5rem; margin-bottom:0.7rem; font-size:1rem; border:1px solid #ccc; border-radius:4px; }
-    button { background:#007bff; color:#fff; border:none; cursor:pointer; }
-    button:hover { background:#0056b3; }
-    #messages { flex:1; overflow-y:auto; border:1px solid #ccc; padding:0.5rem; border-radius:4px; background:#fafafa; display:flex; flex-direction: column; gap:0.5rem; }
-    .message { display:flex; gap:0.5rem; align-items:flex-start; max-width: 80%; padding: 0.5rem; border-radius: 6px; background: #e1ffc7; word-wrap: break-word; }
-    .message.self { background: #c7dfff; align-self: flex-end; flex-direction: row-reverse; }
-    .avatar { width:36px; height:36px; font-size: 28px; line-height: 36px; text-align: center; border-radius: 50%; border:1px solid #ccc; user-select:none; }
-    .sender-info { display:flex; flex-direction: column; font-size: 0.85rem; }
-    .sender { font-weight: bold; }
-    .timestamp { font-size: 0.7rem; color: #666; margin-top: 0.2rem; }
-    #typingIndicator { font-style: italic; color:#666; height: 20px; margin-bottom: 0.5rem; }
-    footer {
-  position: fixed;
-  bottom: 0;
-  width: 100%;
-  padding: 0.25rem 0.5rem;
-  text-align: center;
-  color: #000;
-  background: rgba(255, 255, 255, 0.4);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border-top: 1px solid rgba(255, 255, 255, 0.3);
-  font-size: 0.85rem;
-} 
+    body {
+      font-family: sans-serif;
+      text-align: center;
+      background: #f0f0f0;
+      padding: 30px;
+    }
+    #playerContainer {
+      margin: 20px auto;
+    }
+    audio, video {
+      width: 90%;
+      max-width: 600px;
+    }
+    ul#playlist {
+      list-style: none;
+      padding: 0;
+      max-width: 600px;
+      margin: 20px auto;
+      text-align: left;
+    }
+    ul#playlist li {
+      padding: 10px;
+      cursor: pointer;
+      border-bottom: 1px solid #ccc;
+    }
+    ul#playlist li.active {
+      background-color: #d0f0d0;
+      font-weight: bold;
+    }
+    .controls {
+      margin-top: 15px;
+    }
+    button {
+      padding: 10px 20px;
+      margin: 0 5px;
+    }
   </style>
 </head>
 <body>
-<div id="app">
-  <header>
-    <div>Firebase Messenger</div>
-    <button id="logoutBtn" style="display:none;">Logout</button>
-  </header>
-  <section id="login" class="active">
-    <input type="email" id="loginEmail" placeholder="Email" />
-    <input type="password" id="loginPassword" placeholder="Password" />
-    <button id="loginBtn">Login</button>
-    <button id="toRegisterBtn" style="background:#666;">Register Instead</button>
-  </section>
-  <section id="register">
-    <input type="email" id="registerEmail" placeholder="Email" />
-    <input type="password" id="registerPassword" placeholder="Password" />
-    <button id="registerBtn">Register</button>
-    <button id="toLoginBtn" style="background:#666;">Back to Login</button>
-  </section>
-  <section id="chat">
-    <input type="text" id="displayNameInput" placeholder="Change Display Name" />
-    <button id="saveProfileBtn">Save Profile</button>
-    <select id="chatSelect">
-      <option value="" disabled selected>Select user or group chat</option>
-      <optgroup label="Users" id="userOptions"></optgroup>
-      <optgroup label="Groups" id="groupOptions"></optgroup>
-    </select>
-    <div id="messages"></div>
-    <div id="typingIndicator"></div>
-    <div style="display:flex; gap:0.5rem;">
-      <textarea id="messageInput" placeholder="Type a message..." style="flex:1;"></textarea>
-      <button id="sendBtn" style="width:100px;">Send</button>
-    </div>
-  </section>
-</div>
-  <footer class="footer">&copy; 2025 Maki Web. All rights reserved</footer>
-<script>
-  const firebaseConfig = {
-    apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
-    authDomain: "project-955237504610034331.firebaseapp.com",
-    databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
-    projectId: "project-955237504610034331",
-    storageBucket: "project-955237504610034331.appspot.com",
-    messagingSenderId: "76212939677",
-    appId: "1:76212939677:web:ef498bc1e4e480ab6e5d74"
-  };
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+  <h1>🎶 Playlist Media Player</h1>
 
-  const emojiAvatars = ["😀","😎","🤖","🐱","🐶","🦊","🐼","🐸","🦄","🐵","🐯","🐷","🐰","🐨","🐔","🦉"];
-  const getAvatarEmoji = (id) => {
-    let sum = 0;
-    for (const c of id) sum += c.charCodeAt(0);
-    return emojiAvatars[sum % emojiAvatars.length];
-  };
+  <div id="playerContainer"></div>
 
-  const loginSection = document.getElementById("login");
-  const registerSection = document.getElementById("register");
-  const chatSection = document.getElementById("chat");
-  const loginBtn = document.getElementById("loginBtn");
-  const registerBtn = document.getElementById("registerBtn");
-  const toRegisterBtn = document.getElementById("toRegisterBtn");
-  const toLoginBtn = document.getElementById("toLoginBtn");
-  const logoutBtn = document.getElementById("logoutBtn");
-  const loginEmail = document.getElementById("loginEmail");
-  const loginPassword = document.getElementById("loginPassword");
-  const registerEmail = document.getElementById("registerEmail");
-  const registerPassword = document.getElementById("registerPassword");
-  const displayNameInput = document.getElementById("displayNameInput");
-  const saveProfileBtn = document.getElementById("saveProfileBtn");
-  const sendBtn = document.getElementById("sendBtn");
-  const messagesDiv = document.getElementById("messages");
-  const chatSelect = document.getElementById("chatSelect");
-  const userOptions = document.getElementById("userOptions");
-  const groupOptions = document.getElementById("groupOptions");
-  const messageInput = document.getElementById("messageInput");
-  const typingIndicator = document.getElementById("typingIndicator");
+  <div class="controls">
+    <button onclick="prevTrack()">⏮ Prev</button>
+    <button onclick="togglePlay()">⏯ Play/Pause</button>
+    <button onclick="nextTrack()">⏭ Next</button>
+  </div>
 
-  let currentUser = null;
-  let selectedChatId = null;
-  let isGroupChat = false;
-  let messagesRef = null;
-  let typingTimeout;
+  <ul id="playlist"></ul>
 
-  auth.onAuthStateChanged(user => {
-    if (user) {
-      currentUser = user;
-      showSection(chatSection);
-      logoutBtn.style.display = "block";
-      loadUserProfile(user.uid);
-      joinEveryoneGroup(user.uid);
-      populateChatList();
-      clearMessagesListener();
-    } else {
-      currentUser = null;
-      showSection(loginSection);
-      logoutBtn.style.display = "none";
-      clearMessagesListener();
-      messagesDiv.innerHTML = "";
-      chatSelect.value = "";
-      displayNameInput.value = "";
-    }
-  });
+  <script>
+    const playlist = [
+      { title: "Chill Vibes (MP3)", src: "media/song1.mp3", type: "audio" },
+      { title: "Relax Beats (MP3)", src: "media/song2.mp3", type: "audio" },
+      { title: "Sample Video (MP4)", src: "media/video1.mp4", type: "video" }
+    ];
 
-  function showSection(section) {
-    loginSection.classList.remove("active");
-    registerSection.classList.remove("active");
-    chatSection.classList.remove("active");
-    section.classList.add("active");
-  }
+    let currentIndex = 0;
+    let player = null;
 
-  loginBtn.onclick = () => {
-    auth.signInWithEmailAndPassword(loginEmail.value.trim(), loginPassword.value).catch(e => alert("Login failed: " + e.message));
-  };
+    const playerContainer = document.getElementById("playerContainer");
+    const playlistElement = document.getElementById("playlist");
 
-  registerBtn.onclick = () => {
-    const email = registerEmail.value.trim();
-    const password = registerPassword.value;
-    if (!email || !password) return alert("Enter email and password");
-    auth.createUserWithEmailAndPassword(email, password).then(cred => {
-      db.ref("users/" + cred.user.uid).set({
-        email: email,
-        displayName: email.split('@')[0]
+    function renderPlaylist() {
+      playlistElement.innerHTML = "";
+      playlist.forEach((item, index) => {
+        const li = document.createElement("li");
+        li.textContent = item.title;
+        li.classList.toggle("active", index === currentIndex);
+        li.addEventListener("click", () => {
+          currentIndex = index;
+          loadAndPlay();
+        });
+        playlistElement.appendChild(li);
       });
-    }).catch(e => alert("Registration failed: " + e.message));
-  };
-
-  logoutBtn.onclick = () => auth.signOut();
-  toRegisterBtn.onclick = () => showSection(registerSection);
-  toLoginBtn.onclick = () => showSection(loginSection);
-
-  function loadUserProfile(uid) {
-    db.ref("users/" + uid).once("value").then(snap => {
-      const userData = snap.val();
-      if (!userData) return;
-      displayNameInput.value = userData.displayName || "";
-    });
-  }
-
-  saveProfileBtn.onclick = () => {
-    if (!currentUser) return alert("Not logged in");
-    const newName = displayNameInput.value.trim() || currentUser.email.split("@")[0];
-    db.ref("users/" + currentUser.uid).update({ displayName: newName });
-    alert("Profile saved!");
-    populateChatList();
-  };
-
-  function joinEveryoneGroup(uid) {
-    db.ref("groups/group_everyone/members/" + uid).set(true);
-  }
-
-  async function populateChatList() {
-    userOptions.innerHTML = "";
-    groupOptions.innerHTML = "";
-    const usersSnap = await db.ref("users").once("value");
-    const users = usersSnap.val() || {};
-    for (const uid in users) {
-      if (uid === currentUser.uid) continue;
-      const option = document.createElement("option");
-      option.value = getPrivateChatId(currentUser.uid, uid);
-      option.textContent = users[uid].displayName || users[uid].email || "User";
-      option.dataset.isGroup = "false";
-      option.dataset.userId = uid;
-      userOptions.appendChild(option);
     }
-    const groupOption = document.createElement("option");
-    groupOption.value = "group_everyone";
-    groupOption.textContent = "Everyone (Group Chat)";
-    groupOption.dataset.isGroup = "true";
-    groupOptions.appendChild(groupOption);
-  }
 
-  function getPrivateChatId(uid1, uid2) {
-    return [uid1, uid2].sort().join("_");
-  }
+    function loadAndPlay() {
+      const item = playlist[currentIndex];
+      playerContainer.innerHTML = "";
 
-  function clearMessagesListener() {
-    if (messagesRef) messagesRef.off();
-    messagesRef = null;
-    typingIndicator.textContent = "";
-  }
+      player = document.createElement(item.type);
+      player.controls = true;
+      player.autoplay = true;
 
-  function listenMessages(chatId, group) {
-    clearMessagesListener();
-    if (!chatId) return;
-    selectedChatId = chatId;
-    isGroupChat = group;
-    messagesDiv.innerHTML = "";
-    messagesRef = db.ref("messages/" + chatId);
-    messagesRef.orderByChild("timestamp").on("child_added", snap => {
-      const msg = snap.val();
-      const div = document.createElement("div");
-      div.className = "message" + (msg.sender === currentUser.uid ? " self" : "");
-      const avatar = document.createElement("div");
-      avatar.className = "avatar";
-      avatar.textContent = getAvatarEmoji(msg.sender);
-      const senderInfo = document.createElement("div");
-      senderInfo.className = "sender-info";
-      senderInfo.innerHTML = `<div class="sender">${msg.senderName || "User"}</div><div>${msg.text}</div><div class="timestamp">${new Date(msg.timestamp).toLocaleTimeString()}</div>`;
-      div.appendChild(avatar);
-      div.appendChild(senderInfo);
-      messagesDiv.appendChild(div);
-      messagesDiv.scrollTop = messagesDiv.scrollHeight;
+      const source = document.createElement("source");
+      source.src = item.src;
+      source.type = item.type === "audio" ? "audio/mpeg" : "video/mp4";
+      player.appendChild(source);
+
+      player.addEventListener("ended", nextTrack);
+
+      playerContainer.appendChild(player);
+      renderPlaylist();
+    }
+
+    function togglePlay() {
+      if (player) {
+        if (player.paused) {
+          player.play();
+        } else {
+          player.pause();
+        }
+      }
+    }
+
+    function nextTrack() {
+      currentIndex = (currentIndex + 1) % playlist.length;
+      loadAndPlay();
+    }
+
+    function prevTrack() {
+      currentIndex = (currentIndex - 1 + playlist.length) % playlist.length;
+      loadAndPlay();
+    }
+
+    window.addEventListener("DOMContentLoaded", () => {
+      renderPlaylist();
+      loadAndPlay();
     });
-    const typingRef = db.ref("typing/" + chatId);
-    typingRef.on("value", snap => {
-      const typingUsers = snap.val() || {};
-      const names = Object.entries(typingUsers).filter(([uid, isTyping]) => isTyping && uid !== currentUser.uid).map(([uid]) => uid);
-      typingIndicator.textContent = names.length > 0 ? "Someone is typing..." : "";
-    });
-  }
+  </script>
 
-  sendBtn.onclick = () => {
-    const text = messageInput.value.trim();
-    if (!text || !selectedChatId || !currentUser) return;
-    const msg = {
-      text,
-      sender: currentUser.uid,
-      senderName: displayNameInput.value || currentUser.email.split("@")[0],
-      timestamp: Date.now(),
-    };
-    db.ref("messages/" + selectedChatId).push(msg);
-    messageInput.value = "";
-    db.ref("typing/" + selectedChatId + "/" + currentUser.uid).set(false);
-  };
-
-  messageInput.addEventListener("input", () => {
-    if (!selectedChatId || !currentUser) return;
-    db.ref("typing/" + selectedChatId + "/" + currentUser.uid).set(true);
-    clearTimeout(typingTimeout);
-    typingTimeout = setTimeout(() => {
-      db.ref("typing/" + selectedChatId + "/" + currentUser.uid).set(false);
-    }, 2000);
-  });
-
-  chatSelect.onchange = () => {
-    const selected = chatSelect.selectedOptions[0];
-    if (!selected) return;
-    const isGroup = selected.dataset.isGroup === "true";
-    const chatId = selected.value;
-    listenMessages(chatId, isGroup);
-  };
-</script>
 </body>
 </html>
