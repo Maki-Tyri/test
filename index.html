@@ -3,19 +3,26 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Family Tree</title>
+<title>Family Tree - Editable</title>
 <style>
-  ul { list-style-type: none; }
+  ul { list-style-type: none; padding-left: 1em; }
   .node { cursor: pointer; margin: 5px 0; }
   .children { margin-left: 20px; display: none; }
+  .node > span.name {
+    cursor: pointer;
+  }
   .node.editing input {
     font-size: 1em;
+  }
+  button {
+    margin-left: 8px;
+    font-size: 0.8em;
   }
 </style>
 </head>
 <body>
 
-<h2>Family Tree</h2>
+<h2>Editable Family Tree</h2>
 <div id="tree"></div>
 
 <!-- Firebase SDK -->
@@ -23,7 +30,6 @@
 <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 
 <script>
-  // Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
     authDomain: "project-955237504610034331.firebaseapp.com",
@@ -35,36 +41,40 @@
     measurementId: "G-RCJ4P82PVM"
   };
 
-  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  // Reference to family tree data
   const treeRef = db.ref('familyTree');
 
-  // Load family tree and render
+  // Load and render tree
   treeRef.on('value', snapshot => {
     const data = snapshot.val();
     const container = document.getElementById('tree');
-    container.innerHTML = ''; // clear
+    container.innerHTML = '';
     if (data) {
-      container.appendChild(createTreeNode(data));
+      container.appendChild(createTreeNode(data, []));
     } else {
       container.textContent = 'No family data yet.';
     }
   });
 
-  // Create tree node element recursively
-  function createTreeNode(node) {
+  // Helper: Convert path array to Firebase DB ref
+  function pathToRef(path) {
+    return treeRef.child(path.join('/'));
+  }
+
+  // Create tree node element with path for updating
+  function createTreeNode(node, path) {
     const li = document.createElement('li');
     li.className = 'node';
-    
-    // Create span for the name (editable)
+
+    // Name span
     const span = document.createElement('span');
     span.textContent = node.name || 'Unnamed';
+    span.className = 'name';
     li.appendChild(span);
 
-    // Clicking toggles children visibility
+    // Toggle children on name click
     span.addEventListener('click', () => {
       if (childrenUl.style.display === 'none') {
         childrenUl.style.display = 'block';
@@ -82,22 +92,44 @@
       li.replaceChild(input, span);
       input.focus();
 
-      input.addEventListener('blur', () => finishEditing(input, li, node));
+      input.addEventListener('blur', () => finishEditing(input, li, path));
       input.addEventListener('keydown', e => {
         if (e.key === 'Enter') {
-          finishEditing(input, li, node);
+          finishEditing(input, li, path);
         }
       });
     });
 
-    // Create children list recursively
+    // Add and Remove buttons
+    const btnAdd = document.createElement('button');
+    btnAdd.textContent = '+ Add Child';
+    btnAdd.title = 'Add child to this node';
+    btnAdd.addEventListener('click', e => {
+      e.stopPropagation(); // Prevent toggle
+      addChildNode(path);
+    });
+    li.appendChild(btnAdd);
+
+    // Don't allow root node removal
+    if (path.length > 0) {
+      const btnRemove = document.createElement('button');
+      btnRemove.textContent = '- Remove';
+      btnRemove.title = 'Remove this node and its children';
+      btnRemove.addEventListener('click', e => {
+        e.stopPropagation();
+        removeNode(path);
+      });
+      li.appendChild(btnRemove);
+    }
+
+    // Children list
     const childrenUl = document.createElement('ul');
     childrenUl.className = 'children';
-    childrenUl.style.display = 'none'; // collapsed by default
+    childrenUl.style.display = 'none'; // collapsed default
 
     if (node.children) {
       for (const key in node.children) {
-        const childNode = createTreeNode(node.children[key]);
+        const childNode = createTreeNode(node.children[key], path.concat(['children', key]));
         childrenUl.appendChild(childNode);
       }
     }
@@ -107,52 +139,61 @@
     return li;
   }
 
-  // Finish editing function: save to Firebase
-  function finishEditing(input, li, node) {
+  // Finish editing name, save to Firebase
+  function finishEditing(input, li, path) {
     const newName = input.value.trim();
     if (newName.length > 0) {
-      // Update Firebase data (find node key path)
-      // Since this is a simplified example, let's assume we can edit root node only for now
-      // You can expand this logic to track full path and keys
-      
-      // For demo: update root node name only
-      treeRef.update({ name: newName });
+      const nodeRef = pathToRef(path.concat(['name']));
+      nodeRef.set(newName).then(() => {
+        const span = document.createElement('span');
+        span.textContent = newName;
+        span.className = 'name';
+        li.replaceChild(span, input);
+        li.classList.remove('editing');
 
-      // Replace input with span again
-      const span = document.createElement('span');
-      span.textContent = newName;
-      li.replaceChild(span, input);
-      li.classList.remove('editing');
-
-      // Re-bind events
-      span.addEventListener('click', () => {
-        const childrenUl = li.querySelector('.children');
-        if (childrenUl.style.display === 'none') {
-          childrenUl.style.display = 'block';
-        } else {
-          childrenUl.style.display = 'none';
-        }
-      });
-      span.addEventListener('dblclick', () => {
-        li.classList.add('editing');
-        const input = document.createElement('input');
-        input.type = 'text';
-        input.value = span.textContent;
-        li.replaceChild(input, span);
-        input.focus();
-        input.addEventListener('blur', () => finishEditing(input, li, node));
-        input.addEventListener('keydown', e => {
-          if (e.key === 'Enter') {
-            finishEditing(input, li, node);
+        // Re-bind events
+        span.addEventListener('click', () => {
+          const childrenUl = li.querySelector('.children');
+          if (childrenUl.style.display === 'none') {
+            childrenUl.style.display = 'block';
+          } else {
+            childrenUl.style.display = 'none';
           }
+        });
+        span.addEventListener('dblclick', () => {
+          li.classList.add('editing');
+          const input = document.createElement('input');
+          input.type = 'text';
+          input.value = span.textContent;
+          li.replaceChild(input, span);
+          input.focus();
+          input.addEventListener('blur', () => finishEditing(input, li, path));
+          input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+              finishEditing(input, li, path);
+            }
+          });
         });
       });
     } else {
-      // If empty, cancel edit
+      // Cancel editing if empty
       const span = document.createElement('span');
-      span.textContent = node.name;
+      span.textContent = li.querySelector('span.name').textContent;
       li.replaceChild(span, input);
       li.classList.remove('editing');
+    }
+  }
+
+  // Add a new child node with default name
+  function addChildNode(parentPath) {
+    const newChildRef = pathToRef(parentPath.concat(['children'])).push();
+    newChildRef.set({ name: 'New Member' });
+  }
+
+  // Remove node and its children
+  function removeNode(path) {
+    if (confirm('Are you sure you want to remove this member and all its descendants?')) {
+      pathToRef(path).remove();
     }
   }
 </script>
