@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Responsive Family Tree</title>
+  <title>Advanced Genogram Family Tree</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -11,47 +11,236 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
   <style>
-    .line-connector {
-      width: 2px;
-      background: #6366f1;
-      position: absolute;
-      left: -12px;
-      top: 0;
-      bottom: 0;
-      z-index: -1;
+    /* Gender shapes */
+    .gender-shape {
+      display: inline-block;
+      width: 24px;
+      height: 24px;
+      margin-right: 0.5rem;
+      vertical-align: middle;
+      border: 2px solid currentColor;
     }
-    @media (max-width: 640px) {
-      .family-card {
+    .male {
+      background-color: #3b82f6; /* Blue */
+      clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%); /* Square */
+      border-radius: 4px;
+    }
+    .female {
+      background-color: #ec4899; /* Pink */
+      border-radius: 50%; /* Circle */
+    }
+    .non-binary {
+      background-color: #8b5cf6; /* Purple */
+      clip-path: polygon(50% 0%, 100% 50%, 50% 100%, 0% 50%); /* Diamond */
+    }
+
+    /* Genogram lines */
+    .line-horizontal {
+      border-top: 2px solid #555;
+      height: 0;
+      flex-grow: 1;
+      margin: auto 4px;
+    }
+    .line-vertical {
+      width: 2px;
+      background: #555;
+      flex-shrink: 0;
+    }
+
+    /* Container for member box */
+    .member-box {
+      border: 2px solid #4f46e5;
+      background: white;
+      padding: 6px 12px;
+      border-radius: 0.375rem;
+      min-width: 180px;
+      cursor: pointer;
+      box-shadow: 0 1px 4px rgb(0 0 0 / 0.1);
+      position: relative;
+      transition: box-shadow 0.2s ease;
+    }
+    .member-box:hover {
+      box-shadow: 0 4px 12px rgb(0 0 0 / 0.3);
+    }
+
+    /* Deceased style */
+    .deceased {
+      text-decoration: line-through;
+      color: #a1a1aa;
+      opacity: 0.7;
+    }
+
+    /* Container to horizontally center spouse members */
+    .spouse-container {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.25rem;
+      margin-bottom: 0.5rem;
+      position: relative;
+    }
+    /* Spouse connecting line */
+    .spouse-line {
+      position: absolute;
+      top: 50%;
+      left: 0;
+      right: 0;
+      border-top: 2px solid #ec4899;
+      z-index: 0;
+      pointer-events: none;
+    }
+
+    /* Tree container */
+    .tree-node {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      position: relative;
+    }
+    .children-container {
+      display: flex;
+      justify-content: center;
+      margin-top: 0.75rem;
+      gap: 2rem;
+    }
+
+    /* Lines connecting parents to children */
+    .parent-to-children-line {
+      position: absolute;
+      top: 100%;
+      left: 50%;
+      width: 2px;
+      height: 20px;
+      background: #555;
+      z-index: 0;
+    }
+    .children-horizontal-line {
+      border-top: 2px solid #555;
+      height: 0;
+      position: absolute;
+      top: calc(100% + 20px);
+      left: 0;
+      right: 0;
+      z-index: 0;
+    }
+
+    /* Collapsible toggle */
+    .collapse-toggle {
+      position: absolute;
+      top: -12px;
+      right: -12px;
+      background: #4f46e5;
+      color: white;
+      border-radius: 50%;
+      width: 24px;
+      height: 24px;
+      font-weight: 700;
+      font-size: 18px;
+      line-height: 24px;
+      cursor: pointer;
+      user-select: none;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 2px 6px rgb(0 0 0 / 0.2);
+      z-index: 10;
+    }
+
+    /* Responsive layout */
+    @media (max-width: 768px) {
+      .children-container {
         flex-direction: column;
+        gap: 1.5rem;
+      }
+      .tree-node {
         align-items: flex-start;
       }
     }
+
+    /* Search bar */
+    .search-input {
+      max-width: 320px;
+      margin: 0 auto 1rem auto;
+      display: block;
+      padding: 0.5rem 1rem;
+      border-radius: 0.375rem;
+      border: 2px solid #4f46e5;
+      outline-offset: 2px;
+      outline-color: #a5b4fc;
+      font-size: 1rem;
+    }
+
+    /* Buttons style */
+    button.small-btn {
+      font-size: 0.75rem;
+      padding: 0.2rem 0.5rem;
+      border-radius: 0.25rem;
+      border: none;
+      cursor: pointer;
+      transition: background-color 0.2s ease;
+    }
+    button.edit-btn {
+      background: #6366f1;
+      color: white;
+    }
+    button.edit-btn:hover {
+      background: #4338ca;
+    }
+    button.add-child-btn {
+      background: #10b981;
+      color: white;
+    }
+    button.add-child-btn:hover {
+      background: #047857;
+    }
+    button.add-spouse-btn {
+      background: #ec4899;
+      color: white;
+    }
+    button.add-spouse-btn:hover {
+      background: #be185d;
+    }
+    button.delete-btn {
+      background: #ef4444;
+      color: white;
+    }
+    button.delete-btn:hover {
+      background: #b91c1c;
+    }
   </style>
 </head>
-<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen text-gray-900">
+<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen text-gray-900 flex flex-col">
 
-<div id="root" class="p-4 max-w-6xl mx-auto"></div>
+<div id="root" class="p-4 flex-grow max-w-6xl mx-auto"></div>
 
 <footer class="fixed bottom-0 w-full text-center py-2 bg-white bg-opacity-10 text-white backdrop-blur-md text-sm">
-  &copy; 2025 Maki Web. All rights reserved.
+  &copy; 2025 Maki Web. All rights reserved
 </footer>
 
 <script type="text/javascript">
-const { useState, useEffect } = React;
+const { useState, useEffect, useMemo } = React;
 
 const firebaseConfig = {
   apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
   authDomain: "project-955237504610034331.firebaseapp.com",
   databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
   projectId: "project-955237504610034331",
-  storageBucket: "project-955237504610034331.appspot.com",
+  storageBucket: "project-955237504610034331.firebasestorage.app",
   messagingSenderId: "76212939677",
-  appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74"
+  appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
+  measurementId: "G-RCJ4P82PVM"
 };
 
 firebase.initializeApp(firebaseConfig);
 const auth = firebase.auth();
 const db = firebase.database();
+
+// Relation dropdown options filtered by context
+const relationOptionsByContext = {
+  child: ["Son", "Daughter"],
+  spouse: ["Spouse"],
+  edit: ["Father", "Mother", "Son", "Daughter", "Spouse", "Brother", "Sister"]
+};
 
 function Login({ onLogin }) {
   const [email, setEmail] = useState("");
@@ -83,7 +272,7 @@ function Login({ onLogin }) {
         required: true,
         value: email,
         onChange: e => setEmail(e.target.value),
-        className: "w-full px-4 py-2 border rounded-md"
+        className: "w-full p-3 rounded border border-gray-300"
       }),
       React.createElement("input", {
         type: "password",
@@ -91,111 +280,323 @@ function Login({ onLogin }) {
         required: true,
         value: password,
         onChange: e => setPassword(e.target.value),
-        className: "w-full px-4 py-2 border rounded-md"
+        className: "w-full p-3 rounded border border-gray-300"
       }),
+      error && React.createElement("div", { className: "text-red-600 text-sm" }, error),
       React.createElement("button", {
         type: "submit",
-        className: "w-full bg-indigo-600 text-white py-2 rounded-md"
+        className: "w-full py-3 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
       }, isRegister ? "Register" : "Login")
     ),
-    error && React.createElement("p", { className: "text-red-600 text-center mt-4" }, error),
-    React.createElement("p", {
-      className: "mt-6 text-center text-indigo-600 cursor-pointer hover:underline",
-      onClick: () => setIsRegister(!isRegister)
-    }, isRegister ? "Already have an account? Login" : "No account? Register")
-  );
-}
-
-function FamilyTreeApp() {
-  const [user, setUser] = useState(null);
-  const [members, setMembers] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState("");
-  const [expanded, setExpanded] = useState({});
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(u => {
-      if (u) setUser(u);
-      else setUser(null);
-    });
-    return () => unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    if (!user) return;
-    const ref = db.ref(`users/${user.uid}/members`);
-    const handler = (snapshot) => {
-      const val = snapshot.val() || {};
-      setMembers(Object.values(val));
-      setLoading(false);
-    };
-    ref.on("value", handler);
-    return () => ref.off("value", handler);
-  }, [user]);
-
-  const saveMember = (member) => {
-    if (!user) return;
-    db.ref(`users/${user.uid}/members/${member.id}`).set(member);
-  };
-
-  const deleteMember = (id) => {
-    if (!user) return;
-    db.ref(`users/${user.uid}/members/${id}`).remove();
-  };
-
-  const toggleExpand = (id) => {
-    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
-  };
-
-  const renderTree = (member, allMembers, level = 0) => {
-    const children = allMembers.filter(m => m.parentId === member.id);
-    const isOpen = expanded[member.id] ?? true;
-
-    return (
-      React.createElement("div", { key: member.id, className: "relative ml-4 mt-4 pl-4 border-l-2 border-indigo-400" },
-        React.createElement("div", { className: "flex items-center family-card gap-2 relative bg-white p-2 rounded shadow-md w-full sm:flex-row flex-col" },
-          React.createElement("div", { className: "text-indigo-700 font-semibold" }, member.name),
-          React.createElement("span", { className: "text-xs text-gray-600" }, member.relation || ""),
-          member.deceased && React.createElement("span", { className: "text-red-500 text-sm" }, "☠"),
-          React.createElement("button", { className: "ml-auto text-xs text-blue-600", onClick: () => toggleExpand(member.id) }, isOpen ? "Collapse" : "Expand"),
-          React.createElement("button", { className: "ml-2 text-xs text-red-500", onClick: () => deleteMember(member.id) }, "Delete")
-        ),
-        isOpen && children.map(child => renderTree(child, allMembers, level + 1))
-      )
-    );
-  };
-
-  if (!user) return React.createElement(Login, { onLogin: () => setUser(auth.currentUser) });
-  if (loading) return React.createElement("div", { className: "text-center text-white mt-10" }, "Loading...");
-
-  const rootMembers = members.filter(m => !m.parentId);
-  const filtered = members.filter(m => m.name.toLowerCase().includes(search.toLowerCase()));
-
-  return (
-    React.createElement("div", { className: "bg-white bg-opacity-90 rounded-lg p-4 shadow-xl mt-4 mb-20" },
-      React.createElement("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4" },
-        React.createElement("h1", { className: "text-2xl font-bold text-indigo-700" }, "My Family Tree"),
-        React.createElement("input", {
-          type: "text",
-          placeholder: "Search member...",
-          className: "border border-gray-300 px-3 py-1 rounded w-full sm:w-64",
-          value: search,
-          onChange: e => setSearch(e.target.value)
-        })
-      ),
-      filtered.length === 0 && React.createElement("p", { className: "text-gray-500 italic" }, "No members found."),
-      rootMembers.map(root => renderTree(root, members)),
-      React.createElement("div", { className: "mt-4 text-center" },
-        React.createElement("button", {
-          onClick: () => auth.signOut(),
-          className: "bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded"
-        }, "Logout")
-      )
+    React.createElement("p", { className: "mt-4 text-center text-gray-700" },
+      isRegister ? "Already have an account?" : "Don't have an account? ",
+      React.createElement("button", {
+        onClick: () => setIsRegister(!isRegister),
+        className: "text-indigo-600 hover:underline ml-1"
+      }, isRegister ? "Login" : "Register")
     )
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(FamilyTreeApp));
+function FamilyTreeApp() {
+  const [members, setMembers] = useState({});
+  const [rootIds, setRootIds] = useState([]);
+  const [filter, setFilter] = useState("");
+  const [collapsed, setCollapsed] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
+
+  // Listen to auth changes
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(user => {
+      if (user) {
+        setCurrentUser(user);
+        loadMembers(user.uid);
+      } else {
+        setCurrentUser(null);
+        setMembers({});
+        setRootIds([]);
+      }
+    });
+    return unsubscribe;
+  }, []);
+
+  // Load members from Firebase for the logged-in user
+  function loadMembers(uid) {
+    const membersRef = db.ref(`users/${uid}/members`);
+    membersRef.on("value", snapshot => {
+      const data = snapshot.val() || {};
+      setMembers(data);
+      const roots = Object.values(data)
+        .filter(m => !m.parentIds || m.parentIds.length === 0)
+        .map(m => m.id);
+      setRootIds(roots);
+    });
+  }
+
+  // Save members to Firebase
+  function saveMembers(newMembers) {
+    if (!currentUser) return;
+    db.ref(`users/${currentUser.uid}/members`).set(newMembers);
+  }
+
+  // Add member
+  function addMember(parentId = null, relation = "Son") {
+    const newId = "id" + Math.random().toString(36).substring(2, 10);
+    const newMember = {
+      id: newId,
+      name: relation + " Name",
+      gender: relation === "Son" || relation === "Father" || relation === "Brother" ? "male" : (relation === "Daughter" || relation === "Mother" || relation === "Sister" ? "female" : "non-binary"),
+      birth: "",
+      death: "",
+      parentIds: parentId ? [parentId] : [],
+      spouseIds: [],
+      childrenIds: [],
+    };
+    let updated = {...members};
+    updated[newId] = newMember;
+
+    // Update parent's childrenIds
+    if (parentId && updated[parentId]) {
+      updated[parentId] = {
+        ...updated[parentId],
+        childrenIds: [...(updated[parentId].childrenIds || []), newId]
+      };
+    }
+    saveMembers(updated);
+  }
+
+  // Add spouse
+  function addSpouse(memberId) {
+    const newId = "id" + Math.random().toString(36).substring(2, 10);
+    const newSpouse = {
+      id: newId,
+      name: "Spouse Name",
+      gender: "female", // default spouse gender opposite of member
+      birth: "",
+      death: "",
+      parentIds: [],
+      spouseIds: [memberId],
+      childrenIds: [],
+    };
+    let updated = {...members};
+    updated[newId] = newSpouse;
+
+    // Update member spouseIds
+    if (updated[memberId]) {
+      updated[memberId] = {
+        ...updated[memberId],
+        spouseIds: [...(updated[memberId].spouseIds || []), newId]
+      };
+    }
+    saveMembers(updated);
+  }
+
+  // Update member inline
+  function updateMember(id, updates) {
+    let updated = {...members};
+    updated[id] = {...updated[id], ...updates};
+    saveMembers(updated);
+  }
+
+  // Delete member and cleanup references
+  function deleteMember(id) {
+    let updated = {...members};
+    if (!updated[id]) return;
+
+    // Remove from parents' childrenIds
+    (updated[id].parentIds || []).forEach(pid => {
+      if (updated[pid]) {
+        updated[pid].childrenIds = (updated[pid].childrenIds || []).filter(cid => cid !== id);
+      }
+    });
+    // Remove from spouses' spouseIds
+    (updated[id].spouseIds || []).forEach(sid => {
+      if (updated[sid]) {
+        updated[sid].spouseIds = (updated[sid].spouseIds || []).filter(spid => spid !== id);
+      }
+    });
+    // Remove children references to this member as parent
+    (updated[id].childrenIds || []).forEach(cid => {
+      if (updated[cid]) {
+        updated[cid].parentIds = (updated[cid].parentIds || []).filter(pid => pid !== id);
+      }
+    });
+
+    delete updated[id];
+    saveMembers(updated);
+  }
+
+  // Toggle collapse subtree
+  function toggleCollapse(id) {
+    setCollapsed(prev => ({...prev, [id]: !prev[id]}));
+  }
+
+  // Filter members by search text recursively (returns members to show)
+  function filterMembersBySearch(members, filter) {
+    if (!filter.trim()) return members;
+    const f = filter.trim().toLowerCase();
+    const filtered = {};
+    Object.values(members).forEach(m => {
+      if (m.name.toLowerCase().includes(f)) {
+        filtered[m.id] = m;
+      }
+    });
+    return filtered;
+  }
+
+  // Recursive component to render member and children
+  function MemberNode({ id, members, collapsed, toggleCollapse, filter }) {
+    const member = members[id];
+    if (!member) return null;
+
+    // Apply filter: if this member or any descendant matches filter, show
+    const matchesFilter = member.name.toLowerCase().includes(filter.toLowerCase());
+    const hasVisibleChild = (member.childrenIds || []).some(cid => {
+      return members[cid] && (members[cid].name.toLowerCase().includes(filter.toLowerCase()));
+    });
+    if (filter && !matchesFilter && !hasVisibleChild) return null;
+
+    const genderClass = member.gender === "male" ? "male" : (member.gender === "female" ? "female" : "non-binary");
+    const isCollapsed = collapsed[id];
+
+    return React.createElement("div", { className: "tree-node" },
+      React.createElement("div", {
+        className: `member-box ${member.death ? "deceased" : ""}`,
+        onClick: () => toggleCollapse(id),
+        title: `Click to ${isCollapsed ? "expand" : "collapse"} subtree`
+      },
+        React.createElement("span", { className: `gender-shape ${genderClass}`, title: member.gender }),
+        React.createElement("input", {
+          type: "text",
+          value: member.name,
+          onClick: e => e.stopPropagation(),
+          onChange: e => updateMember(id, {name: e.target.value}),
+          className: "font-semibold border-b border-transparent focus:border-indigo-500 outline-none w-32"
+        }),
+        React.createElement("br", null),
+        React.createElement("small", { className: "text-xs text-gray-500" },
+          member.birth && `B: ${member.birth} `, 
+          member.death && `D: ${member.death}`
+        ),
+        React.createElement("br", null),
+        React.createElement("button", {
+          onClick: e => { e.stopPropagation(); addMember(id, "Son"); },
+          className: "small-btn add-child-btn mr-1 mt-1"
+        }, "+Child"),
+        React.createElement("button", {
+          onClick: e => { e.stopPropagation(); addSpouse(id); },
+          className: "small-btn add-spouse-btn mr-1 mt-1"
+        }, "+Spouse"),
+        React.createElement("button", {
+          onClick: e => { e.stopPropagation(); deleteMember(id); },
+          className: "small-btn delete-btn mt-1"
+        }, "Del")
+      ),
+
+      // Spouse container with connecting line
+      (member.spouseIds && member.spouseIds.length > 0) && React.createElement("div", { className: "spouse-container" },
+        React.createElement("div", { className: "spouse-line" }),
+        React.createElement(MemberCardList, { ids: member.spouseIds, members, collapsed, toggleCollapse, filter })
+      ),
+
+      // Lines connecting parents to children
+      !isCollapsed && (member.childrenIds && member.childrenIds.length > 0) && React.createElement("div", {
+        style: { marginTop: "1rem", position: "relative", width: "100%" }
+      },
+        React.createElement("div", {
+          className: "parent-to-children-line",
+          style: { left: "50%", transform: "translateX(-50%)" }
+        }),
+        React.createElement("div", { className: "children-horizontal-line" }),
+        React.createElement("div", { className: "children-container" },
+          member.childrenIds.map(cid => (
+            React.createElement(MemberNode, {
+              key: cid,
+              id: cid,
+              members,
+              collapsed,
+              toggleCollapse,
+              filter
+            })
+          ))
+        )
+      )
+    );
+  }
+
+  // Helper to render multiple members in a row (spouses)
+  function MemberCardList({ ids, members, collapsed, toggleCollapse, filter }) {
+    return React.createElement(React.Fragment, null,
+      ids.map(id => (
+        React.createElement(MemberNode, {
+          key: id,
+          id,
+          members,
+          collapsed,
+          toggleCollapse,
+          filter
+        })
+      ))
+    );
+  }
+
+  const filteredMembers = useMemo(() => filterMembersBySearch(members, filter), [members, filter]);
+
+  return React.createElement("div", { className: "flex flex-col" },
+    React.createElement("input", {
+      type: "search",
+      placeholder: "Search family members...",
+      value: filter,
+      onChange: e => setFilter(e.target.value),
+      className: "search-input"
+    }),
+
+    React.createElement("div", { className: "flex justify-end mb-2" },
+      React.createElement("button", {
+        className: "small-btn add-child-btn",
+        onClick: () => addMember(null, "Father")
+      }, "+ Add Root Member")
+    ),
+
+    React.createElement("div", { className: "flex flex-wrap justify-center gap-8" },
+      rootIds.map(id => (
+        React.createElement(MemberNode, {
+          key: id,
+          id,
+          members: filteredMembers,
+          collapsed,
+          toggleCollapse,
+          filter
+        })
+      ))
+    )
+  );
+}
+
+function App() {
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged(u => setUser(u));
+    return unsubscribe;
+  }, []);
+
+  if (!user) return React.createElement(Login, { onLogin: () => setUser(auth.currentUser) });
+
+  return React.createElement(React.Fragment, null,
+    React.createElement("div", { className: "mb-4 flex justify-between items-center max-w-6xl mx-auto px-4" },
+      React.createElement("h1", { className: "text-white text-3xl font-bold" }, "Advanced Genogram Family Tree"),
+      React.createElement("button", {
+        className: "px-4 py-2 bg-red-600 rounded text-white hover:bg-red-700 transition",
+        onClick: () => auth.signOut()
+      }, "Logout")
+    ),
+    React.createElement(FamilyTreeApp)
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
 </script>
+
 </body>
 </html>
