@@ -3,231 +3,586 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Family Tree Recursive Firebase</title>
+<title>Family Tree App with Firebase</title>
 <style>
-  body { font-family: Arial, sans-serif; margin: 0; background: #f5f7fa; }
-  #treeContainer { padding: 20px; display: flex; flex-wrap: wrap; gap: 16px; }
-  .member-card {
-    border: 1px solid #ccc; border-radius: 8px; padding: 12px; background: #fff;
-    min-width: 220px; max-width: 320px; flex-grow: 1;
+  /* Reset */
+  * {
+    box-sizing: border-box;
   }
-  .member-card .name { font-weight: bold; font-size: 1.2em; }
-  .member-card .detail { font-size: 0.9em; color: #555; }
-  .children-container, .spouses-container { margin-left: 20px; border-left: 2px solid #ccc; padding-left: 12px; margin-top: 8px; }
-  button { margin: 4px 4px 4px 0; cursor: pointer; }
+  body, html {
+    margin: 0; padding: 0; height: 100%;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f4f8;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+  }
+
+  /* ----------- LOGIN PAGE ----------- */
+  #login-page {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background: url('https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=800&q=80') no-repeat center/cover;
+    padding: 20px;
+  }
+  #login-container {
+    background: rgba(255 255 255 / 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 14px;
+    padding: 40px 30px;
+    width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+  }
+  #login-container h2 {
+    margin-bottom: 24px;
+    font-weight: 700;
+    font-size: 1.8rem;
+    letter-spacing: 1.2px;
+  }
+  #login-container input[type="text"],
+  #login-container input[type="password"] {
+    width: 100%;
+    padding: 12px 15px;
+    margin: 10px 0 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    outline: none;
+  }
+  #login-container button {
+    width: 100%;
+    padding: 14px 0;
+    background: #007bff;
+    border: none;
+    border-radius: 8px;
+    font-weight: 700;
+    color: white;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
+  }
+  #login-container button:hover {
+    background: #0056b3;
+  }
+
+  /* ----------- MAIN APP ----------- */
+  #app {
+    flex: 1;
+    display: flex;
+    min-height: 0; /* for flex children to shrink properly */
+    overflow: hidden;
+    background: #e9f0ff;
+  }
+
+  /* Side connections panel */
+  #connections-panel {
+    background: #ffffffdd;
+    width: 200px;
+    border-right: 2px solid #007bff;
+    overflow-y: auto;
+    padding: 10px 8px;
+    font-size: 0.9rem;
+    user-select: none;
+    box-shadow: inset -3px 0 8px -3px rgba(0,123,255,0.3);
+  }
+  #connections-panel h3 {
+    font-weight: 600;
+    margin: 10px 0;
+    color: #007bff;
+    border-bottom: 1px solid #007bff;
+    padding-bottom: 6px;
+  }
+  #connections-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+  #connections-list li {
+    margin: 8px 0;
+    cursor: pointer;
+    color: #004a99;
+    transition: color 0.2s;
+  }
+  #connections-list li:hover {
+    color: #007bff;
+    text-decoration: underline;
+  }
+
+  /* Family tree container - flexible & scrollable */
+  #family-tree-container {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    /* allow wrapping for responsiveness */
+    flex-wrap: wrap;
+    gap: 20px;
+    min-width: 0; /* important for flex shrink */
+  }
+
+  /* The tree container grows with members */
+  #tree-root {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    max-width: 100%;
+    min-width: 280px;
+  }
+
+  /* Each person node */
+  .tree-node {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 3px 8px rgb(0 0 0 / 0.12);
+    padding: 12px 16px;
+    min-width: 260px;
+    max-width: 320px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .tree-node.spouse-node {
+    background: #e8f0fe;
+    border: 1.5px solid #007bff;
+  }
+
+  .node-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .node-header input[type="text"] {
+    flex-grow: 1;
+    font-weight: 600;
+    font-size: 1.1rem;
+    border: none;
+    border-bottom: 1.5px solid #007bff;
+    padding: 4px 6px;
+    outline-offset: 2px;
+    background: transparent;
+  }
+  .node-header input[type="text"]:focus {
+    background: #dbe9ff;
+  }
+  .node-header input[type="date"] {
+    border-radius: 6px;
+    border: 1px solid #aaa;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+  }
+  .node-header input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  /* Buttons container */
+  .node-buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .node-buttons button {
+    cursor: pointer;
+    border-radius: 6px;
+    border: none;
+    background: #007bff;
+    color: white;
+    font-weight: 600;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    transition: background 0.25s ease;
+  }
+  .node-buttons button:hover {
+    background: #0056b3;
+  }
+  .node-buttons .delete-btn {
+    background: #dc3545;
+  }
+  .node-buttons .delete-btn:hover {
+    background: #a71d2a;
+  }
+
+  /* Spouses container - horizontal with gap */
+  .spouses-container {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  /* horizontal connecting line between spouses */
+  .spouses-container::before {
+    content: "";
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #007bff;
+    z-index: 0;
+    margin: auto;
+    width: 80%;
+    border-radius: 2px;
+  }
+
+  /* Children container vertical stack */
+  .children-container {
+    margin-left: 30px;
+    border-left: 2px solid #007bff;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  /* Footer fixed with glass background */
   footer {
-    position: fixed; bottom: 0; width: 100%; background: rgba(255 255 255 / 0.3);
-    text-align: center; padding: 10px 0; backdrop-filter: blur(10px);
-    font-size: 0.9em; color: #444;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    padding: 14px 0;
+    text-align: center;
+    font-weight: 600;
+    background: rgba(255 255 255 / 0.15);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    color: #007bff;
+    box-shadow: 0 -2px 8px rgba(0, 123, 255, 0.15);
+    user-select: none;
+    z-index: 999;
+  }
+
+  /* Responsive tweaks */
+  @media (max-width: 900px) {
+    #connections-panel {
+      width: 140px;
+      font-size: 0.85rem;
+      padding: 6px 4px;
+    }
+    #login-container {
+      width: 90vw;
+      padding: 30px 20px;
+    }
+    .tree-node {
+      min-width: 220px;
+      max-width: 280px;
+    }
+  }
+  @media (max-width: 600px) {
+    #app {
+      flex-direction: column;
+    }
+    #connections-panel {
+      width: 100%;
+      height: 120px;
+      border-right: none;
+      border-bottom: 2px solid #007bff;
+      display: flex;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      padding: 6px 12px;
+    }
+    #connections-list li {
+      display: inline-block;
+      margin: 0 10px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    #family-tree-container {
+      flex: 1;
+      padding: 12px 8px;
+      overflow-x: auto;
+      overflow-y: visible;
+      /* Allow tree to not shrink too small */
+      min-width: 280px;
+    }
+    #tree-root {
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+    .children-container {
+      margin-left: 15px;
+      padding-left: 10px;
+      border-left-width: 1.5px;
+    }
   }
 </style>
 </head>
 <body>
 
-<div id="treeContainer">Loading family tree...</div>
-<footer>&copy; 2025 Maki Web. All rights reserved</footer>
-
-<!-- Modal for add/edit -->
-<div id="modal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); justify-content:center; align-items:center;">
-  <div style="background:#fff; padding:20px; border-radius:8px; width:300px;">
-    <h3 id="modalTitle"></h3>
-    <form id="memberForm">
-      <label>Name:<br><input type="text" name="name" required></label><br><br>
-      <label>Birth Year:<br><input type="text" name="birth"></label><br><br>
-      <label>Died Year:<br><input type="text" name="died"></label><br><br>
-      <button type="submit">Save</button>
-      <button type="button" id="cancelBtn">Cancel</button>
-    </form>
+<!-- LOGIN PAGE -->
+<div id="login-page">
+  <div id="login-container">
+    <h2>Family Tree Login</h2>
+    <input id="username" type="text" placeholder="Username" autocomplete="off" />
+    <input id="password" type="password" placeholder="Password" autocomplete="off" />
+    <button id="login-btn">Login</button>
   </div>
 </div>
 
-<script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-app.js";
-  import { getDatabase, ref, onValue, set, push, get, child, update } from "https://www.gstatic.com/firebasejs/9.22.0/firebase-database.js";
+<!-- MAIN APP -->
+<div id="app" style="display:none;">
+  <aside id="connections-panel">
+    <h3>Connections</h3>
+    <ul id="connections-list"></ul>
+  </aside>
+  <main id="family-tree-container">
+    <div id="tree-root"></div>
+  </main>
+</div>
 
-  // Your Firebase config
+<footer>
+  Family Tree App © 2025
+</footer>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<script>
+  // Firebase config (replace with your config)
   const firebaseConfig = {
-    apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
-    authDomain: "project-955237504610034331.firebaseapp.com",
-    databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
-    projectId: "project-955237504610034331",
-    storageBucket: "project-955237504610034331.firebasestorage.app",
-    messagingSenderId: "76212939677",
-    appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
-    measurementId: "G-RCJ4P82PVM"
+    apiKey: "AIzaSyCZyl0plSe2U48P3czGdfJ2c1FSpOJkOiY",
+    authDomain: "psa-sample-project-29887.firebaseapp.com",
+    databaseURL: "https://psa-sample-project-29887-default-rtdb.firebaseio.com",
+    projectId: "psa-sample-project-29887",
+    storageBucket: "psa-sample-project-29887.appspot.com",
+    messagingSenderId: "823703225224",
+    appId: "1:823703225224:web:d840f0f9b576f7160b193a",
+    measurementId: "G-5LR8KN6Z3T"
   };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getDatabase(app);
+  // Initialize Firebase
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
 
-  const treeContainer = document.getElementById('treeContainer');
-  const modal = document.getElementById('modal');
-  const memberForm = document.getElementById('memberForm');
-  const modalTitle = document.getElementById('modalTitle');
-  const cancelBtn = document.getElementById('cancelBtn');
+  // DOM references
+  const loginPage = document.getElementById('login-page');
+  const app = document.getElementById('app');
+  const loginBtn = document.getElementById('login-btn');
+  const usernameInput = document.getElementById('username');
+  const passwordInput = document.getElementById('password');
+  const connectionsList = document.getElementById('connections-list');
+  const treeRoot = document.getElementById('tree-root');
 
-  // State for modal
-  let modalMode = 'add'; // or 'edit'
-  let modalTargetPath = ''; // Firebase path to target parent or member to edit
-  let modalTargetType = ''; // 'member', 'spouse', 'child'
-  let modalEditId = null; // id to edit (for edit mode)
-
-  // Recursive function to create cards
-  function createMemberCard(id, data, path) {
-    const card = document.createElement('div');
-    card.classList.add('member-card');
-
-    const nameSpan = document.createElement('div');
-    nameSpan.className = 'name';
-    nameSpan.textContent = data.name || '(No name)';
-    card.appendChild(nameSpan);
-
-    const birthSpan = document.createElement('div');
-    birthSpan.className = 'detail';
-    birthSpan.textContent = `Born: ${data.birth || 'N/A'}`;
-    card.appendChild(birthSpan);
-
-    if(data.died){
-      const diedSpan = document.createElement('div');
-      diedSpan.className = 'detail';
-      diedSpan.textContent = `Died: ${data.died}`;
-      card.appendChild(diedSpan);
+  // Simple login (just demo)
+  loginBtn.addEventListener('click', () => {
+    if(usernameInput.value.trim() && passwordInput.value.trim()) {
+      loginPage.style.display = 'none';
+      app.style.display = 'flex';
+      loadFamilyTree();
+      loadConnections();
+    } else {
+      alert('Please enter username and password');
     }
+  });
 
-    // Buttons container
-    const btnContainer = document.createElement('div');
-
-    // Edit button
-    const editBtn = document.createElement('button');
-    editBtn.textContent = 'Edit';
-    editBtn.onclick = () => openModal('edit', path + '/' + id, data);
-    btnContainer.appendChild(editBtn);
-
-    // Add spouse button
-    const addSpouseBtn = document.createElement('button');
-    addSpouseBtn.textContent = 'Add Spouse';
-    addSpouseBtn.onclick = () => openModal('add', path + '/' + id + '/spouses', null);
-    btnContainer.appendChild(addSpouseBtn);
-
-    // Add child button
-    const addChildBtn = document.createElement('button');
-    addChildBtn.textContent = 'Add Child';
-    addChildBtn.onclick = () => {
-      // Children are always added under a spouse
-      // So if path ends with spouses/<spouseId>, add children under that spouse
-      // If path ends with memberId, no direct children allowed (children belong to spouse)
-      // So we check and adjust path accordingly
-
-      // Example path: members/memberId/spouses/spouseId
-      let childPath = path + '/' + id;
-      if(path.includes('/spouses/')){
-        childPath += '/children';
-      } else {
-        alert("You can only add children under a spouse.");
+  // Load family tree from Firebase
+  function loadFamilyTree() {
+    db.ref('familyTree').on('value', (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        treeRoot.innerHTML = '<p>No family data found.</p>';
         return;
       }
-      openModal('add', childPath, null);
-    };
-    btnContainer.appendChild(addChildBtn);
-
-    card.appendChild(btnContainer);
-
-    // Render spouses container if any
-    if(data.spouses){
-      const spousesContainer = document.createElement('div');
-      spousesContainer.className = 'spouses-container';
-      spousesContainer.style.marginTop = '12px';
-
-      for(const spouseId in data.spouses){
-        const spouseData = data.spouses[spouseId];
-        const spouseCard = createMemberCard(spouseId, spouseData, path + '/' + id + '/spouses');
-        spousesContainer.appendChild(spouseCard);
-
-        // Render children of spouse
-        if(spouseData.children){
-          const childrenContainer = document.createElement('div');
-          childrenContainer.className = 'children-container';
-
-          for(const childId in spouseData.children){
-            const childData = spouseData.children[childId];
-            // Children path is under spouses/spouseId/children
-            const childCard = createMemberCard(childId, childData, path + '/' + id + '/spouses/' + spouseId + '/children');
-            childrenContainer.appendChild(childCard);
-          }
-          spouseCard.appendChild(childrenContainer);
-        }
-      }
-      card.appendChild(spousesContainer);
-    }
-
-    return card;
-  }
-
-  // Load whole family tree recursively
-  function loadFamilyTree(){
-    treeContainer.textContent = 'Loading family tree...';
-    const membersRef = ref(db, 'members');
-    onValue(membersRef, (snapshot) => {
-      treeContainer.innerHTML = '';
-      const members = snapshot.val();
-      if(!members){
-        treeContainer.textContent = 'No family data found.';
-        return;
-      }
-      for(const memberId in members){
-        const memberData = members[memberId];
-        const card = createMemberCard(memberId, memberData, 'members');
-        treeContainer.appendChild(card);
-      }
+      treeRoot.innerHTML = '';
+      // Assuming root person is top-level key (customize as needed)
+      Object.keys(data).forEach(personId => {
+        const person = data[personId];
+        const personNode = createPersonNode(person, personId);
+        treeRoot.appendChild(personNode);
+      });
     });
   }
 
-  // Open modal for add or edit
-  function openModal(mode, targetPath, data) {
-    modalMode = mode;
-    modalTargetPath = targetPath;
-
-    if(mode === 'edit'){
-      modalTitle.textContent = 'Edit Member';
-      memberForm.name.value = data.name || '';
-      memberForm.birth.value = data.birth || '';
-      memberForm.died.value = data.died || '';
-    } else {
-      modalTitle.textContent = 'Add Member';
-      memberForm.reset();
-    }
-    modal.style.display = 'flex';
+  // Load connections (e.g. a list of family member names)
+  function loadConnections() {
+    db.ref('familyTree').on('value', (snapshot) => {
+      const data = snapshot.val();
+      connectionsList.innerHTML = '';
+      if (!data) return;
+      Object.entries(data).forEach(([id, person]) => {
+        const li = document.createElement('li');
+        li.textContent = person.name || 'Unnamed';
+        li.onclick = () => alert(`Clicked on ${person.name}`);
+        connectionsList.appendChild(li);
+      });
+    });
   }
 
-  cancelBtn.onclick = () => {
-    modal.style.display = 'none';
-  };
+  // Create a person node DOM element recursively
+  function createPersonNode(person, id) {
+    const container = document.createElement('div');
+    container.className = 'tree-node';
+    container.dataset.id = id;
 
-  memberForm.onsubmit = async (e) => {
-    e.preventDefault();
-    const name = memberForm.name.value.trim();
-    if(!name) {
-      alert('Name is required');
-      return;
+    const header = document.createElement('div');
+    header.className = 'node-header';
+
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = person.name || '';
+    nameInput.placeholder = 'Name';
+    nameInput.onchange = () => updatePerson(id, 'name', nameInput.value);
+    header.appendChild(nameInput);
+
+    const birthInput = document.createElement('input');
+    birthInput.type = 'date';
+    birthInput.value = person.birthdate || '';
+    birthInput.title = 'Birthdate';
+    birthInput.onchange = () => updatePerson(id, 'birthdate', birthInput.value);
+    header.appendChild(birthInput);
+
+    const aliveCheckbox = document.createElement('input');
+    aliveCheckbox.type = 'checkbox';
+    aliveCheckbox.checked = person.alive !== false; // default alive true
+    aliveCheckbox.title = 'Alive?';
+    aliveCheckbox.onchange = () => updatePerson(id, 'alive', aliveCheckbox.checked);
+    header.appendChild(aliveCheckbox);
+
+    container.appendChild(header);
+
+    // Spouses container (if any)
+    if (person.spouses) {
+      const spousesDiv = document.createElement('div');
+      spousesDiv.className = 'spouses-container';
+      Object.entries(person.spouses).forEach(([spouseId, spouse]) => {
+        const spouseNode = document.createElement('div');
+        spouseNode.className = 'tree-node spouse-node';
+        spouseNode.dataset.id = spouseId;
+
+        const spouseNameInput = document.createElement('input');
+        spouseNameInput.type = 'text';
+        spouseNameInput.value = spouse.name || '';
+        spouseNameInput.placeholder = 'Spouse Name';
+        spouseNameInput.onchange = () => updateSpouse(id, spouseId, 'name', spouseNameInput.value);
+        spouseNode.appendChild(spouseNameInput);
+
+        spousesDiv.appendChild(spouseNode);
+      });
+      container.appendChild(spousesDiv);
     }
-    const birth = memberForm.birth.value.trim();
-    const died = memberForm.died.value.trim();
 
-    if(modalMode === 'add'){
-      // push new data to target path
-      const newRef = push(ref(db, modalTargetPath));
-      await set(newRef, { name, birth, died });
-    }
-    else if(modalMode === 'edit'){
-      // update data at target path
-      const updateRef = ref(db, modalTargetPath);
-      await update(updateRef, { name, birth, died });
+    // Children container (recursive)
+    if (person.children) {
+      const childrenDiv = document.createElement('div');
+      childrenDiv.className = 'children-container';
+      Object.entries(person.children).forEach(([childId, child]) => {
+        const childNode = createPersonNode(child, childId);
+        childrenDiv.appendChild(childNode);
+      });
+      container.appendChild(childrenDiv);
     }
 
-    modal.style.display = 'none';
-  };
+    // Buttons (for add child, add spouse, delete)
+    const btns = document.createElement('div');
+    btns.className = 'node-buttons';
 
-  loadFamilyTree();
+    const addChildBtn = document.createElement('button');
+    addChildBtn.textContent = '+ Child';
+    addChildBtn.onclick = () => addChild(id);
+    btns.appendChild(addChildBtn);
+
+    const addSpouseBtn = document.createElement('button');
+    addSpouseBtn.textContent = '+ Spouse';
+    addSpouseBtn.onclick = () => addSpouse(id);
+    btns.appendChild(addSpouseBtn);
+
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.className = 'delete-btn';
+    deleteBtn.onclick = () => deletePerson(id);
+    btns.appendChild(deleteBtn);
+
+    container.appendChild(btns);
+
+    return container;
+  }
+
+  // Update person data in Firebase
+  function updatePerson(id, field, value) {
+    db.ref('familyTree/' + id).update({ [field]: value });
+  }
+  // Update spouse data
+  function updateSpouse(personId, spouseId, field, value) {
+    db.ref(`familyTree/${personId}/spouses/${spouseId}`).update({ [field]: value });
+  }
+
+  // Add child - creates a new child under person with empty data
+  function addChild(parentId) {
+    const newChildRef = db.ref('familyTree').push();
+    const newChildId = newChildRef.key;
+    newChildRef.set({
+      name: 'New Child',
+      birthdate: '',
+      alive: true,
+      spouses: {},
+      children: {}
+    });
+    // Add child reference under parent
+    db.ref(`familyTree/${parentId}/children/${newChildId}`).set({
+      name: 'New Child',
+      birthdate: '',
+      alive: true,
+      spouses: {},
+      children: {}
+    });
+  }
+
+  // Add spouse - adds a spouse under person
+  function addSpouse(personId) {
+    const newSpouseRef = db.ref('familyTree').push();
+    const newSpouseId = newSpouseRef.key;
+    newSpouseRef.set({
+      name: 'New Spouse',
+      birthdate: '',
+      alive: true,
+      spouses: {},
+      children: {}
+    });
+    db.ref(`familyTree/${personId}/spouses/${newSpouseId}`).set({
+      name: 'New Spouse',
+      birthdate: '',
+      alive: true,
+      spouses: {},
+      children: {}
+    });
+  }
+
+  // Delete person completely
+  function deletePerson(id) {
+    if (!confirm('Are you sure you want to delete this person and their references?')) return;
+
+    // Remove person data
+    db.ref('familyTree/' + id).remove();
+
+    // Remove this person from all spouses and children references
+    db.ref('familyTree').once('value').then(snapshot => {
+      const data = snapshot.val();
+      if (!data) return;
+
+      Object.entries(data).forEach(([pid, person]) => {
+        if (person.spouses && person.spouses[id]) {
+          db.ref(`familyTree/${pid}/spouses/${id}`).remove();
+        }
+        if (person.children && person.children[id]) {
+          db.ref(`familyTree/${pid}/children/${id}`).remove();
+        }
+      });
+    });
+  }
 </script>
 
 </body>
