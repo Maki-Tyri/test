@@ -120,6 +120,14 @@
     flex-direction: column;
     gap: 6px;
   }
+  .member-card.spouse {
+    background-color: #f4f6f8;
+    margin-left: 20px;
+  }
+  .member-card.child {
+    background-color: #e9f0f7;
+    margin-left: 30px;
+  }
   .member-card span.name {
     font-weight: 700;
     font-size: 1.2em;
@@ -134,18 +142,28 @@
   }
 
   /* Buttons */
-  button.add-btn {
-    margin-top: 10px;
+  button.add-btn, button.edit-btn {
+    margin-top: 6px;
     padding: 6px 10px;
-    background-color: #3498db;
     border: none;
     border-radius: 8px;
-    color: white;
     cursor: pointer;
     font-size: 0.9em;
+    font-weight: 600;
+    color: white;
+  }
+  button.add-btn {
+    background-color: #3498db;
   }
   button.add-btn:hover {
     background-color: #2980b9;
+  }
+  button.edit-btn {
+    background-color: #27ae60;
+    margin-left: 8px;
+  }
+  button.edit-btn:hover {
+    background-color: #1e8449;
   }
 
   /* Connections Sidebar */
@@ -239,9 +257,10 @@
 
 <footer>&copy; 2025 Maki Web. All rights reserved</footer>
 
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+
 <script>
   // Firebase config
   const firebaseConfig = {
@@ -254,11 +273,13 @@
     appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
     measurementId: "G-RCJ4P82PVM"
   };
+
+  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const auth = firebase.auth();
   const db = firebase.database();
 
-  // UI Elements
+  // DOM Elements
   const loginPage = document.getElementById('login-page');
   const loginForm = document.getElementById('login-form');
   const loginError = document.getElementById('login-error');
@@ -267,23 +288,28 @@
   const connectionsList = document.getElementById('connections-list');
   const logoutBtn = document.getElementById('logout-btn');
 
-  // --- AUTH ---
+  // Keep track of members in memory
+  let membersData = {};
+
+  // --- AUTH HANDLERS ---
   auth.onAuthStateChanged(user => {
-    if (user) {
+    if(user){
       loginPage.style.display = 'none';
       appContainer.style.display = 'flex';
       loadFamilyTree();
     } else {
       loginPage.style.display = 'flex';
       appContainer.style.display = 'none';
+      membersContainer.innerHTML = '';
+      connectionsList.innerHTML = '';
     }
   });
 
   loginForm.addEventListener('submit', e => {
     e.preventDefault();
     loginError.textContent = '';
-    const email = loginForm.email.value;
-    const password = loginForm.password.value;
+    const email = loginForm.email.value.trim();
+    const password = loginForm.password.value.trim();
     auth.signInWithEmailAndPassword(email, password)
       .catch(err => {
         loginError.textContent = err.message;
@@ -294,219 +320,120 @@
     auth.signOut();
   };
 
-  // --- FAMILY TREE FUNCTIONS ---
-  function createMemberElement(memberId, memberData, parentId=null, spouseIndex=null) {
-    // memberData example:
-    // { name, birth, died, spouses: {spouseId: {...}, ...} }
-    // or children inside spouse data: spouses -> children
+  // --- FAMILY TREE HANDLERS ---
 
+  // Load all members from DB once
+  function loadFamilyTree(){
+    db.ref('members').once('value').then(snapshot => {
+      membersData = snapshot.val() || {};
+      if(Object.keys(membersData).length === 0){
+        // no data - prompt add root member
+        membersContainer.innerHTML = `<button id="add-root-btn" style="padding:12px 20px; font-size:1.2em; cursor:pointer; border-radius:12px; background:#3498db; color:#fff; border:none;">Add Root Member</button>`;
+        document.getElementById('add-root-btn').onclick = () => {
+          openAddEditModal(null, null, 'member');
+        };
+        connectionsList.innerHTML = '';
+        return;
+      }
+      renderMembers();
+      buildConnectionsSidebar(membersData);
+    });
+  }
+
+  // Recursive render function for members -> spouses -> children
+  function renderMembers(){
+    membersContainer.innerHTML = '';
+    for(let memberId in membersData){
+      const member = membersData[memberId];
+      const memberCard = createMemberCard(memberId, member, 'member');
+      membersContainer.appendChild(memberCard);
+    }
+  }
+
+  // Create card for member/spouse/child
+  // type = 'member'|'spouse'|'child'
+  function createMemberCard(id, data, type){
     const card = document.createElement('div');
     card.classList.add('member-card');
-    card.dataset.id = memberId;
+    card.classList.add(type);
 
+    // Name and dates
     const nameSpan = document.createElement('span');
     nameSpan.className = 'name';
-    nameSpan.textContent = memberData.name || '(No Name)';
+    nameSpan.textContent = data.name || '(No name)';
     card.appendChild(nameSpan);
 
     const birthSpan = document.createElement('span');
     birthSpan.className = 'detail';
-    birthSpan.textContent = `Born: ${memberData.birth || 'N/A'}`;
+    birthSpan.textContent = `Born: ${data.birth || 'N/A'}`;
     card.appendChild(birthSpan);
 
-    if(memberData.died){
+    if(data.died){
       const diedSpan = document.createElement('span');
-      diedSpan.className = 'died';
-      diedSpan.textContent = `Died: ${memberData.died}`;
+      diedSpan.className = 'detail died';
+      diedSpan.textContent = `Died: ${data.died}`;
       card.appendChild(diedSpan);
     }
 
-    // BUTTONS for adding relatives
-    // If root member, show Add Spouse button
-    if(!parentId && !spouseIndex){
+    // Buttons container
+    const btnContainer = document.createElement('div');
+    btnContainer.style.marginTop = '8px';
+
+    // Edit button for all types
+    const editBtn = document.createElement('button');
+    editBtn.textContent = 'Edit';
+    editBtn.className = 'edit-btn';
+    editBtn.onclick = () => {
+      openAddEditModal(id, type, 'edit');
+    };
+    btnContainer.appendChild(editBtn);
+
+    // Add spouse button only for member (not for spouse or child)
+    if(type === 'member'){
       const addSpouseBtn = document.createElement('button');
-      addSpouseBtn.textContent = '+ Add Spouse';
-      addSpouseBtn.classList.add('add-btn');
-      addSpouseBtn.onclick = () => addSpouse(memberId);
-      card.appendChild(addSpouseBtn);
+      addSpouseBtn.textContent = 'Add Spouse';
+      addSpouseBtn.className = 'add-btn';
+      addSpouseBtn.onclick = () => {
+        openAddEditModal(id, 'spouse', 'add');
+      };
+      btnContainer.appendChild(addSpouseBtn);
     }
 
-    // If spouse card (spouseIndex defined), show Add Child button
-    if(spouseIndex !== null){
+    // Add child button only for spouse (not for member or child)
+    if(type === 'spouse'){
       const addChildBtn = document.createElement('button');
-      addChildBtn.textContent = '+ Add Child';
-      addChildBtn.classList.add('add-btn');
-      addChildBtn.onclick = () => addChild(memberId, spouseIndex);
-      card.appendChild(addChildBtn);
+      addChildBtn.textContent = 'Add Child';
+      addChildBtn.className = 'add-btn';
+      addChildBtn.onclick = () => {
+        openAddEditModal(id, 'child', 'add');
+      };
+      btnContainer.appendChild(addChildBtn);
     }
 
-    // Show spouses if root member
-    if(!parentId && memberData.spouses){
-      for(let [idx, [spId, spouseData]] of Object.entries(Object.entries(memberData.spouses))){
-        idx = Number(idx);
-        const spouseCard = createSpouseElement(spId, spouseData, memberId, idx);
+    card.appendChild(btnContainer);
+
+    // Render spouses if member
+    if(type === 'member' && data.spouses){
+      for(let spouseId in data.spouses){
+        const spouse = data.spouses[spouseId];
+        const spouseCard = createMemberCard(spouseId, spouse, 'spouse');
         card.appendChild(spouseCard);
+
+        // Render children if spouse has children
+        if(spouse.children){
+          for(let childId in spouse.children){
+            const child = spouse.children[childId];
+            const childCard = createMemberCard(childId, child, 'child');
+            spouseCard.appendChild(childCard);
+          }
+        }
       }
     }
 
     return card;
   }
 
-  function createSpouseElement(spouseId, spouseData, memberId, spouseIndex){
-    const spouseCard = document.createElement('div');
-    spouseCard.classList.add('member-card');
-    spouseCard.style.marginLeft = '20px';
-    spouseCard.style.backgroundColor = '#f4f6f8';
-
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'name';
-    nameSpan.textContent = spouseData.name || '(No Name)';
-    spouseCard.appendChild(nameSpan);
-
-    const birthSpan = document.createElement('span');
-    birthSpan.className = 'detail';
-    birthSpan.textContent = `Born: ${spouseData.birth || 'N/A'}`;
-    spouseCard.appendChild(birthSpan);
-
-    if(spouseData.died){
-      const diedSpan = document.createElement('span');
-      diedSpan.className = 'died';
-      diedSpan.textContent = `Died: ${spouseData.died}`;
-      spouseCard.appendChild(diedSpan);
-    }
-
-    // Add Child button
-    const addChildBtn = document.createElement('button');
-    addChildBtn.textContent = '+ Add Child';
-    addChildBtn.classList.add('add-btn');
-    addChildBtn.onclick = () => addChild(memberId, spouseIndex);
-    spouseCard.appendChild(addChildBtn);
-
-    // Show children of spouse
-    if(spouseData.children){
-      for(let [childId, childData] of Object.entries(spouseData.children)){
-        const childCard = document.createElement('div');
-        childCard.classList.add('member-card');
-        childCard.style.marginLeft = '30px';
-        childCard.style.backgroundColor = '#e9f0f7';
-
-        const childName = document.createElement('span');
-        childName.className = 'name';
-        childName.textContent = childData.name || '(No Name)';
-        childCard.appendChild(childName);
-
-        const childBirth = document.createElement('span');
-        childBirth.className = 'detail';
-        childBirth.textContent = `Born: ${childData.birth || 'N/A'}`;
-        childCard.appendChild(childBirth);
-
-        if(childData.died){
-          const childDied = document.createElement('span');
-          childDied.className = 'died';
-          childDied.textContent = `Died: ${childData.died}`;
-          childCard.appendChild(childDied);
-        }
-
-        spouseCard.appendChild(childCard);
-      }
-    }
-
-    return spouseCard;
-  }
-
-  function loadFamilyTree() {
-    membersContainer.innerHTML = '';
-    connectionsList.innerHTML = '';
-    // Load members from Firebase Realtime DB
-    db.ref('members').once('value').then(snapshot => {
-      const members = snapshot.val();
-      if(!members){
-        // No members - add button to add root member
-        const addRootBtn = document.createElement('button');
-        addRootBtn.textContent = '+ Add Root Member';
-        addRootBtn.classList.add('add-btn');
-        addRootBtn.style.margin = '20px auto';
-        addRootBtn.onclick = addRootMember;
-        membersContainer.appendChild(addRootBtn);
-        return;
-      }
-      // Show members
-      for(let [memberId, memberData] of Object.entries(members)){
-        const memberCard = createMemberElement(memberId, memberData);
-        membersContainer.appendChild(memberCard);
-      }
-      buildConnectionsSidebar(members);
-    });
-  }
-
-  // Add root member (if no members)
-  function addRootMember() {
-    const name = prompt('Enter name for new root member:');
-    if(!name) return alert('Name is required');
-    const birth = prompt('Enter birthdate (optional):');
-    const died = prompt('Enter death date (optional):');
-
-    // Create new member object
-    const newMember = { name, birth: birth || '', died: died || '', spouses: {} };
-    // Push to DB
-    const newKey = db.ref('members').push().key;
-    db.ref('members/' + newKey).set(newMember).then(() => {
-      loadFamilyTree();
-    });
-  }
-
-  // Add spouse for a member
-  function addSpouse(memberId){
-    const name = prompt('Enter spouse name:');
-    if(!name) return alert('Name is required');
-    const birth = prompt('Enter spouse birthdate (optional):');
-    const died = prompt('Enter spouse death date (optional):');
-
-    const newSpouse = { name, birth: birth || '', died: died || '', children: {} };
-
-    // Add spouse to member's spouses object
-    db.ref(`members/${memberId}/spouses`).once('value').then(snapshot => {
-      let spouses = snapshot.val() || {};
-      // Generate a new spouseId key
-      const newSpouseKey = db.ref().push().key;
-      spouses[newSpouseKey] = newSpouse;
-      db.ref(`members/${memberId}/spouses`).set(spouses).then(() => {
-        loadFamilyTree();
-      });
-    });
-  }
-
-  // Add child for spouse
-  function addChild(memberId, spouseIndex){
-    // Get spouse key from member's spouses (since spouseIndex is array index)
-    db.ref(`members/${memberId}/spouses`).once('value').then(snapshot => {
-      const spouses = snapshot.val() || {};
-      const spouseKeys = Object.keys(spouses);
-      if(!spouseKeys[spouseIndex]){
-        return alert('Spouse not found');
-      }
-      const spouseKey = spouseKeys[spouseIndex];
-      const name = prompt('Enter child name:');
-      if(!name) return alert('Name is required');
-      const birth = prompt('Enter child birthdate (optional):');
-      const died = prompt('Enter child death date (optional):');
-
-      const newChild = { name, birth: birth || '', died: died || '' };
-
-      // Add child to spouse's children
-      const childrenRef = db.ref(`members/${memberId}/spouses/${spouseKey}/children`);
-      childrenRef.once('value').then(csnap => {
-        const children = csnap.val() || {};
-        const newChildKey = db.ref().push().key;
-        children[newChildKey] = newChild;
-        childrenRef.set(children).then(() => {
-          loadFamilyTree();
-        });
-      });
-    });
-  }
-
-  // Build connections sidebar showing relationships nicely
+  // Build connections sidebar
   function buildConnectionsSidebar(members){
     connectionsList.innerHTML = '';
     for(let [id, data] of Object.entries(members)){
@@ -528,6 +455,163 @@
       connectionsList.appendChild(li);
     }
   }
+
+  // --- MODAL for Add/Edit ---
+  // We'll create a simple prompt-based modal for now for simplicity.
+  // You can replace this with a custom modal later.
+
+  function openAddEditModal(parentId, targetType, mode){
+    // parentId = id of member or spouse we add spouse or child to or edit target's id if mode='edit'
+    // targetType = 'member' | 'spouse' | 'child'
+    // mode = 'add' or 'edit'
+
+    let existingData = null;
+
+    if(mode === 'edit'){
+      // Find the target data to edit
+      if(targetType === 'member'){
+        existingData = membersData[parentId];
+      } else if(targetType === 'spouse'){
+        // Find spouse inside some member
+        existingData = findSpouseById(parentId);
+      } else if(targetType === 'child'){
+        existingData = findChildById(parentId);
+      }
+    }
+
+    const name = prompt(`Enter ${targetType} name:`, existingData ? existingData.name : '');
+    if(name === null) return; // canceled
+
+    const birth = prompt(`Enter ${targetType} birth year/date:`, existingData ? existingData.birth : '');
+    if(birth === null) return;
+
+    const died = prompt(`Enter ${targetType} died year/date (optional):`, existingData ? existingData.died || '' : '');
+    if(died === null) return;
+
+    if(mode === 'add'){
+      if(targetType === 'member'){
+        // Adding root member (rare)
+        const newId = db.ref().child('members').push().key;
+        const newMember = { name, birth, died: died || null, spouses: {} };
+        db.ref(`members/${newId}`).set(newMember).then(() => {
+          loadFamilyTree();
+        });
+      }
+      else if(targetType === 'spouse'){
+        // Add spouse to parentId member
+        const newId = db.ref().child('members').push().key; // generate unique id
+        const newSpouse = { name, birth, died: died || null, children: {} };
+        // get current spouses object or empty
+        const spousesRef = db.ref(`members/${parentId}/spouses`);
+        spousesRef.once('value').then(snap => {
+          const spouses = snap.val() || {};
+          spouses[newId] = newSpouse;
+          spousesRef.set(spouses).then(() => loadFamilyTree());
+        });
+      }
+      else if(targetType === 'child'){
+        // Add child to spouse with id=parentId
+        // Find spouse path
+        findSpouseParentAndPath(parentId).then(({ memberId, spouseKey }) => {
+          if(!memberId) {
+            alert('Spouse not found in DB');
+            return;
+          }
+          const childrenRef = db.ref(`members/${memberId}/spouses/${spouseKey}/children`);
+          childrenRef.once('value').then(csnap => {
+            const children = csnap.val() || {};
+            const newChildKey = db.ref().push().key;
+            children[newChildKey] = { name, birth, died: died || null };
+            childrenRef.set(children).then(() => loadFamilyTree());
+          });
+        });
+      }
+    } else if(mode === 'edit'){
+      // Update existing entry
+      if(targetType === 'member'){
+        db.ref(`members/${parentId}`).update({ name, birth, died: died || null }).then(() => loadFamilyTree());
+      } else if(targetType === 'spouse'){
+        // find spouse parent and update spouse
+        findSpouseParentAndPath(parentId).then(({ memberId, spouseKey }) => {
+          if(!memberId) {
+            alert('Spouse not found in DB');
+            return;
+          }
+          db.ref(`members/${memberId}/spouses/${spouseKey}`).update({ name, birth, died: died || null }).then(() => loadFamilyTree());
+        });
+      } else if(targetType === 'child'){
+        // find child parent path
+        findChildParentAndPath(parentId).then(({ memberId, spouseKey, childKey }) => {
+          if(!memberId) {
+            alert('Child not found in DB');
+            return;
+          }
+          db.ref(`members/${memberId}/spouses/${spouseKey}/children/${childKey}`).update({ name, birth, died: died || null }).then(() => loadFamilyTree());
+        });
+      }
+    }
+  }
+
+  // Helpers to find spouse by id
+  function findSpouseById(spouseId){
+    for(let memberId in membersData){
+      const member = membersData[memberId];
+      if(member.spouses && member.spouses[spouseId]){
+        return member.spouses[spouseId];
+      }
+    }
+    return null;
+  }
+
+  // Helpers to find child by id
+  function findChildById(childId){
+    for(let memberId in membersData){
+      const member = membersData[memberId];
+      if(member.spouses){
+        for(let spouseId in member.spouses){
+          const spouse = member.spouses[spouseId];
+          if(spouse.children && spouse.children[childId]){
+            return spouse.children[childId];
+          }
+        }
+      }
+    }
+    return null;
+  }
+
+  // Find spouse's parent memberId and key
+  function findSpouseParentAndPath(spouseId){
+    return new Promise(resolve => {
+      for(let memberId in membersData){
+        const member = membersData[memberId];
+        if(member.spouses && member.spouses[spouseId]){
+          resolve({ memberId, spouseKey: spouseId });
+          return;
+        }
+      }
+      resolve({ memberId: null, spouseKey: null });
+    });
+  }
+
+  // Find child's parent memberId, spouseKey, and childKey
+  function findChildParentAndPath(childId){
+    return new Promise(resolve => {
+      for(let memberId in membersData){
+        const member = membersData[memberId];
+        if(member.spouses){
+          for(let spouseId in member.spouses){
+            const spouse = member.spouses[spouseId];
+            if(spouse.children && spouse.children[childId]){
+              resolve({ memberId, spouseKey: spouseId, childKey: childId });
+              return;
+            }
+          }
+        }
+      }
+      resolve({ memberId: null, spouseKey: null, childKey: null });
+    });
+  }
+
 </script>
 </body>
 </html>
