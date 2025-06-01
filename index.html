@@ -21,7 +21,6 @@
 <script type="text/javascript">
   const { useState, useEffect } = React;
 
-  // Initialize Firebase
   const firebaseConfig = {
     apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
     authDomain: "project-955237504610034331.firebaseapp.com",
@@ -37,7 +36,6 @@
   const auth = firebase.auth();
   const db = firebase.database();
 
-  // Login Component
   function Login({ onLogin }) {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -93,7 +91,6 @@
     );
   }
 
-  // FamilyMember Component (recursive)
   function FamilyMember({ member, onAddChild, onEdit }) {
     const [collapsed, setCollapsed] = useState(false);
 
@@ -125,7 +122,6 @@
     );
   }
 
-  // FamilyTree Component
   function FamilyTree({ userId }) {
     const [treeData, setTreeData] = useState(null);
     const [editingMember, setEditingMember] = useState(null);
@@ -138,19 +134,15 @@
       familyRef.on("value", (snapshot) => {
         setTreeData(snapshot.val());
       });
-
       return () => familyRef.off();
     }, [userId]);
 
-    // Helper to convert flat data to nested tree
     function buildTree(data) {
       if (!data) return [];
-
       const map = {};
       Object.values(data).forEach(m => {
         map[m.id] = { ...m, children: [] };
       });
-
       const roots = [];
       Object.values(map).forEach(m => {
         if (m.parentId && map[m.parentId]) {
@@ -159,7 +151,6 @@
           roots.push(m);
         }
       });
-
       return roots;
     }
 
@@ -167,19 +158,16 @@
 
     async function saveMember() {
       if (!name.trim() || !relation.trim()) return;
-
       if (editingMember) {
-        // Update existing member
         await db.ref(`families/${userId}/${editingMember.id}`).update({ name, relation });
         setEditingMember(null);
-      } else if (addingParentId) {
-        // Add new child member
+      } else {
         const newId = Date.now().toString();
         await db.ref(`families/${userId}/${newId}`).set({
           id: newId,
           name,
           relation,
-          parentId: addingParentId
+          parentId: addingParentId || null
         });
         setAddingParentId(null);
       }
@@ -190,7 +178,13 @@
     return React.createElement("div", { className: "max-w-4xl mx-auto p-6 bg-white bg-opacity-80 rounded-lg shadow-md mt-8 backdrop-blur-md" },
       React.createElement("h2", { className: "text-3xl font-bold mb-6 text-center text-indigo-700" }, "Family Tree"),
 
-      nestedTree.length === 0 && React.createElement("p", { className: "text-center text-gray-600" }, "No family members found. Add your first member."),
+      nestedTree.length === 0 && React.createElement("div", { className: "text-center text-gray-700 mb-6" },
+        React.createElement("p", null, "No family members yet."),
+        React.createElement("button", {
+          onClick: () => setAddingParentId(null),
+          className: "mt-2 bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition"
+        }, "Add Root Member")
+      ),
 
       nestedTree.map(member =>
         React.createElement(FamilyMember, {
@@ -201,8 +195,8 @@
         })
       ),
 
-      (editingMember || addingParentId) && React.createElement("div", { className: "mt-8 p-4 border border-indigo-300 rounded-md max-w-md mx-auto bg-indigo-50" },
-        React.createElement("h3", { className: "text-xl font-semibold mb-4 text-indigo-700" }, editingMember ? "Edit Member" : "Add Child"),
+      (editingMember || addingParentId === null || typeof addingParentId === 'string') && React.createElement("div", { className: "mt-8 p-4 border border-indigo-300 rounded-md max-w-md mx-auto bg-indigo-50" },
+        React.createElement("h3", { className: "text-xl font-semibold mb-4 text-indigo-700" }, editingMember ? "Edit Member" : "Add Member"),
         React.createElement("input", {
           type: "text",
           placeholder: "Name",
@@ -236,7 +230,6 @@
     );
   }
 
-  // Main App Component
   function App() {
     const [user, setUser] = useState(null);
 
@@ -248,9 +241,7 @@
     }, []);
 
     if (!user) {
-      return React.createElement("div", { className: "min-h-screen flex items-center justify-center w-full" },
-        React.createElement(Login, { onLogin: () => {} })
-      );
+      return React.createElement(Login, { onLogin: () => {} });
     }
 
     return React.createElement("div", { className: "min-h-screen bg-gradient-to-tr from-indigo-400 via-purple-400 to-pink-400 p-4" },
