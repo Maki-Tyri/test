@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Family Tree App</title>
+<title>Family Tree App with Firebase</title>
 <style>
   /* Reset */
   * {
@@ -12,606 +12,400 @@
   body, html {
     margin: 0; padding: 0; height: 100%;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%);
-    color: #222;
+    background: #f0f4f8;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
   }
 
-  /* Container */
-  #app-container {
+  /* ----------- LOGIN PAGE ----------- */
+  #login-page {
     flex: 1;
     display: flex;
-    flex-direction: column;
-    max-width: 1200px;
-    margin: 20px auto;
-    padding: 10px;
-    background: rgba(255 255 255 / 0.85);
-    border-radius: 12px;
-    box-shadow: 0 8px 24px rgb(0 0 0 / 0.1);
-    overflow-x: auto;
-  }
-
-  /* Login Page */
-  #login-page {
-    display: flex;
-    flex-direction: column;
     justify-content: center;
     align-items: center;
-    height: 100vh;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  }
-  #login-page form {
-    background: rgba(255 255 255 / 0.15);
-    padding: 40px;
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.25);
-    width: 90%;
-    max-width: 350px;
-    backdrop-filter: blur(10px);
-    color: white;
-  }
-  #login-page h2 {
-    text-align: center;
-    margin-bottom: 24px;
-  }
-  #login-page label {
-    display: block;
-    margin: 12px 0 6px;
-    font-weight: 600;
-  }
-  #login-page input[type="email"],
-  #login-page input[type="password"] {
-    width: 100%;
-    padding: 10px 12px;
-    border-radius: 8px;
-    border: none;
-    outline: none;
-    font-size: 16px;
-  }
-  #login-page button {
-    margin-top: 20px;
-    width: 100%;
-    padding: 14px;
-    background: #6b5b95;
-    border: none;
-    border-radius: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    color: white;
-    font-size: 16px;
-    transition: background-color 0.3s ease;
-  }
-  #login-page button:hover {
-    background: #8e79b7;
-  }
-  #login-page .error-msg {
-    color: #ff6b6b;
-    margin-top: 10px;
-    text-align: center;
-  }
-
-  /* Family Tree */
-  #family-tree {
-    display: flex;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    padding-bottom: 60px; /* for footer space */
-  }
-
-  /* Members Container */
-  #members-container {
-    display: flex;
-    gap: 40px;
-    align-items: flex-start;
+    background: url('https://images.unsplash.com/photo-1503264116251-35a269479413?auto=format&fit=crop&w=800&q=80') no-repeat center/cover;
     padding: 20px;
   }
-
-  /* Single Member Card */
-  .member-card {
-    background: #fff;
-    border-radius: 12px;
-    padding: 16px 20px;
-    min-width: 250px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.12);
-    position: relative;
+  #login-container {
+    background: rgba(255 255 255 / 0.15);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border-radius: 14px;
+    padding: 40px 30px;
+    width: 320px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+    color: #fff;
     display: flex;
     flex-direction: column;
-    gap: 6px;
+    align-items: center;
   }
-  .member-card.spouse {
-    background-color: #f4f6f8;
-    margin-left: 20px;
-  }
-  .member-card.child {
-    background-color: #e9f0f7;
-    margin-left: 30px;
-  }
-  .member-card span.name {
+  #login-container h2 {
+    margin-bottom: 24px;
     font-weight: 700;
-    font-size: 1.2em;
+    font-size: 1.8rem;
+    letter-spacing: 1.2px;
   }
-  .member-card span.detail {
-    font-size: 0.9em;
-    color: #555;
+  #login-container input[type="text"],
+  #login-container input[type="password"] {
+    width: 100%;
+    padding: 12px 15px;
+    margin: 10px 0 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 1rem;
+    outline: none;
   }
-  .member-card span.died {
-    color: #d9534f;
-    font-weight: 600;
-  }
-
-  /* Buttons */
-  button.add-btn, button.edit-btn {
-    margin-top: 6px;
-    padding: 6px 10px;
+  #login-container button {
+    width: 100%;
+    padding: 14px 0;
+    background: #007bff;
     border: none;
     border-radius: 8px;
-    cursor: pointer;
-    font-size: 0.9em;
-    font-weight: 600;
+    font-weight: 700;
     color: white;
+    font-size: 1.1rem;
+    cursor: pointer;
+    transition: background 0.3s ease;
   }
-  button.add-btn {
-    background-color: #3498db;
-  }
-  button.add-btn:hover {
-    background-color: #2980b9;
-  }
-  button.edit-btn {
-    background-color: #27ae60;
-    margin-left: 8px;
-  }
-  button.edit-btn:hover {
-    background-color: #1e8449;
+  #login-container button:hover {
+    background: #0056b3;
   }
 
-  /* Connections Sidebar */
-  #connections-sidebar {
-    width: 250px;
-    border-left: 2px solid #ccc;
-    padding-left: 20px;
-    overflow-y: auto;
+  /* ----------- MAIN APP ----------- */
+  #app {
+    flex: 1;
+    display: flex;
+    min-height: 0; /* for flex children to shrink properly */
+    overflow: hidden;
+    background: #e9f0ff;
   }
-  #connections-sidebar h3 {
-    margin-top: 0;
-    font-size: 1.2em;
-    font-weight: 700;
-    border-bottom: 2px solid #3498db;
+
+  /* Side connections panel */
+  #connections-panel {
+    background: #ffffffdd;
+    width: 200px;
+    border-right: 2px solid #007bff;
+    overflow-y: auto;
+    padding: 10px 8px;
+    font-size: 0.9rem;
+    user-select: none;
+    box-shadow: inset -3px 0 8px -3px rgba(0,123,255,0.3);
+  }
+  #connections-panel h3 {
+    font-weight: 600;
+    margin: 10px 0;
+    color: #007bff;
+    border-bottom: 1px solid #007bff;
     padding-bottom: 6px;
   }
   #connections-list {
     list-style: none;
-    padding-left: 0;
-    font-size: 0.9em;
+    margin: 0;
+    padding: 0;
   }
   #connections-list li {
-    margin-bottom: 12px;
+    margin: 8px 0;
+    cursor: pointer;
+    color: #004a99;
+    transition: color 0.2s;
   }
-  #connections-list strong {
-    color: #2980b9;
+  #connections-list li:hover {
+    color: #007bff;
+    text-decoration: underline;
   }
 
-  /* Footer */
+  /* Family tree container - flexible & scrollable */
+  #family-tree-container {
+    flex: 1;
+    overflow: auto;
+    padding: 20px;
+    display: flex;
+    justify-content: flex-start;
+    align-items: flex-start;
+    /* allow wrapping for responsiveness */
+    flex-wrap: wrap;
+    gap: 20px;
+  }
+
+  /* The tree container grows with members */
+  #tree-root {
+    display: flex;
+    flex-direction: column;
+    gap: 40px;
+    max-width: 100%;
+    min-width: 280px;
+  }
+
+  /* Each person node */
+  .tree-node {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 3px 8px rgb(0 0 0 / 0.12);
+    padding: 12px 16px;
+    min-width: 260px;
+    max-width: 320px;
+    user-select: none;
+    flex-shrink: 0;
+  }
+  .tree-node.spouse-node {
+    background: #e8f0fe;
+    border: 1.5px solid #007bff;
+  }
+
+  .node-header {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 10px;
+  }
+  .node-header input[type="text"] {
+    flex-grow: 1;
+    font-weight: 600;
+    font-size: 1.1rem;
+    border: none;
+    border-bottom: 1.5px solid #007bff;
+    padding: 4px 6px;
+    outline-offset: 2px;
+    background: transparent;
+  }
+  .node-header input[type="text"]:focus {
+    background: #dbe9ff;
+  }
+  .node-header input[type="date"] {
+    border-radius: 6px;
+    border: 1px solid #aaa;
+    padding: 4px 8px;
+    font-size: 0.9rem;
+  }
+  .node-header input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+  }
+
+  /* Buttons container */
+  .node-buttons {
+    display: flex;
+    gap: 6px;
+    flex-wrap: nowrap;
+  }
+  .node-buttons button {
+    cursor: pointer;
+    border-radius: 6px;
+    border: none;
+    background: #007bff;
+    color: white;
+    font-weight: 600;
+    padding: 6px 10px;
+    font-size: 0.85rem;
+    transition: background 0.25s ease;
+  }
+  .node-buttons button:hover {
+    background: #0056b3;
+  }
+  .node-buttons .delete-btn {
+    background: #dc3545;
+  }
+  .node-buttons .delete-btn:hover {
+    background: #a71d2a;
+  }
+
+  /* Spouses container - horizontal with gap */
+  .spouses-container {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 8px;
+    position: relative;
+  }
+  /* horizontal connecting line between spouses */
+  .spouses-container::before {
+    content: "";
+    position: absolute;
+    top: 20px;
+    left: 0;
+    right: 0;
+    height: 2px;
+    background-color: #007bff;
+    z-index: 0;
+    margin: auto;
+    width: 80%;
+    border-radius: 2px;
+  }
+
+  /* Children container vertical stack */
+  .children-container {
+    margin-left: 30px;
+    border-left: 2px solid #007bff;
+    padding-left: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px;
+  }
+
+  /* Footer fixed with glass background */
   footer {
     position: fixed;
     bottom: 0;
     left: 0;
     width: 100%;
-    backdrop-filter: blur(15px);
-    background: rgba(255 255 255 / 0.25);
-    color: #333;
+    padding: 14px 0;
     text-align: center;
-    padding: 10px 0;
     font-weight: 600;
-    border-top: 1px solid rgba(0,0,0,0.1);
+    background: rgba(255 255 255 / 0.15);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    color: #007bff;
+    box-shadow: 0 -2px 8px rgba(0, 123, 255, 0.15);
     user-select: none;
+    z-index: 999;
   }
 
-  /* Responsive */
+  /* Responsive tweaks */
   @media (max-width: 900px) {
-    #family-tree {
+    #connections-panel {
+      width: 140px;
+      font-size: 0.85rem;
+      padding: 6px 4px;
+    }
+    #login-container {
+      width: 90vw;
+      padding: 30px 20px;
+    }
+    .tree-node {
+      min-width: 220px;
+      max-width: 280px;
+    }
+  }
+  @media (max-width: 600px) {
+    #app {
       flex-direction: column;
-      overflow-x: visible;
     }
-    #members-container {
-      flex-wrap: wrap;
-      justify-content: center;
-      gap: 30px;
-    }
-    #connections-sidebar {
+    #connections-panel {
       width: 100%;
-      border-left: none;
-      border-top: 2px solid #ccc;
-      padding-left: 0;
-      padding-top: 10px;
-      margin-top: 20px;
+      height: 120px;
+      border-right: none;
+      border-bottom: 2px solid #007bff;
+      display: flex;
+      overflow-x: auto;
+      overflow-y: hidden;
+      white-space: nowrap;
+      padding: 6px 12px;
+    }
+    #connections-list li {
+      display: inline-block;
+      margin: 0 10px;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+    #family-tree-container {
+      flex: 1;
+      padding: 12px 8px;
+      overflow-x: auto;
+      overflow-y: visible;
+    }
+    .children-container {
+      margin-left: 15px;
+      padding-left: 10px;
+      border-left-width: 1.5px;
     }
   }
 </style>
 </head>
 <body>
 
+<!-- LOGIN PAGE -->
 <div id="login-page">
-  <form id="login-form">
-    <h2>Login to Family Tree</h2>
-    <label for="email">Email</label>
-    <input id="email" type="email" placeholder="Email" required />
-    <label for="password">Password</label>
-    <input id="password" type="password" placeholder="Password" required />
-    <button type="submit">Login</button>
-    <p class="error-msg" id="login-error"></p>
-  </form>
-</div>
-
-<div id="app-container" style="display:none;">
-  <div id="family-tree">
-    <div id="members-container"></div>
-    <div id="connections-sidebar">
-      <h3>Connections</h3>
-      <ul id="connections-list"></ul>
-    </div>
+  <div id="login-container">
+    <h2>Family Tree Login</h2>
+    <input id="username" type="text" placeholder="Username" autocomplete="off" />
+    <input id="password" type="password" placeholder="Password" autocomplete="off" />
+    <button id="login-btn">Login</button>
   </div>
-  <button id="logout-btn" style="margin-top:10px; padding:10px 16px; border:none; border-radius:8px; cursor:pointer; background:#d9534f; color:white; font-weight:600;">Logout</button>
 </div>
 
-<footer>&copy; 2025 Maki Web. All rights reserved</footer>
+<!-- MAIN APP -->
+<div id="app" style="display:none;">
+  <aside id="connections-panel">
+    <h3>Connections</h3>
+    <ul id="connections-list"></ul>
+  </aside>
+  <main id="family-tree-container">
+    <div id="tree-root"></div>
+  </main>
+</div>
 
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<footer>
+  Family Tree App © 2025
+</footer>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-  // Firebase config
+  // Firebase config (replace with your config)
   const firebaseConfig = {
-    apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
-    authDomain: "project-955237504610034331.firebaseapp.com",
-    databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
-    projectId: "project-955237504610034331",
-    storageBucket: "project-955237504610034331.firebasestorage.app",
-    messagingSenderId: "76212939677",
-    appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
-    measurementId: "G-RCJ4P82PVM"
-  };
-
-  // Initialize Firebase
+  apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
+  authDomain: "project-955237504610034331.firebaseapp.com",
+  databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
+  projectId: "project-955237504610034331",
+  storageBucket: "project-955237504610034331.firebasestorage.app",
+  messagingSenderId: "76212939677",
+  appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
+  measurementId: "G-RCJ4P82PVM"
+};
   firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
   const db = firebase.database();
 
-  // DOM Elements
-  const loginPage = document.getElementById('login-page');
-  const loginForm = document.getElementById('login-form');
-  const loginError = document.getElementById('login-error');
-  const appContainer = document.getElementById('app-container');
-  const membersContainer = document.getElementById('members-container');
-  const connectionsList = document.getElementById('connections-list');
-  const logoutBtn = document.getElementById('logout-btn');
-
-  // Keep track of members in memory
-  let membersData = {};
-
-  // --- AUTH HANDLERS ---
-  auth.onAuthStateChanged(user => {
-    if(user){
-      loginPage.style.display = 'none';
-      appContainer.style.display = 'flex';
+  // Simple fake login (demo only)
+  document.getElementById('login-btn').addEventListener('click', () => {
+    const user = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value.trim();
+    if(user && pass) {
+      document.getElementById('login-page').style.display = 'none';
+      document.getElementById('app').style.display = 'flex';
       loadFamilyTree();
+      loadConnections();
     } else {
-      loginPage.style.display = 'flex';
-      appContainer.style.display = 'none';
-      membersContainer.innerHTML = '';
-      connectionsList.innerHTML = '';
+      alert('Enter username and password');
     }
   });
 
-  loginForm.addEventListener('submit', e => {
-    e.preventDefault();
-    loginError.textContent = '';
-    const email = loginForm.email.value.trim();
-    const password = loginForm.password.value.trim();
-    auth.signInWithEmailAndPassword(email, password)
-      .catch(err => {
-        loginError.textContent = err.message;
-      });
-  });
-
-  logoutBtn.onclick = () => {
-    auth.signOut();
-  };
-
-  // --- FAMILY TREE HANDLERS ---
-
-  // Load all members from DB once
-  function loadFamilyTree(){
-    db.ref('members').once('value').then(snapshot => {
-      membersData = snapshot.val() || {};
-      if(Object.keys(membersData).length === 0){
-        // no data - prompt add root member
-        membersContainer.innerHTML = `<button id="add-root-btn" style="padding:12px 20px; font-size:1.2em; cursor:pointer; border-radius:12px; background:#3498db; color:#fff; border:none;">Add Root Member</button>`;
-        document.getElementById('add-root-btn').onclick = () => {
-          openAddEditModal(null, null, 'member');
-        };
-        connectionsList.innerHTML = '';
-        return;
-      }
-      renderMembers();
-      buildConnectionsSidebar(membersData);
-    });
+  // Dummy functions (replace with your logic)
+  function loadFamilyTree() {
+    // Populate tree-root with some dummy data for demo
+    const root = document.getElementById('tree-root');
+    root.innerHTML = `
+      <div class="tree-node">
+        <div class="node-header">
+          <input type="text" value="John Doe" />
+          <input type="date" />
+          <input type="checkbox" title="Is Deceased" />
+        </div>
+        <div class="spouses-container">
+          <div class="tree-node spouse-node">
+            <div class="node-header"><input type="text" value="Jane Doe" /></div>
+          </div>
+        </div>
+        <div class="children-container">
+          <div class="tree-node">
+            <div class="node-header"><input type="text" value="Jimmy Doe" /></div>
+          </div>
+        </div>
+      </div>
+    `;
   }
-
-  // Recursive render function for members -> spouses -> children
-  function renderMembers(){
-    membersContainer.innerHTML = '';
-    for(let memberId in membersData){
-      const member = membersData[memberId];
-      const memberCard = createMemberCard(memberId, member, 'member');
-      membersContainer.appendChild(memberCard);
-    }
+  function loadConnections() {
+    const list = document.getElementById('connections-list');
+    list.innerHTML = `
+      <li>John Doe</li>
+      <li>Jane Doe</li>
+      <li>Jimmy Doe</li>
+    `;
   }
-
-  // Create card for member/spouse/child
-  // type = 'member'|'spouse'|'child'
-  function createMemberCard(id, data, type){
-    const card = document.createElement('div');
-    card.classList.add('member-card');
-    card.classList.add(type);
-
-    // Name and dates
-    const nameSpan = document.createElement('span');
-    nameSpan.className = 'name';
-    nameSpan.textContent = data.name || '(No name)';
-    card.appendChild(nameSpan);
-
-    const birthSpan = document.createElement('span');
-    birthSpan.className = 'detail';
-    birthSpan.textContent = `Born: ${data.birth || 'N/A'}`;
-    card.appendChild(birthSpan);
-
-    if(data.died){
-      const diedSpan = document.createElement('span');
-      diedSpan.className = 'detail died';
-      diedSpan.textContent = `Died: ${data.died}`;
-      card.appendChild(diedSpan);
-    }
-
-    // Buttons container
-    const btnContainer = document.createElement('div');
-    btnContainer.style.marginTop = '8px';
-
-    // Edit button for all types
-    const editBtn = document.createElement('button');
-    editBtn.textContent = 'Edit';
-    editBtn.className = 'edit-btn';
-    editBtn.onclick = () => {
-      openAddEditModal(id, type, 'edit');
-    };
-    btnContainer.appendChild(editBtn);
-
-    // Add spouse button only for member (not for spouse or child)
-    if(type === 'member'){
-      const addSpouseBtn = document.createElement('button');
-      addSpouseBtn.textContent = 'Add Spouse';
-      addSpouseBtn.className = 'add-btn';
-      addSpouseBtn.onclick = () => {
-        openAddEditModal(id, 'spouse', 'add');
-      };
-      btnContainer.appendChild(addSpouseBtn);
-    }
-
-    // Add child button only for spouse (not for member or child)
-    if(type === 'spouse'){
-      const addChildBtn = document.createElement('button');
-      addChildBtn.textContent = 'Add Child';
-      addChildBtn.className = 'add-btn';
-      addChildBtn.onclick = () => {
-        openAddEditModal(id, 'child', 'add');
-      };
-      btnContainer.appendChild(addChildBtn);
-    }
-
-    card.appendChild(btnContainer);
-
-    // Render spouses if member
-    if(type === 'member' && data.spouses){
-      for(let spouseId in data.spouses){
-        const spouse = data.spouses[spouseId];
-        const spouseCard = createMemberCard(spouseId, spouse, 'spouse');
-        card.appendChild(spouseCard);
-
-        // Render children if spouse has children
-        if(spouse.children){
-          for(let childId in spouse.children){
-            const child = spouse.children[childId];
-            const childCard = createMemberCard(childId, child, 'child');
-            spouseCard.appendChild(childCard);
-          }
-        }
-      }
-    }
-
-    return card;
-  }
-
-  // Build connections sidebar
-  function buildConnectionsSidebar(members){
-    connectionsList.innerHTML = '';
-    for(let [id, data] of Object.entries(members)){
-      const li = document.createElement('li');
-      let text = `<strong>${data.name}</strong><br/>Born: ${data.birth || 'N/A'}`;
-      if(data.died) text += `<br/>Died: ${data.died}`;
-
-      // Spouses
-      if(data.spouses){
-        const spousesArr = Object.values(data.spouses);
-        text += `<br/>Spouse${spousesArr.length > 1 ? 's' : ''}: `;
-        text += spousesArr.map(s => s.name).join(', ');
-        // Children count
-        const totalChildren = spousesArr.reduce((sum,s) => sum + (s.children ? Object.keys(s.children).length : 0), 0);
-        if(totalChildren) text += `<br/>Children: ${totalChildren}`;
-      }
-
-      li.innerHTML = text;
-      connectionsList.appendChild(li);
-    }
-  }
-
-  // --- MODAL for Add/Edit ---
-  // We'll create a simple prompt-based modal for now for simplicity.
-  // You can replace this with a custom modal later.
-
-  function openAddEditModal(parentId, targetType, mode){
-    // parentId = id of member or spouse we add spouse or child to or edit target's id if mode='edit'
-    // targetType = 'member' | 'spouse' | 'child'
-    // mode = 'add' or 'edit'
-
-    let existingData = null;
-
-    if(mode === 'edit'){
-      // Find the target data to edit
-      if(targetType === 'member'){
-        existingData = membersData[parentId];
-      } else if(targetType === 'spouse'){
-        // Find spouse inside some member
-        existingData = findSpouseById(parentId);
-      } else if(targetType === 'child'){
-        existingData = findChildById(parentId);
-      }
-    }
-
-    const name = prompt(`Enter ${targetType} name:`, existingData ? existingData.name : '');
-    if(name === null) return; // canceled
-
-    const birth = prompt(`Enter ${targetType} birth year/date:`, existingData ? existingData.birth : '');
-    if(birth === null) return;
-
-    const died = prompt(`Enter ${targetType} died year/date (optional):`, existingData ? existingData.died || '' : '');
-    if(died === null) return;
-
-    if(mode === 'add'){
-      if(targetType === 'member'){
-        // Adding root member (rare)
-        const newId = db.ref().child('members').push().key;
-        const newMember = { name, birth, died: died || null, spouses: {} };
-        db.ref(`members/${newId}`).set(newMember).then(() => {
-          loadFamilyTree();
-        });
-      }
-      else if(targetType === 'spouse'){
-        // Add spouse to parentId member
-        const newId = db.ref().child('members').push().key; // generate unique id
-        const newSpouse = { name, birth, died: died || null, children: {} };
-        // get current spouses object or empty
-        const spousesRef = db.ref(`members/${parentId}/spouses`);
-        spousesRef.once('value').then(snap => {
-          const spouses = snap.val() || {};
-          spouses[newId] = newSpouse;
-          spousesRef.set(spouses).then(() => loadFamilyTree());
-        });
-      }
-      else if(targetType === 'child'){
-        // Add child to spouse with id=parentId
-        // Find spouse path
-        findSpouseParentAndPath(parentId).then(({ memberId, spouseKey }) => {
-          if(!memberId) {
-            alert('Spouse not found in DB');
-            return;
-          }
-          const childrenRef = db.ref(`members/${memberId}/spouses/${spouseKey}/children`);
-          childrenRef.once('value').then(csnap => {
-            const children = csnap.val() || {};
-            const newChildKey = db.ref().push().key;
-            children[newChildKey] = { name, birth, died: died || null };
-            childrenRef.set(children).then(() => loadFamilyTree());
-          });
-        });
-      }
-    } else if(mode === 'edit'){
-      // Update existing entry
-      if(targetType === 'member'){
-        db.ref(`members/${parentId}`).update({ name, birth, died: died || null }).then(() => loadFamilyTree());
-      } else if(targetType === 'spouse'){
-        // find spouse parent and update spouse
-        findSpouseParentAndPath(parentId).then(({ memberId, spouseKey }) => {
-          if(!memberId) {
-            alert('Spouse not found in DB');
-            return;
-          }
-          db.ref(`members/${memberId}/spouses/${spouseKey}`).update({ name, birth, died: died || null }).then(() => loadFamilyTree());
-        });
-      } else if(targetType === 'child'){
-        // find child parent path
-        findChildParentAndPath(parentId).then(({ memberId, spouseKey, childKey }) => {
-          if(!memberId) {
-            alert('Child not found in DB');
-            return;
-          }
-          db.ref(`members/${memberId}/spouses/${spouseKey}/children/${childKey}`).update({ name, birth, died: died || null }).then(() => loadFamilyTree());
-        });
-      }
-    }
-  }
-
-  // Helpers to find spouse by id
-  function findSpouseById(spouseId){
-    for(let memberId in membersData){
-      const member = membersData[memberId];
-      if(member.spouses && member.spouses[spouseId]){
-        return member.spouses[spouseId];
-      }
-    }
-    return null;
-  }
-
-  // Helpers to find child by id
-  function findChildById(childId){
-    for(let memberId in membersData){
-      const member = membersData[memberId];
-      if(member.spouses){
-        for(let spouseId in member.spouses){
-          const spouse = member.spouses[spouseId];
-          if(spouse.children && spouse.children[childId]){
-            return spouse.children[childId];
-          }
-        }
-      }
-    }
-    return null;
-  }
-
-  // Find spouse's parent memberId and key
-  function findSpouseParentAndPath(spouseId){
-    return new Promise(resolve => {
-      for(let memberId in membersData){
-        const member = membersData[memberId];
-        if(member.spouses && member.spouses[spouseId]){
-          resolve({ memberId, spouseKey: spouseId });
-          return;
-        }
-      }
-      resolve({ memberId: null, spouseKey: null });
-    });
-  }
-
-  // Find child's parent memberId, spouseKey, and childKey
-  function findChildParentAndPath(childId){
-    return new Promise(resolve => {
-      for(let memberId in membersData){
-        const member = membersData[memberId];
-        if(member.spouses){
-          for(let spouseId in member.spouses){
-            const spouse = member.spouses[spouseId];
-            if(spouse.children && spouse.children[childId]){
-              resolve({ memberId, spouseKey: spouseId, childKey: childId });
-              return;
-            }
-          }
-        }
-      }
-      resolve({ memberId: null, spouseKey: null, childKey: null });
-    });
-  }
-
 </script>
+
 </body>
 </html>
