@@ -123,9 +123,9 @@
     display: flex;
     justify-content: flex-start;
     align-items: flex-start;
-    /* allow wrapping for responsiveness */
     flex-wrap: wrap;
     gap: 20px;
+    min-width: 0; /* important to allow flex shrink */
   }
 
   /* The tree container grows with members */
@@ -304,6 +304,8 @@
       padding: 12px 8px;
       overflow-x: auto;
       overflow-y: visible;
+      flex-wrap: nowrap; /* horizontal scroll on mobile */
+      gap: 12px;
     }
     .children-container {
       margin-left: 15px;
@@ -329,275 +331,97 @@
 <div id="app" style="display:none;">
   <aside id="connections-panel">
     <h3>Connections</h3>
-    <ul id="connections-list"></ul>
+    <ul id="connections-list">
+      <!-- dynamically filled -->
+    </ul>
   </aside>
   <main id="family-tree-container">
-    <div id="tree-root"></div>
+    <div id="tree-root">
+      <!-- dynamically filled -->
+    </div>
   </main>
 </div>
 
-<footer>
-  Family Tree App © 2025
-</footer>
+<footer>Family Tree App © 2025</footer>
 
 <!-- Firebase SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
 <script>
-  // Firebase config (replace with your config)
+  // Initialize Firebase (insert your own config here)
   const firebaseConfig = {
-    apiKey: "AIzaSyCZyl0plSe2U48P3czGdfJ2c1FSpOJkOiY",
-    authDomain: "psa-sample-project-29887.firebaseapp.com",
-    databaseURL: "https://psa-sample-project-29887-default-rtdb.firebaseio.com",
-    projectId: "psa-sample-project-29887",
-    storageBucket: "psa-sample-project-29887.appspot.com",
-    messagingSenderId: "823703225224",
-    appId: "1:823703225224:web:d840f0f9b576f7160b193a",
-    measurementId: "G-3Y6Z2TGVJW"
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_AUTH_DOMAIN",
+    databaseURL: "YOUR_DB_URL",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_STORAGE_BUCKET",
+    messagingSenderId: "YOUR_MSG_SENDER_ID",
+    appId: "YOUR_APP_ID"
   };
   firebase.initializeApp(firebaseConfig);
+
+  const auth = firebase.auth();
   const db = firebase.database();
 
-  // Simple fake login (demo only)
-  document.getElementById('login-btn').addEventListener('click', () => {
-    const user = document.getElementById('username').value.trim();
-    const pass = document.getElementById('password').value.trim();
-    if(user && pass){
-      // Proceed to app
-      document.getElementById('login-page').style.display = 'none';
-      document.getElementById('app').style.display = 'flex';
+  // Login handling
+  const loginPage = document.getElementById('login-page');
+  const app = document.getElementById('app');
+  const loginBtn = document.getElementById('login-btn');
+  loginBtn.addEventListener('click', () => {
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value.trim();
+    // This is a mock login: replace with your auth logic
+    if (username && password) {
+      loginPage.style.display = 'none';
+      app.style.display = 'flex';
       loadFamilyTree();
     } else {
       alert('Please enter username and password');
     }
   });
 
-  // Data structure: persons keyed by id
-  // Each person: { id, name, birthDate, isSpouse, spouses:[], children:[] }
-  // For demo, we store under /familyTree root
-
-  let familyData = {};
-
-  // Utility: create new unique ID
-  function genId() {
-    return 'id-' + Math.random().toString(36).substr(2, 9);
-  }
-
-  // Load data from Firebase
+  // Dummy function to fill tree and connections panel
   function loadFamilyTree() {
-    db.ref('familyTree').on('value', snapshot => {
-      familyData = snapshot.val() || {};
-      renderFamilyTree();
-      updateConnectionsPanel();
-    });
-  }
+    // Here, connect to Firebase to load data and render the tree and connections.
+    // For demo, just add a sample node and connections
 
-  // Save data to Firebase
-  function saveFamilyTree() {
-    db.ref('familyTree').set(familyData);
-  }
+    // Sample data
+    const treeRoot = document.getElementById('tree-root');
+    treeRoot.innerHTML = `
+      <div class="tree-node">
+        <div class="node-header">
+          <input type="text" value="Juan Dela Cruz" />
+          <input type="date" value="1970-01-01" />
+          <input type="checkbox" title="Deceased" />
+        </div>
+        <div class="spouses-container">
+          <div class="tree-node spouse-node">
+            <input type="text" value="Maria Santos" />
+          </div>
+        </div>
+        <div class="children-container">
+          <div class="tree-node">
+            <input type="text" value="Ana Dela Cruz" />
+          </div>
+          <div class="tree-node">
+            <input type="text" value="Pedro Dela Cruz" />
+          </div>
+        </div>
+      </div>
+    `;
 
-  // Add new person to data
-  function addPerson(parentId = null, isSpouse = false) {
-    const id = genId();
-    familyData[id] = {
-      id,
-      name: '',
-      birthDate: '',
-      isSpouse,
-      spouses: [],
-      children: []
-    };
-    if(parentId){
-      if(isSpouse){
-        // add as spouse of parent
-        familyData[parentId].spouses.push(id);
-        // For two-way connection, add parent as spouse to new person
-        familyData[id].spouses.push(parentId);
-      } else {
-        // add as child of parent
-        familyData[parentId].children.push(id);
-      }
-    }
-    saveFamilyTree();
-  }
-
-  // Delete person recursively
-  function deletePerson(id, parentId = null) {
-    if(!familyData[id]) return;
-    // Remove from parent's children or spouses
-    if(parentId){
-      let p = familyData[parentId];
-      if(p){
-        p.children = p.children.filter(c => c !== id);
-        p.spouses = p.spouses.filter(s => s !== id);
-      }
-    }
-    // Remove spouse connections
-    familyData[id].spouses.forEach(spId => {
-      if(familyData[spId]){
-        familyData[spId].spouses = familyData[spId].spouses.filter(s => s !== id);
-      }
-    });
-    // Delete children recursively
-    familyData[id].children.forEach(childId => deletePerson(childId, id));
-    // Finally delete self
-    delete familyData[id];
-    saveFamilyTree();
-  }
-
-  // Update person field (name, birthDate)
-  function updatePersonField(id, field, value) {
-    if(familyData[id]){
-      familyData[id][field] = value;
-      saveFamilyTree();
-    }
-  }
-
-  // Render connections on side panel
-  function updateConnectionsPanel() {
-    const container = document.getElementById('connections-list');
-    container.innerHTML = '';
-    Object.values(familyData).forEach(person => {
-      if(person.name.trim() !== ''){
-        const li = document.createElement('li');
-        li.textContent = person.name + (person.isSpouse ? ' (Spouse)' : '');
-        li.onclick = () => alert(`Clicked: ${person.name}`);
-        container.appendChild(li);
-      }
-    });
-  }
-
-  // Render the whole family tree recursively
-  function renderFamilyTree() {
-    const root = document.getElementById('tree-root');
-    root.innerHTML = '';
-
-    // Find root members (those without spouses pointing to them and who are not children of anyone)
-    // We'll consider roots those who are not children of any other person
-    const allChildren = new Set();
-    Object.values(familyData).forEach(p => p.children.forEach(c => allChildren.add(c)));
-
-    const roots = Object.values(familyData).filter(p => !allChildren.has(p.id) && !p.isSpouse);
-
-    roots.forEach(rootPerson => {
-      root.appendChild(createPersonNode(rootPerson));
-    });
-  }
-
-  // Create a person node with spouses and children recursively
-  function createPersonNode(person) {
-    const node = document.createElement('div');
-    node.className = 'tree-node';
-
-    // Header with editable name and birth date
-    const header = document.createElement('div');
-    header.className = 'node-header';
-
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.placeholder = 'Name';
-    nameInput.value = person.name;
-    nameInput.oninput = e => updatePersonField(person.id, 'name', e.target.value);
-
-    const dateInput = document.createElement('input');
-    dateInput.type = 'date';
-    dateInput.value = person.birthDate;
-    dateInput.title = "Birth Date";
-    dateInput.onchange = e => updatePersonField(person.id, 'birthDate', e.target.value);
-
-    header.appendChild(nameInput);
-    header.appendChild(dateInput);
-
-    node.appendChild(header);
-
-    // Buttons for adding spouse, adding child, delete person
-    const btns = document.createElement('div');
-    btns.className = 'node-buttons';
-
-    const addSpouseBtn = document.createElement('button');
-    addSpouseBtn.textContent = 'Add Spouse';
-    addSpouseBtn.onclick = () => addPerson(person.id, true);
-
-    const addChildBtn = document.createElement('button');
-    addChildBtn.textContent = 'Add Child';
-    addChildBtn.onclick = () => addPerson(person.id, false);
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.onclick = () => {
-      if(confirm(`Delete ${person.name || 'this person'} and all descendants?`)){
-        // Find parent id to update relations - tricky, so we skip it to simplify
-        deletePerson(person.id);
-      }
-    };
-
-    btns.appendChild(addSpouseBtn);
-    btns.appendChild(addChildBtn);
-    btns.appendChild(deleteBtn);
-    node.appendChild(btns);
-
-    // Show spouses horizontally
-    if(person.spouses.length > 0){
-      const spousesDiv = document.createElement('div');
-      spousesDiv.className = 'spouses-container';
-      person.spouses.forEach(spouseId => {
-        const spouse = familyData[spouseId];
-        if(spouse){
-          const spouseNode = document.createElement('div');
-          spouseNode.className = 'tree-node spouse-node';
-
-          // Spouse name input
-          const spouseNameInput = document.createElement('input');
-          spouseNameInput.type = 'text';
-          spouseNameInput.placeholder = 'Spouse Name';
-          spouseNameInput.value = spouse.name;
-          spouseNameInput.oninput = e => updatePersonField(spouse.id, 'name', e.target.value);
-
-          // Spouse birth date input
-          const spouseDateInput = document.createElement('input');
-          spouseDateInput.type = 'date';
-          spouseDateInput.value = spouse.birthDate;
-          spouseDateInput.title = "Birth Date";
-          spouseDateInput.onchange = e => updatePersonField(spouse.id, 'birthDate', e.target.value);
-
-          spouseNode.appendChild(spouseNameInput);
-          spouseNode.appendChild(spouseDateInput);
-
-          // Delete spouse button
-          const spouseDeleteBtn = document.createElement('button');
-          spouseDeleteBtn.textContent = 'Delete Spouse';
-          spouseDeleteBtn.className = 'delete-btn';
-          spouseDeleteBtn.onclick = () => {
-            if(confirm(`Delete spouse ${spouse.name || ''}?`)){
-              deletePerson(spouse.id, person.id);
-            }
-          };
-          spouseNode.appendChild(spouseDeleteBtn);
-
-          spousesDiv.appendChild(spouseNode);
-        }
-      });
-      node.appendChild(spousesDiv);
-    }
-
-    // Children container
-    if(person.children.length > 0){
-      const childrenDiv = document.createElement('div');
-      childrenDiv.className = 'children-container';
-      person.children.forEach(childId => {
-        const child = familyData[childId];
-        if(child){
-          childrenDiv.appendChild(createPersonNode(child));
-        }
-      });
-      node.appendChild(childrenDiv);
-    }
-
-    return node;
+    // Fill connections list
+    const connectionsList = document.getElementById('connections-list');
+    connectionsList.innerHTML = `
+      <li>Juan Dela Cruz</li>
+      <li>Maria Santos</li>
+      <li>Ana Dela Cruz</li>
+      <li>Pedro Dela Cruz</li>
+    `;
   }
 </script>
+
 </body>
 </html>
