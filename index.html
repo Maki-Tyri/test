@@ -3,746 +3,711 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Family Tree App with Side Connections & Login</title>
+<title>Family Tree App</title>
+
+<!-- Firebase SDK -->
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+
 <style>
-  /* Reset & base */
+  /* Reset */
   * {
     box-sizing: border-box;
   }
   body, html {
     margin: 0; padding: 0; height: 100%;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: linear-gradient(135deg, #e0f0ff, #ffffff);
-    display: flex;
-    flex-direction: column;
-    min-height: 100vh;
+    font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+    background: #f0f2f5;
   }
 
-  /* ----- LOGIN PAGE ----- */
-  #login-page {
-    flex: 1;
-    display: none;
-    justify-content: center;
-    align-items: center;
-    padding: 20px;
-  }
-  #login-page.active {
-    display: flex;
-  }
-  .login-container {
-    background: rgba(255 255 255 / 0.15);
-    backdrop-filter: blur(15px);
-    border-radius: 15px;
-    padding: 30px 40px;
-    max-width: 380px;
-    width: 100%;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.12);
-    color: #003366;
-  }
-  .login-container h2 {
-    margin-bottom: 24px;
-    font-weight: 700;
-    text-align: center;
-  }
-  .login-container label {
-    display: block;
-    margin-bottom: 6px;
-    font-weight: 600;
-  }
-  .login-container input[type="text"],
-  .login-container input[type="password"] {
-    width: 100%;
-    padding: 10px 12px;
-    margin-bottom: 18px;
-    border-radius: 8px;
-    border: none;
-    outline: none;
-    font-size: 16px;
-    background: rgba(255 255 255 / 0.6);
-    box-shadow: inset 1px 1px 4px rgba(0,0,0,0.1);
-    transition: background 0.3s ease;
-  }
-  .login-container input[type="text"]:focus,
-  .login-container input[type="password"]:focus {
-    background: rgba(255 255 255 / 0.85);
-  }
-  .login-container button {
-    width: 100%;
-    padding: 12px;
-    font-weight: 700;
-    font-size: 18px;
-    color: white;
-    background: #007bff;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,123,255,0.6);
-    transition: background 0.3s ease;
-  }
-  .login-container button:hover {
-    background: #0056b3;
-  }
-
-  /* ----- FAMILY TREE APP ----- */
+  /* Container with flex for responsiveness */
   #app-container {
-    flex: 1;
-    display: none;
-    padding: 20px;
-    overflow-x: auto;
-    background: #f8fbff;
-  }
-  #app-container.active {
-    display: block;
-  }
-
-  .family-tree-wrapper {
     display: flex;
-    justify-content: center;
+    height: calc(100vh - 50px);
+    max-height: calc(100vh - 50px);
+    overflow: hidden;
   }
 
-  .family-tree {
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    min-width: 280px;
-    max-width: 100%;
-  }
-
-  /* Nodes container with flexible growth */
-  .tree-node {
-    background: white;
-    border-radius: 12px;
-    padding: 12px 16px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    min-width: 260px;
-    max-width: 320px;
+  /* Sidebar: family tree container on left */
+  #family-tree-container {
+    flex: 1 1 400px;
+    min-width: 320px;
+    max-width: 600px;
+    overflow-y: auto;
+    background: #fff;
+    padding: 16px;
+    border-right: 2px solid #ddd;
     position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-  }
-  /* Responsive container grows with content */
-  .tree-node input[type="text"], 
-  .tree-node input[type="date"] {
-    width: 100%;
-    padding: 6px 8px;
-    border-radius: 6px;
-    border: 1px solid #ccc;
-    font-size: 14px;
-  }
-  .tree-node input[type="checkbox"] {
-    transform: scale(1.2);
-    margin-right: 6px;
-    cursor: pointer;
   }
 
+  /* Connections sidebar on right */
+  #connections-container {
+    width: 280px;
+    background: #fafafa;
+    border-left: 2px solid #ddd;
+    overflow-y: auto;
+    padding: 12px 16px;
+    font-size: 0.9rem;
+    color: #444;
+  }
+
+  /* Responsive: stack on mobile */
+  @media (max-width: 720px) {
+    #app-container {
+      flex-direction: column;
+      height: auto;
+      max-height: none;
+    }
+    #family-tree-container, #connections-container {
+      max-width: 100%;
+      width: 100%;
+      height: auto;
+      border: none;
+    }
+    #connections-container {
+      border-top: 2px solid #ddd;
+    }
+  }
+
+  /* Family Tree node styling */
+  .tree-node {
+    background: #e9f0ff;
+    border-radius: 8px;
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    box-shadow: 0 2px 5px rgb(0 123 255 / 0.15);
+    position: relative;
+  }
+  .spouses-container {
+    display: flex;
+    gap: 10px;
+    margin-top: 8px;
+    position: relative;
+  }
+  .spouse-node {
+    background: #dceefc;
+    flex: 1 1 0;
+  }
   .node-header {
     display: flex;
     flex-wrap: wrap;
-    align-items: center;
     gap: 8px;
+    align-items: center;
   }
-
+  input[type=text], input[type=date] {
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 1rem;
+    min-width: 100px;
+  }
+  input[type=checkbox] {
+    transform: scale(1.2);
+    cursor: pointer;
+  }
   .node-buttons {
     margin-left: auto;
     display: flex;
     gap: 6px;
   }
-  .node-buttons button {
-    cursor: pointer;
-    background: #007bff;
+  button {
     border: none;
+    background-color: #007bff;
     color: white;
-    padding: 4px 8px;
-    font-size: 13px;
-    border-radius: 6px;
-    transition: background 0.2s ease;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
   }
-  .node-buttons button:hover {
-    background: #0056b3;
+  button.delete-btn {
+    background-color: #dc3545;
   }
-  .node-buttons .delete-btn {
-    background: #dc3545;
+  button:hover {
+    opacity: 0.85;
   }
-  .node-buttons .delete-btn:hover {
-    background: #a71d2a;
-  }
-
-  /* Spouses side by side with horizontal connector */
-  .spouses-container {
-    display: flex;
-    gap: 16px;
-    position: relative;
-    margin-top: 8px;
-  }
-  .spouse-node {
-    background: #f3f7ff;
-    border: 1.5px solid #007bff;
-    min-width: 220px;
-  }
-  .spouse-connector {
-    position: absolute;
-    top: 14px;
-    left: 0;
-    right: 0;
-    height: 2px;
-    background: #007bff;
-    z-index: 0;
-  }
-
-  /* Children vertical container */
   .children-container {
-    margin-top: 16px;
-    border-left: 3px solid #007bff;
-    padding-left: 16px;
-    display: flex;
-    flex-direction: column;
-    gap: 24px;
-    position: relative;
+    margin-left: 24px;
+    border-left: 2px solid #007bff;
+    padding-left: 12px;
+    margin-top: 10px;
   }
 
-  /* Connectors on left side */
+  /* Connections box on right */
+  #connections-container h3 {
+    margin-top: 0;
+    border-bottom: 2px solid #007bff;
+    padding-bottom: 6px;
+  }
+  #connections-list {
+    list-style: none;
+    padding-left: 0;
+    max-height: 80vh;
+    overflow-y: auto;
+  }
+  #connections-list li {
+    margin-bottom: 8px;
+  }
+
+  /* SVG connectors in tree nodes */
   svg.connector-svg {
     position: absolute;
-    top: 0; left: 0;
     pointer-events: none;
     overflow: visible;
-    z-index: 10;
   }
 
-  /* Connectors lines styling */
-  line {
-    stroke: #007bff;
-    stroke-width: 2;
-  }
-
-  /* Footer fixed & glass style */
+  /* Footer fixed glass style */
   footer {
     position: fixed;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    background: rgba(255 255 255 / 0.15);
-    backdrop-filter: blur(12px);
-    color: #003366;
-    font-weight: 600;
-    text-align: center;
-    padding: 10px 0;
-    font-size: 14px;
-    user-select: none;
-    z-index: 1000;
-    border-top: 1px solid rgba(0, 0, 0, 0.1);
+    bottom: 0; left: 0; right: 0;
+    height: 50px;
+    background: rgba(255 255 255 / 0.35);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.9rem;
+    color: #444;
+    border-top: 1px solid rgba(0,0,0,0.1);
+    z-index: 9999;
   }
 
-  /* Responsive tweaks */
-  @media (max-width: 768px) {
-    .tree-node, .spouse-node {
-      min-width: 100%;
-      max-width: 100%;
-    }
-    .family-tree-wrapper {
-      padding-bottom: 50px; /* For footer space */
-    }
+  /* LOGIN PAGE STYLES */
+  #login-page {
+    position: fixed;
+    inset: 0;
+    background: linear-gradient(135deg, #3a86ff, #8338ec);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10000;
+  }
+  #login-container {
+    background: rgba(255 255 255 / 0.15);
+    padding: 30px 36px;
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    backdrop-filter: blur(15px);
+    -webkit-backdrop-filter: blur(15px);
+    color: white;
+    width: 320px;
+    text-align: center;
+  }
+  #login-container h2 {
+    margin-bottom: 20px;
+    font-weight: 700;
+  }
+  #login-container input[type="email"],
+  #login-container input[type="password"] {
+    width: 100%;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    border-radius: 8px;
+    border: none;
+    outline: none;
+    font-size: 1rem;
+  }
+  #login-container button {
+    width: 100%;
+    background: #ff4d6d;
+    border-radius: 8px;
+    padding: 12px 0;
+    font-weight: 700;
+    font-size: 1.1rem;
+    transition: background 0.3s ease;
+  }
+  #login-container button:hover {
+    background: #ff2e56;
+  }
+  #login-error {
+    color: #ffbaba;
+    margin-bottom: 10px;
+    min-height: 20px;
   }
 </style>
 </head>
 <body>
 
 <!-- LOGIN PAGE -->
-<div id="login-page" class="active">
-  <div class="login-container">
-    <h2>Login to Family Tree</h2>
-    <form id="login-form">
-      <label for="username">Username</label>
-      <input id="username" type="text" required autocomplete="username" />
-      <label for="password">Password</label>
-      <input id="password" type="password" required autocomplete="current-password" />
-      <button type="submit">Login</button>
-    </form>
+<div id="login-page">
+  <div id="login-container">
+    <h2>Family Tree Login</h2>
+    <div id="login-error"></div>
+    <input type="email" id="email" placeholder="Email" autocomplete="username" required />
+    <input type="password" id="password" placeholder="Password" autocomplete="current-password" required />
+    <button id="login-btn">Log In</button>
   </div>
 </div>
 
-<!-- FAMILY TREE APP -->
-<div id="app-container">
-  <div class="family-tree-wrapper">
-    <div id="family-tree" class="family-tree"></div>
+<!-- APP CONTAINER -->
+<div id="app-container" style="display:none;">
+  <div id="family-tree-container"></div>
+  <div id="connections-container">
+    <h3>Relationships</h3>
+    <ul id="connections-list"></ul>
   </div>
 </div>
 
 <footer>&copy; 2025 Maki Web. All rights reserved</footer>
 
 <script>
-  // Simple login toggle - for demo only, no backend/auth
+  // Firebase config + init
+  const firebaseConfig = {
+    apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
+    authDomain: "project-955237504610034331.firebaseapp.com",
+    databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
+    projectId: "project-955237504610034331",
+    storageBucket: "project-955237504610034331.firebasestorage.app",
+    messagingSenderId: "76212939677",
+    appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
+    measurementId: "G-RCJ4P82PVM"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.database();
+  const auth = firebase.auth();
+
+  // DOM Elements
   const loginPage = document.getElementById('login-page');
   const appContainer = document.getElementById('app-container');
-  const loginForm = document.getElementById('login-form');
+  const familyTreeContainer = document.getElementById('family-tree-container');
+  const connectionsList = document.getElementById('connections-list');
+  const loginBtn = document.getElementById('login-btn');
+  const loginError = document.getElementById('login-error');
 
-  loginForm.addEventListener('submit', e => {
-    e.preventDefault();
-    // You can add validation here if needed
-    loginPage.classList.remove('active');
-    appContainer.classList.add('active');
-    renderFamilyTrees();
+  // Simple login logic with Firebase Auth (email/pass)
+  loginBtn.addEventListener('click', () => {
+    const email = document.getElementById('email').value.trim();
+    const password = document.getElementById('password').value;
+    loginError.textContent = '';
+    if (!email || !password) {
+      loginError.textContent = 'Please fill all fields.';
+      return;
+    }
+    auth.signInWithEmailAndPassword(email, password)
+      .then(() => {
+        loginPage.style.display = 'none';
+        appContainer.style.display = 'flex';
+        startListeningToFamilyTree();
+      })
+      .catch((err) => {
+        loginError.textContent = err.message;
+      });
   });
 
-  // Family tree data structure
-  let familyTrees = {};
-
-  // Load from localStorage if exists
-  function loadFamilyTrees() {
-    const data = localStorage.getItem('familyTrees');
-    if (data) familyTrees = JSON.parse(data);
-    else {
-      // If empty, create a root sample person for demo
-      const rootId = 'root';
-      familyTrees[rootId] = {
-        id: rootId,
-        name: 'Root Person',
-        birthday: '',
-        died: false,
-        diedDate: '',
-        children: {},
-        spouses: {}
-      };
+  // Log out on auth state changed (optional)
+  auth.onAuthStateChanged(user => {
+    if (!user) {
+      loginPage.style.display = 'flex';
+      appContainer.style.display = 'none';
     }
+  });
+
+  // FAMILY TREE DATA & RENDERING
+
+  let familyTrees = {}; // keyed by id from DB
+
+  function startListeningToFamilyTree() {
+    db.ref('familyTrees').on('value', (snapshot) => {
+      familyTrees = snapshot.val() || {};
+      renderFamilyTrees();
+      renderConnections();
+    });
   }
 
   function saveFamilyTrees() {
-    localStorage.setItem('familyTrees', JSON.stringify(familyTrees));
+    // Save current familyTrees back to firebase realtime DB
+    db.ref('familyTrees').set(familyTrees);
   }
 
-  // Main render function
+  // --- RENDERING FAMILY TREES ---
+
   function renderFamilyTrees() {
-    const treeContainer = document.getElementById('family-tree');
-    treeContainer.innerHTML = '';
-    loadFamilyTrees();
-
-    for (const rootId in familyTrees) {
-      renderNode(familyTrees[rootId], treeContainer, rootId, null);
+    familyTreeContainer.innerHTML = '';
+    for (const id in familyTrees) {
+      renderNode(familyTrees[id], familyTreeContainer, id, null);
     }
   }
 
-  // Create SVG line helper for left side connectors
-  function createLine(svg, x1, y1, x2, y2) {
-    const ns = "http://www.w3.org/2000/svg";
-    const line = document.createElementNS(ns, "line");
-    line.setAttribute("x1", x1);
-    line.setAttribute("y1", y1);
-    line.setAttribute("x2", x2);
-    line.setAttribute("y2", y2);
-    line.setAttribute("stroke", "#007bff");
-    line.setAttribute("stroke-width", "2");
-    return line;
-  }
-
-  // Recursive render node (person)
-  function renderNode(node, parentDiv, nodeId, parentNodeDiv) {
-    const nodeDiv = document.createElement('div');
-    nodeDiv.className = 'tree-node';
-    nodeDiv.dataset.id = nodeId;
-
-    // Header with inputs
-    const header = document.createElement('div');
-    header.className = 'node-header';
-
-    const nameInput = document.createElement('input');
-    nameInput.type = 'text';
-    nameInput.value = node.name;
-    nameInput.title = "Name";
-    header.appendChild(nameInput);
-
-    const birthdayInput = document.createElement('input');
-    birthdayInput.type = 'date';
-    birthdayInput.value = node.birthday || '';
-    birthdayInput.title = "Birthday";
-    header.appendChild(birthdayInput);
-
-    const diedCheckbox = document.createElement('input');
-    diedCheckbox.type = 'checkbox';
-    diedCheckbox.checked = node.died || false;
-    diedCheckbox.title = "Died";
-    header.appendChild(diedCheckbox);
-
-    const diedDateInput = document.createElement('input');
-    diedDateInput.type = 'date';
-    diedDateInput.value = node.diedDate || '';
-    diedDateInput.style.display = diedCheckbox.checked ? 'inline-block' : 'none';
-    diedDateInput.title = "Date of Death";
-    diedDateInput.style.marginLeft = '8px';
-    header.appendChild(diedDateInput);
-
-    diedCheckbox.addEventListener('change', () => {
-      diedDateInput.style.display = diedCheckbox.checked ? 'inline-block' : 'none';
-      node.died = diedCheckbox.checked;
-      if (!node.died) node.diedDate = '';
-      saveAndRender();
-    });
-    diedDateInput.addEventListener('change', () => {
-      node.diedDate = diedDateInput.value;
-      saveAndRender();
-    });
-
-    // Save changes on name/birthday inputs
-    nameInput.addEventListener('input', () => {
-      node.name = nameInput.value;
-      saveAndRender();
-    });
-    birthdayInput.addEventListener('change', () => {
-      node.birthday = birthdayInput.value;
-      saveAndRender();
-    });
-
-    // Buttons: add spouse, add child, delete node
-    const btnContainer = document.createElement('div');
-    btnContainer.className = 'node-buttons';
-
-    const addSpouseBtn = document.createElement('button');
-    addSpouseBtn.textContent = '+ Spouse';
-    addSpouseBtn.title = 'Add Spouse';
-    addSpouseBtn.addEventListener('click', () => {
-      const spouseId = generateId();
-      node.spouses[spouseId] = {
-        id: spouseId,
-        name: '',
-        birthday: '',
-        died: false,
-        diedDate: '',
-        children: {},
-        spouses: {}
-      };
-      saveAndRender();
-    });
-
-    const addChildBtn = document.createElement('button');
-    addChildBtn.textContent = '+ Child';
-    addChildBtn.title = 'Add Child';
-    addChildBtn.addEventListener('click', () => {
-      const childId = generateId();
-      node.children[childId] = {
-        id: childId,
-        name: '',
-        birthday: '',
-        died: false,
-        diedDate: '',
-        children: {},
-        spouses: {}
-      };
-      saveAndRender();
-    });
-
-    const deleteBtn = document.createElement('button');
-    deleteBtn.textContent = 'Delete';
-    deleteBtn.className = 'delete-btn';
-    deleteBtn.title = 'Delete Member';
-    deleteBtn.addEventListener('click', () => {
-      if (confirm(`Delete ${node.name || 'this member'}?`)) {
-        deleteNodeById(nodeId);
-        saveAndRender();
-      }
-    });
-
-    btnContainer.appendChild(addSpouseBtn);
-    btnContainer.appendChild(addChildBtn);
-    btnContainer.appendChild(deleteBtn);
-
-    header.appendChild(btnContainer);
-    nodeDiv.appendChild(header);
-
-    // Spouses container (side by side)
-    if (Object.keys(node.spouses).length > 0) {
-      const spousesDiv = document.createElement('div');
-      spousesDiv.className = 'spouses-container';
-
-      // Add connector line between spouses
-      const spouseLine = document.createElement('div');
-      spouseLine.className = 'spouse-connector';
-      spousesDiv.appendChild(spouseLine);
-
-      for (const spouseId in node.spouses) {
-        const spouseNode = node.spouses[spouseId];
-        const spouseDiv = document.createElement('div');
-        spouseDiv.className = 'tree-node spouse-node';
-        spouseDiv.dataset.id = spouseId;
-
-        // Spouse inputs (same as main node)
-        const spouseHeader = document.createElement('div');
-        spouseHeader.className = 'node-header';
-
-        const sNameInput = document.createElement('input');
-        sNameInput.type = 'text';
-        sNameInput.value = spouseNode.name;
-        sNameInput.title = "Name";
-        spouseHeader.appendChild(sNameInput);
-
-        const sBirthdayInput = document.createElement('input');
-        sBirthdayInput.type = 'date';
-        sBirthdayInput.value = spouseNode.birthday || '';
-        sBirthdayInput.title = "Birthday";
-        spouseHeader.appendChild(sBirthdayInput);
-
-        const sDiedCheckbox = document.createElement('input');
-        sDiedCheckbox.type = 'checkbox';
-        sDiedCheckbox.checked = spouseNode.died || false;
-        sDiedCheckbox.title = "Died";
-        spouseHeader.appendChild(sDiedCheckbox);
-
-        const sDiedDateInput = document.createElement('input');
-        sDiedDateInput.type = 'date';
-        sDiedDateInput.value = spouseNode.diedDate || '';
-        sDiedDateInput.style.display = sDiedCheckbox.checked ? 'inline-block' : 'none';
-        sDiedDateInput.title = "Date of Death";
-        sDiedDateInput.style.marginLeft = '8px';
-        spouseHeader.appendChild(sDiedDateInput);
-
-        sDiedCheckbox.addEventListener('change', () => {
-          sDiedDateInput.style.display = sDiedCheckbox.checked ? 'inline-block' : 'none';
-          spouseNode.died = sDiedCheckbox.checked;
-          if (!spouseNode.died) spouseNode.diedDate = '';
-          saveAndRender();
-        });
-        sDiedDateInput.addEventListener('change', () => {
-          spouseNode.diedDate = sDiedDateInput.value;
-          saveAndRender();
-        });
-
-        sNameInput.addEventListener('input', () => {
-          spouseNode.name = sNameInput.value;
-          saveAndRender();
-        });
-        sBirthdayInput.addEventListener('change', () => {
-          spouseNode.birthday = sBirthdayInput.value;
-          saveAndRender();
-        });
-
-        // Buttons for spouse: add child and delete spouse
-        const spouseBtnContainer = document.createElement('div');
-        spouseBtnContainer.className = 'node-buttons';
-
-        const addSpouseChildBtn = document.createElement('button');
-        addSpouseChildBtn.textContent = '+ Child';
-        addSpouseChildBtn.title = 'Add Child';
-        addSpouseChildBtn.addEventListener('click', () => {
-          const childId = generateId();
-          spouseNode.children[childId] = {
-            id: childId,
-            name: '',
-            birthday: '',
-            died: false,
-            diedDate: '',
-            children: {},
-            spouses: {}
-          };
-          saveAndRender();
-        });
-
-        const deleteSpouseBtn = document.createElement('button');
-        deleteSpouseBtn.textContent = 'Delete';
-        deleteSpouseBtn.className = 'delete-btn';
-        deleteSpouseBtn.title = 'Delete Spouse';
-        deleteSpouseBtn.addEventListener('click', () => {
-          if (confirm(`Delete spouse ${spouseNode.name || ''}?`)) {
-            deleteSpouse(node, spouseId);
-            saveAndRender();
-          }
-        });
-
-        spouseBtnContainer.appendChild(addSpouseChildBtn);
-        spouseBtnContainer.appendChild(deleteSpouseBtn);
-
-        spouseHeader.appendChild(spouseBtnContainer);
-        spouseDiv.appendChild(spouseHeader);
-
-        // Spouse children container
-        if (Object.keys(spouseNode.children).length > 0) {
-          const spouseChildrenDiv = document.createElement('div');
-          spouseChildrenDiv.className = 'children-container';
-          for (const cId in spouseNode.children) {
-            renderNode(spouseNode.children[cId], spouseChildrenDiv, cId, spouseDiv);
-          }
-          spouseDiv.appendChild(spouseChildrenDiv);
-        }
-
-        spousesDiv.appendChild(spouseDiv);
-      }
-      nodeDiv.appendChild(spousesDiv);
-    }
-
-    // Children container (vertical)
-    if (Object.keys(node.children).length > 0) {
-      const childrenDiv = document.createElement('div');
-      childrenDiv.className = 'children-container';
-      for (const childId in node.children) {
-        renderNode(node.children[childId], childrenDiv, childId, nodeDiv);
-      }
-      nodeDiv.appendChild(childrenDiv);
-    }
-
-    parentDiv.appendChild(nodeDiv);
-
-    // After node rendered, draw left side connectors to children and spouses
-    setTimeout(() => {
-      drawConnections(nodeDiv);
-    }, 0);
-  }
-
-  // Delete node by id in the whole tree
-  function deleteNodeById(id) {
-    function recursiveDelete(obj) {
-      if (obj.children && obj.children[id]) {
-        delete obj.children[id];
-        return true;
-      }
-      if (obj.spouses && obj.spouses[id]) {
-        delete obj.spouses[id];
-        return true;
-      }
-      for (const key in obj.children) {
-        if (recursiveDelete(obj.children[key])) return true;
-      }
-      for (const key in obj.spouses) {
-        if (recursiveDelete(obj.spouses[key])) return true;
-      }
-      return false;
-    }
-    if (familyTrees[id]) {
-      delete familyTrees[id];
-    } else {
-      for (const rootId in familyTrees) {
-        if (recursiveDelete(familyTrees[rootId])) break;
-      }
-    }
-  }
-
-  // Delete spouse from a node
-  function deleteSpouse(parentNode, spouseId) {
-    if (parentNode.spouses && parentNode.spouses[spouseId]) {
-      delete parentNode.spouses[spouseId];
-    }
-  }
-
-  // Generate simple unique id
-  function generateId() {
-    return 'id_' + Math.random().toString(36).substr(2, 9);
-  }
-
-  // Save and re-render
-  function saveAndRender() {
-    saveFamilyTrees();
-    renderFamilyTrees();
-  }
-
-  // Draw connectors on left side from node to children and spouses
-  function drawConnections(nodeDiv) {
-    // Remove old svg connector if any
-    const oldSvg = nodeDiv.querySelector('svg.connector-svg');
-    if (oldSvg) oldSvg.remove();
-
-    const childrenContainer = nodeDiv.querySelector('.children-container');
-    const spousesContainer = nodeDiv.querySelector('.spouses-container');
-
-    if (!childrenContainer && !spousesContainer) return;
-
+  // Create SVG line helper
+  function createLine(x1, y1, x2, y2) {
     const ns = "http://www.w3.org/2000/svg";
     const svg = document.createElementNS(ns, "svg");
     svg.classList.add('connector-svg');
-    nodeDiv.appendChild(svg);
+    svg.style.left = Math.min(x1, x2) + "px";
+    svg.style.top = Math.min(y1, y2) + "px";
+    svg.style.width = Math.abs(x2 - x1) + "px";
+    svg.style.height = Math.abs(y2 - y1) + "px";
+    svg.style.position = "absolute";
+    svg.style.pointerEvents = "none";
 
-    const parentRect = nodeDiv.getBoundingClientRect();
+    const line = document.createElementNS(ns, "line");
+    line.setAttribute("x1", x1 < x2 ? 0 : Math.abs(x2 - x1));
+    line.setAttribute("y1", y1 < y2 ? 0 : Math.abs(y2 - y1));
+    line.setAttribute("x2", x1 < x2 ? Math.abs(x2 - x1) : 0);
+    line.setAttribute("y2", y1 < y2 ? Math.abs(y2 - y1) : 0);
+    line.setAttribute("stroke", "#007bff");
+    line.setAttribute("stroke-width", "2");
+    line.setAttribute("marker-end", "url(#arrowhead)");
 
-    // We position svg absolutely relative to nodeDiv:
-    // set width/height to cover vertical height needed and width left side for lines.
-    let totalHeight = nodeDiv.offsetHeight;
-    let maxWidth = 40; // space on left side for connector lines
+    svg.appendChild(line);
+    return svg;
+  }
 
-    svg.style.width = maxWidth + 'px';
-    svg.style.height = totalHeight + 'px';
-    svg.style.left = '-40px';
-    svg.style.top = '0px';
+  // Render single family node
+  function renderNode(node, container, nodeId, parentId) {
+    const nodeDiv = document.createElement('div');
+    nodeDiv.classList.add('tree-node');
+    nodeDiv.dataset.id = nodeId;
 
-    // Coordinates relative to SVG for lines
-    // Connect from left center of nodeDiv (x=40) vertically to each child's top left
+    // Header: name + dates + died checkbox
+    const header = document.createElement('div');
+    header.classList.add('node-header');
 
-    // Starting point: vertical center of nodeDiv left edge
-    const startX = maxWidth;
-    const startY = nodeDiv.offsetHeight / 2;
+    // Name input
+    const nameInput = document.createElement('input');
+    nameInput.type = 'text';
+    nameInput.value = node.name || '';
+    nameInput.placeholder = 'Full Name';
+    nameInput.addEventListener('change', e => {
+      node.name = e.target.value;
+      saveFamilyTrees();
+      renderConnections();
+    });
+    header.appendChild(nameInput);
 
-    // Draw vertical line from parent node center left side down through children
-    if (childrenContainer) {
-      // For each child, draw a horizontal line from svg left side to child node's left edge,
-      // and a vertical line connecting parent center to children top positions.
+    // Born date
+    const bornInput = document.createElement('input');
+    bornInput.type = 'date';
+    bornInput.value = node.born || '';
+    bornInput.title = "Date of Birth";
+    bornInput.addEventListener('change', e => {
+      node.born = e.target.value;
+      saveFamilyTrees();
+      renderConnections();
+    });
+    header.appendChild(bornInput);
 
-      const children = Array.from(childrenContainer.children);
+    // Died date
+    const diedInput = document.createElement('input');
+    diedInput.type = 'date';
+    diedInput.value = node.died || '';
+    diedInput.title = "Date of Death";
+    diedInput.addEventListener('change', e => {
+      node.died = e.target.value;
+      saveFamilyTrees();
+      renderConnections();
+    });
+    header.appendChild(diedInput);
 
-      // Compute children positions relative to nodeDiv
-      const childrenPos = children.map(c => c.offsetTop + c.offsetHeight / 2);
-
-      // Draw main vertical line from startY to last child's center Y
-      const minY = Math.min(...childrenPos);
-      const maxY = Math.max(...childrenPos);
-
-      // Vertical main line from parent center left edge to span children centers
-      const mainLine = document.createElementNS(ns, "line");
-      mainLine.setAttribute('x1', startX);
-      mainLine.setAttribute('y1', startY);
-      mainLine.setAttribute('x2', startX);
-      mainLine.setAttribute('y2', minY);
-      mainLine.setAttribute('stroke', '#007bff');
-      mainLine.setAttribute('stroke-width', '2');
-      svg.appendChild(mainLine);
-
-      if (minY !== maxY) {
-        const verticalSpanLine = document.createElementNS(ns, "line");
-        verticalSpanLine.setAttribute('x1', startX);
-        verticalSpanLine.setAttribute('y1', minY);
-        verticalSpanLine.setAttribute('x2', startX);
-        verticalSpanLine.setAttribute('y2', maxY);
-        verticalSpanLine.setAttribute('stroke', '#007bff');
-        verticalSpanLine.setAttribute('stroke-width', '2');
-        svg.appendChild(verticalSpanLine);
+    // Died checkbox for quick toggle
+    const diedCheckbox = document.createElement('input');
+    diedCheckbox.type = 'checkbox';
+    diedCheckbox.checked = !!node.died;
+    diedCheckbox.title = "Mark as Deceased";
+    diedCheckbox.addEventListener('change', e => {
+      if (e.target.checked) {
+        // If no died date set, default to today
+        if (!node.died) {
+          node.died = new Date().toISOString().substring(0, 10);
+          diedInput.value = node.died;
+        }
+      } else {
+        node.died = '';
+        diedInput.value = '';
       }
+      saveFamilyTrees();
+      renderConnections();
+    });
+    header.appendChild(diedCheckbox);
 
-      // Horizontal connectors from main vertical line to each child
-      childrenPos.forEach(y => {
-        const hLine = document.createElementNS(ns, "line");
-        hLine.setAttribute('x1', startX);
-        hLine.setAttribute('y1', y);
-        hLine.setAttribute('x2', 0);
-        hLine.setAttribute('y2', y);
-        hLine.setAttribute('stroke', '#007bff');
-        hLine.setAttribute('stroke-width', '2');
-        svg.appendChild(hLine);
+    // Delete node button
+    const deleteBtn = document.createElement('button');
+    deleteBtn.textContent = 'Delete';
+    deleteBtn.classList.add('delete-btn');
+    deleteBtn.title = "Delete this person";
+    deleteBtn.addEventListener('click', () => {
+      deleteNode(nodeId);
+    });
+    header.appendChild(deleteBtn);
+
+    nodeDiv.appendChild(header);
+
+    // Spouses container
+    const spousesCont = document.createElement('div');
+    spousesCont.classList.add('spouses-container');
+
+    if (node.spouses) {
+      // Sort spouses by name for consistent ordering
+      const spouseIds = Object.keys(node.spouses).sort((a,b) => {
+        const na = node.spouses[a].name.toLowerCase();
+        const nb = node.spouses[b].name.toLowerCase();
+        return na.localeCompare(nb);
+      });
+      spouseIds.forEach(sid => {
+        const spouse = node.spouses[sid];
+        const spouseDiv = document.createElement('div');
+        spouseDiv.classList.add('spouse-node');
+
+        // Spouse name and born/died
+        const spouseHeader = document.createElement('div');
+        spouseHeader.classList.add('node-header');
+
+        const spouseName = document.createElement('input');
+        spouseName.type = 'text';
+        spouseName.value = spouse.name || '';
+        spouseName.placeholder = 'Spouse Name';
+        spouseName.addEventListener('change', e => {
+          spouse.name = e.target.value;
+          saveFamilyTrees();
+          renderConnections();
+        });
+        spouseHeader.appendChild(spouseName);
+
+        const spouseBorn = document.createElement('input');
+        spouseBorn.type = 'date';
+        spouseBorn.value = spouse.born || '';
+        spouseBorn.title = "Date of Birth";
+        spouseBorn.addEventListener('change', e => {
+          spouse.born = e.target.value;
+          saveFamilyTrees();
+          renderConnections();
+        });
+        spouseHeader.appendChild(spouseBorn);
+
+        const spouseDied = document.createElement('input');
+        spouseDied.type = 'date';
+        spouseDied.value = spouse.died || '';
+        spouseDied.title = "Date of Death";
+        spouseDied.addEventListener('change', e => {
+          spouse.died = e.target.value;
+          saveFamilyTrees();
+          renderConnections();
+        });
+        spouseHeader.appendChild(spouseDied);
+
+        const spouseDiedCheckbox = document.createElement('input');
+        spouseDiedCheckbox.type = 'checkbox';
+        spouseDiedCheckbox.checked = !!spouse.died;
+        spouseDiedCheckbox.title = "Mark as Deceased";
+        spouseDiedCheckbox.addEventListener('change', e => {
+          if (e.target.checked) {
+            if (!spouse.died) {
+              spouse.died = new Date().toISOString().substring(0, 10);
+              spouseDied.value = spouse.died;
+            }
+          } else {
+            spouse.died = '';
+            spouseDied.value = '';
+          }
+          saveFamilyTrees();
+          renderConnections();
+        });
+        spouseHeader.appendChild(spouseDiedCheckbox);
+
+        // Buttons: Add child to spouse, Delete spouse
+        const spouseButtons = document.createElement('div');
+        spouseButtons.classList.add('node-buttons');
+
+        const addChildBtn = document.createElement('button');
+        addChildBtn.textContent = '+Child';
+        addChildBtn.title = "Add child to this spouse";
+        addChildBtn.addEventListener('click', () => {
+          addChild(nodeId, sid);
+        });
+        spouseButtons.appendChild(addChildBtn);
+
+        const deleteSpouseBtn = document.createElement('button');
+        deleteSpouseBtn.textContent = 'Delete Spouse';
+        deleteSpouseBtn.classList.add('delete-btn');
+        deleteSpouseBtn.title = "Remove this spouse";
+        deleteSpouseBtn.addEventListener('click', () => {
+          deleteSpouse(nodeId, sid);
+        });
+        spouseButtons.appendChild(deleteSpouseBtn);
+
+        spouseHeader.appendChild(spouseButtons);
+
+        spouseDiv.appendChild(spouseHeader);
+
+        // Children of spouse
+        if (spouse.children) {
+          const childrenCont = document.createElement('div');
+          childrenCont.classList.add('children-container');
+          const childIds = Object.keys(spouse.children);
+          childIds.forEach(cid => {
+            renderNode(spouse.children[cid], childrenCont, cid, nodeId);
+          });
+          spouseDiv.appendChild(childrenCont);
+        }
+
+        spousesCont.appendChild(spouseDiv);
       });
     }
 
-    // Draw connectors for spouses horizontally (line connecting spouses)
-    if (spousesContainer) {
-      // The spousesContainer is inside nodeDiv, so no extra connector lines needed besides the one between spouses
-      // But let's draw a vertical line from parent's center to spouses line
+    // Add spouse button
+    const addSpouseBtn = document.createElement('button');
+    addSpouseBtn.textContent = '+ Add Spouse';
+    addSpouseBtn.addEventListener('click', () => {
+      addSpouse(nodeId);
+    });
+    spousesCont.appendChild(addSpouseBtn);
 
-      const spousesLineY = spousesContainer.offsetTop + spousesContainer.offsetHeight / 2;
+    nodeDiv.appendChild(spousesCont);
 
-      const verticalLine = document.createElementNS(ns, "line");
-      verticalLine.setAttribute('x1', startX);
-      verticalLine.setAttribute('y1', startY);
-      verticalLine.setAttribute('x2', startX);
-      verticalLine.setAttribute('y2', spousesLineY);
-      verticalLine.setAttribute('stroke', '#007bff');
-      verticalLine.setAttribute('stroke-width', '2');
-      svg.appendChild(verticalLine);
+    container.appendChild(nodeDiv);
 
-      // Also horizontal line from left svg edge to spouses line vertical connector
-      const hLineSpouse = document.createElementNS(ns, "line");
-      hLineSpouse.setAttribute('x1', 0);
-      hLineSpouse.setAttribute('y1', spousesLineY);
-      hLineSpouse.setAttribute('x2', startX);
-      hLineSpouse.setAttribute('y2', spousesLineY);
-      hLineSpouse.setAttribute('stroke', '#007bff');
-      hLineSpouse.setAttribute('stroke-width', '2');
-      svg.appendChild(hLineSpouse);
-    }
+    // After appending, draw lines to children
+    drawConnections(nodeDiv, node, nodeId);
   }
 
+  // Add spouse to a person
+  function addSpouse(nodeId) {
+    if (!familyTrees[nodeId].spouses) familyTrees[nodeId].spouses = {};
+    const newSpouseId = generateId();
+    familyTrees[nodeId].spouses[newSpouseId] = {
+      name: '',
+      born: '',
+      died: '',
+      children: {}
+    };
+    saveFamilyTrees();
+  }
+
+  // Add child to a spouse
+  function addChild(parentId, spouseId) {
+    if (!familyTrees[parentId].spouses[spouseId].children) {
+      familyTrees[parentId].spouses[spouseId].children = {};
+    }
+    const newChildId = generateId();
+    familyTrees[parentId].spouses[spouseId].children[newChildId] = {
+      name: '',
+      born: '',
+      died: '',
+      spouses: {}
+    };
+    saveFamilyTrees();
+  }
+
+  // Delete a person (and all their family)
+  function deleteNode(nodeId) {
+    delete familyTrees[nodeId];
+    saveFamilyTrees();
+  }
+
+  // Delete spouse
+  function deleteSpouse(nodeId, spouseId) {
+    delete familyTrees[nodeId].spouses[spouseId];
+    saveFamilyTrees();
+  }
+
+  // Utility to generate ID
+  function generateId() {
+    return Math.random().toString(36).slice(2, 10);
+  }
+
+  // DRAW CONNECTIONS FOR EACH NODE TO THEIR CHILDREN - arrows on left side
+  function drawConnections(nodeDiv, node, nodeId) {
+    // Remove old connectors inside nodeDiv
+    [...nodeDiv.querySelectorAll('svg.connector-svg')].forEach(el => el.remove());
+
+    if (!node.spouses) return;
+
+    // For each spouse, connect nodeDiv to spouse children
+    Object.entries(node.spouses).forEach(([spouseId, spouse]) => {
+      if (!spouse.children) return;
+
+      const spouseDiv = [...nodeDiv.querySelectorAll('.spouse-node')].find(d => {
+        return d.querySelector('input[type=text]').value === spouse.name;
+      });
+      if (!spouseDiv) return;
+
+      // Coordinates for nodeDiv and children container
+      const containerRect = familyTreeContainer.getBoundingClientRect();
+      const nodeRect = nodeDiv.getBoundingClientRect();
+      const spouseRect = spouseDiv.getBoundingClientRect();
+
+      // Connect main person to spouse node horizontally (they are side by side)
+      // We can skip if already close
+
+      // Connect spouses and children vertically
+      const childrenCont = spouseDiv.querySelector('.children-container');
+      if (!childrenCont) return;
+
+      const children = [...childrenCont.children];
+      children.forEach(childNodeDiv => {
+        const childRect = childNodeDiv.getBoundingClientRect();
+
+        // Draw vertical line from spouse bottom center to child top center
+        const x1 = spouseRect.left - containerRect.left + spouseRect.width/2;
+        const y1 = spouseRect.bottom - containerRect.top;
+
+        const x2 = childRect.left - containerRect.left + childRect.width/2;
+        const y2 = childRect.top - containerRect.top;
+
+        const svgLine = createLine(x1, y1, x2, y2);
+        familyTreeContainer.appendChild(svgLine);
+      });
+
+      // Also draw horizontal connection between main node and spouses
+      const xNode = nodeRect.right - containerRect.left;
+      const yNode = nodeRect.top + nodeRect.height/2 - containerRect.top;
+
+      const xSpouse = spouseRect.left - containerRect.left;
+      const ySpouse = spouseRect.top + spouseRect.height/2 - containerRect.top;
+
+      // Only draw if gap > 10px to avoid overlap
+      if (xSpouse - xNode > 10) {
+        const svgLine = createLine(xNode, yNode, xSpouse, ySpouse);
+        familyTreeContainer.appendChild(svgLine);
+      }
+    });
+  }
+
+  // RENDER CONNECTIONS ON THE RIGHT SIDE panel
+  function renderConnections() {
+    connectionsList.innerHTML = '';
+
+    // For every node and their spouses and children, list relationship text
+    for (const nodeId in familyTrees) {
+      const node = familyTrees[nodeId];
+      const nodeName = node.name || '[No name]';
+
+      if (node.spouses) {
+        for (const spouseId in node.spouses) {
+          const spouse = node.spouses[spouseId];
+          const spouseName = spouse.name || '[No name]';
+
+          // Spouse relation
+          const liSpouse = document.createElement('li');
+          liSpouse.textContent = `${nodeName} ↔ ${spouseName} (Spouse)`;
+          connectionsList.appendChild(liSpouse);
+
+          // Children relations
+          if (spouse.children) {
+            for (const childId in spouse.children) {
+              const child = spouse.children[childId];
+              const childName = child.name || '[No name]';
+              const liChild = document.createElement('li');
+              liChild.textContent = `${nodeName} + ${spouseName} → ${childName} (Child)`;
+              connectionsList.appendChild(liChild);
+            }
+          }
+        }
+      }
+    }
+  }
 </script>
+
+<!-- SVG Arrowhead definition for lines -->
+<svg width="0" height="0" style="position:absolute;visibility:hidden">
+  <defs>
+    <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+        refX="10" refY="3.5" orient="auto" markerUnits="strokeWidth">
+      <path d="M0,0 L10,3.5 L0,7" fill="#007bff" />
+    </marker>
+  </defs>
+</svg>
 
 </body>
 </html>
