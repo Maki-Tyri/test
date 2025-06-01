@@ -1,50 +1,39 @@
 <!DOCTYPE html>
-<html lang="en" >
+<html lang="en">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Family Tree with Spouse Lines & Delete</title>
+  <title>Responsive Family Tree</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
-
   <style>
-    .spouse-line-container {
-      position: relative;
-      display: flex;
-      align-items: center;
-      margin-left: 1.5rem;
-      margin-top: 0.5rem;
-    }
-    .spouse-line {
+    .line-connector {
+      width: 2px;
+      background: #6366f1;
       position: absolute;
-      height: 2px;
-      background: #ec4899;
-      top: 50%;
-      left: 0;
-      right: 0;
-      z-index: 0;
+      left: -12px;
+      top: 0;
+      bottom: 0;
+      z-index: -1;
     }
-    .spouse-name {
-      background: white;
-      padding: 0 0.5rem;
-      position: relative;
-      z-index: 1;
-      font-style: italic;
-      color: #db2777;
-      font-weight: 600;
+    @media (max-width: 640px) {
+      .family-card {
+        flex-direction: column;
+        align-items: flex-start;
+      }
     }
   </style>
 </head>
 <body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen text-gray-900">
 
-<div id="root" class="p-4 max-w-5xl mx-auto"></div>
+<div id="root" class="p-4 max-w-6xl mx-auto"></div>
 
 <footer class="fixed bottom-0 w-full text-center py-2 bg-white bg-opacity-10 text-white backdrop-blur-md text-sm">
-  &copy; 2025 Maki Web. All rights reserved
+  &copy; 2025 Maki Web. All rights reserved.
 </footer>
 
 <script type="text/javascript">
@@ -89,15 +78,19 @@ function Login({ onLogin }) {
     React.createElement("h2", { className: "text-3xl font-bold mb-6 text-center" }, isRegister ? "Register" : "Login"),
     React.createElement("form", { onSubmit: handleSubmit, className: "space-y-4" },
       React.createElement("input", {
-        type: "email", required: true, value: email,
-        onChange: e => setEmail(e.target.value),
+        type: "email",
         placeholder: "Email",
+        required: true,
+        value: email,
+        onChange: e => setEmail(e.target.value),
         className: "w-full px-4 py-2 border rounded-md"
       }),
       React.createElement("input", {
-        type: "password", required: true, value: password,
-        onChange: e => setPassword(e.target.value),
+        type: "password",
         placeholder: "Password",
+        required: true,
+        value: password,
+        onChange: e => setPassword(e.target.value),
         className: "w-full px-4 py-2 border rounded-md"
       }),
       React.createElement("button", {
@@ -113,265 +106,96 @@ function Login({ onLogin }) {
   );
 }
 
-function FamilyTree() {
+function FamilyTreeApp() {
   const [user, setUser] = useState(null);
   const [members, setMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState("");
+  const [expanded, setExpanded] = useState({});
 
   useEffect(() => {
-    const unsubscribeAuth = auth.onAuthStateChanged(u => {
-      setUser(u || null);
+    const unsubscribe = auth.onAuthStateChanged(u => {
+      if (u) setUser(u);
+      else setUser(null);
     });
-    return () => unsubscribeAuth();
+    return () => unsubscribe();
   }, []);
 
   useEffect(() => {
-    if (!user) {
-      setMembers([]);
-      setLoading(false);
-      return;
-    }
-    setLoading(true);
+    if (!user) return;
     const ref = db.ref(`users/${user.uid}/members`);
-    ref.on("value", (snap) => {
-      const val = snap.val();
-      setMembers(val ? Object.values(val) : []);
+    const handler = (snapshot) => {
+      const val = snapshot.val() || {};
+      setMembers(Object.values(val));
       setLoading(false);
-    });
-    return () => ref.off();
+    };
+    ref.on("value", handler);
+    return () => ref.off("value", handler);
   }, [user]);
 
-  const saveMember = (m) => {
+  const saveMember = (member) => {
     if (!user) return;
-    db.ref(`users/${user.uid}/members/${m.id}`).set(m);
+    db.ref(`users/${user.uid}/members/${member.id}`).set(member);
   };
 
   const deleteMember = (id) => {
     if (!user) return;
-    if (!confirm("Are you sure you want to delete this member?")) return;
-
-    const ref = db.ref(`users/${user.uid}/members`);
-    ref.child(id).remove();
-
-    // Also remove spouse links pointing to this member
-    members.forEach(m => {
-      if (m.spouseId === id) {
-        db.ref(`users/${user.uid}/members/${m.id}`).update({ spouseId: "" });
-      }
-      if (m.parentId === id) {
-        db.ref(`users/${user.uid}/members/${m.id}`).update({ parentId: "" });
-      }
-    });
+    db.ref(`users/${user.uid}/members/${id}`).remove();
   };
 
-  const handleAddChild = (child) => saveMember(child);
-
-  const handleAddSpouse = (spouse, member) => {
-    spouse.id = spouse.id || Date.now().toString();
-    saveMember(spouse);
-    saveMember({ ...member, spouseId: spouse.id });
-    saveMember({ ...spouse, spouseId: member.id });
+  const toggleExpand = (id) => {
+    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  const handleEdit = (member) => {
-    saveMember(member);
-    if (member.spouseId) {
-      const spouse = members.find(m => m.id === member.spouseId);
-      if (spouse && spouse.spouseId !== member.id) {
-        saveMember({ ...spouse, spouseId: member.id });
-      }
-    }
+  const renderTree = (member, allMembers, level = 0) => {
+    const children = allMembers.filter(m => m.parentId === member.id);
+    const isOpen = expanded[member.id] ?? true;
+
+    return (
+      React.createElement("div", { key: member.id, className: "relative ml-4 mt-4 pl-4 border-l-2 border-indigo-400" },
+        React.createElement("div", { className: "flex items-center family-card gap-2 relative bg-white p-2 rounded shadow-md w-full sm:flex-row flex-col" },
+          React.createElement("div", { className: "text-indigo-700 font-semibold" }, member.name),
+          React.createElement("span", { className: "text-xs text-gray-600" }, member.relation || ""),
+          member.deceased && React.createElement("span", { className: "text-red-500 text-sm" }, "☠"),
+          React.createElement("button", { className: "ml-auto text-xs text-blue-600", onClick: () => toggleExpand(member.id) }, isOpen ? "Collapse" : "Expand"),
+          React.createElement("button", { className: "ml-2 text-xs text-red-500", onClick: () => deleteMember(member.id) }, "Delete")
+        ),
+        isOpen && children.map(child => renderTree(child, allMembers, level + 1))
+      )
+    );
   };
 
   if (!user) return React.createElement(Login, { onLogin: () => setUser(auth.currentUser) });
-  if (loading) return React.createElement("p", { className: "text-center mt-12 text-white" }, "Loading...");
+  if (loading) return React.createElement("div", { className: "text-center text-white mt-10" }, "Loading...");
 
-  const roots = members.filter(m => !m.parentId);
+  const rootMembers = members.filter(m => !m.parentId);
+  const filtered = members.filter(m => m.name.toLowerCase().includes(search.toLowerCase()));
 
-  return React.createElement("div", { className: "bg-white bg-opacity-80 rounded p-6 max-w-4xl mx-auto mt-8" },
-    React.createElement("h1", { className: "text-4xl font-bold mb-6 text-indigo-900 text-center" }, "Family Tree"),
-    roots.length === 0
-      ? React.createElement("button", {
-          className: "bg-indigo-600 text-white px-4 py-2 rounded mx-auto block",
-          onClick: () => {
-            const id = Date.now().toString();
-            saveMember({ id, name: "Root Ancestor", relation: "Father" });
-          }
-        }, "Add Root Member")
-      : roots.map(root =>
-        React.createElement(FamilyMember, {
-          key: root.id,
-          member: root,
-          members,
-          onAddChild: handleAddChild,
-          onAddSpouse: handleAddSpouse,
-          onEdit: handleEdit,
-          onDelete: deleteMember
+  return (
+    React.createElement("div", { className: "bg-white bg-opacity-90 rounded-lg p-4 shadow-xl mt-4 mb-20" },
+      React.createElement("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4" },
+        React.createElement("h1", { className: "text-2xl font-bold text-indigo-700" }, "My Family Tree"),
+        React.createElement("input", {
+          type: "text",
+          placeholder: "Search member...",
+          className: "border border-gray-300 px-3 py-1 rounded w-full sm:w-64",
+          value: search,
+          onChange: e => setSearch(e.target.value)
         })
       ),
-    React.createElement("button", {
-      onClick: () => auth.signOut(),
-      className: "mt-6 bg-pink-600 text-white px-4 py-2 rounded"
-    }, "Logout")
-  );
-}
-
-function FamilyMember({ member, members, onAddChild, onAddSpouse, onEdit, onDelete }) {
-  const [showFormFor, setShowFormFor] = useState(null);
-
-  const spouse = members.find(m => m.id === member.spouseId);
-  const children = members.filter(m => m.parentId === member.id);
-
-  const showSpouseLine = spouse && member.id < spouse.id;
-
-  const handleSave = (data) => {
-    if (showFormFor === "child") onAddChild(data);
-    else if (showFormFor === "spouse") onAddSpouse(data, member);
-    else if (showFormFor === "edit") onEdit(data);
-    setShowFormFor(null);
-  };
-
-  return React.createElement("div", { className: "ml-6 py-2 border-l-2 border-indigo-300 relative" },
-    React.createElement("div", { className: "flex items-center gap-2" },
-      React.createElement("span", { className: "font-semibold text-indigo-900" }, member.name),
-      member.relation && React.createElement("span", { className: "text-sm text-gray-600" }, `(${member.relation})`),
-      member.birthDate && React.createElement("span", { className: "text-xs text-gray-400" }, `b. ${member.birthDate}`),
-      member.deathDate && React.createElement("span", { className: "text-xs text-gray-400" }, `d. ${member.deathDate}`),
-      member.deceased && React.createElement("span", { className: "text-pink-600 font-semibold" }, "☠"),
-
-      React.createElement("div", { className: "ml-auto flex gap-2" },
+      filtered.length === 0 && React.createElement("p", { className: "text-gray-500 italic" }, "No members found."),
+      rootMembers.map(root => renderTree(root, members)),
+      React.createElement("div", { className: "mt-4 text-center" },
         React.createElement("button", {
-          className: "text-indigo-600 hover:underline text-xs",
-          onClick: () => setShowFormFor("edit")
-        }, "Edit"),
-        React.createElement("button", {
-          className: "text-pink-600 hover:underline text-xs",
-          onClick: () => setShowFormFor("child")
-        }, "Add Child"),
-        !spouse && React.createElement("button", {
-          className: "text-green-600 hover:underline text-xs",
-          onClick: () => setShowFormFor("spouse")
-        }, "Add Spouse"),
-        React.createElement("button", {
-          className: "text-red-600 hover:underline text-xs",
-          onClick: () => onDelete(member.id)
-        }, "Delete")
-      )
-    ),
-
-    showSpouseLine && React.createElement("div", { className: "spouse-line-container" },
-      React.createElement("div", { className: "spouse-line" }),
-      React.createElement("span", { className: "spouse-name" }, spouse.name)
-    ),
-
-    showFormFor && React.createElement(MemberForm, {
-      initialData: showFormFor === "edit" ? member : {},
-      onCancel: () => setShowFormFor(null),
-      onSave: handleSave,
-      members,
-      parentId: member.id,
-      formType: showFormFor
-    }),
-
-    children.length > 0 && React.createElement("div", { className: "ml-6 border-l border-indigo-400 pl-4 mt-1 space-y-1" },
-      children.map(child =>
-        React.createElement(FamilyMember, {
-          key: child.id,
-          member: child,
-          members,
-          onAddChild,
-          onAddSpouse,
-          onEdit,
-          onDelete
-        })
+          onClick: () => auth.signOut(),
+          className: "bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded"
+        }, "Logout")
       )
     )
   );
 }
 
-function MemberForm({ initialData = {}, onCancel, onSave, members, parentId, formType }) {
-  const [form, setForm] = useState({
-    name: initialData.name || "",
-    relation: initialData.relation || (formType === "spouse" ? "Spouse" : ""),
-    birthDate: initialData.birthDate || "",
-    deathDate: initialData.deathDate || "",
-    deceased: initialData.deceased || false,
-    spouseId: initialData.spouseId || "",
-  });
-
-  const spouseOptions = members.filter(m => m.id !== initialData.id);
-  const relationOptions = {
-    child: ["Son", "Daughter"],
-    spouse: ["Spouse"],
-    edit: ["Father", "Mother", "Son", "Daughter", "Spouse", "Brother", "Sister"]
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    if (!form.name.trim()) {
-      alert("Name is required");
-      return;
-    }
-    onSave({ ...initialData, ...form, parentId, id: initialData.id || Date.now().toString() });
-  };
-
-  return React.createElement("form", { onSubmit: handleSubmit, className: "ml-6 mt-2 p-3 border-l-2 border-indigo-400 bg-indigo-50 rounded space-y-2" },
-    React.createElement("input", {
-      type: "text", placeholder: "Name",
-      value: form.name,
-      onChange: e => setForm({ ...form, name: e.target.value }),
-      className: "w-full px-3 py-1 border rounded"
-    }),
-    formType === "spouse"
-      ? React.createElement("input", {
-          type: "text", value: "Spouse", disabled: true,
-          className: "w-full px-3 py-1 border rounded bg-gray-100"
-        })
-      : React.createElement("select", {
-          value: form.relation,
-          onChange: e => setForm({ ...form, relation: e.target.value }),
-          className: "w-full px-3 py-1 border rounded"
-        },
-          React.createElement("option", { value: "" }, "-- Select Relation --"),
-          relationOptions[formType || "edit"].map(r =>
-            React.createElement("option", { key: r, value: r }, r)
-          )
-        ),
-    React.createElement("div", { className: "flex gap-2" },
-      React.createElement("input", {
-        type: "date", value: form.birthDate,
-        onChange: e => setForm({ ...form, birthDate: e.target.value }),
-        className: "flex-1 px-3 py-1 border rounded"
-      }),
-      React.createElement("input", {
-        type: "date", value: form.deathDate,
-        onChange: e => setForm({ ...form, deathDate: e.target.value }),
-        className: "flex-1 px-3 py-1 border rounded"
-      })
-    ),
-    React.createElement("label", { className: "flex items-center space-x-2" },
-      React.createElement("input", {
-        type: "checkbox", checked: form.deceased,
-        onChange: e => setForm({ ...form, deceased: e.target.checked })
-      }),
-      React.createElement("span", null, "Deceased")
-    ),
-    React.createElement("select", {
-      value: form.spouseId,
-      onChange: e => setForm({ ...form, spouseId: e.target.value }),
-      className: "w-full px-3 py-1 border rounded"
-    },
-      React.createElement("option", { value: "" }, "-- Select Spouse (Optional) --"),
-      spouseOptions.map(m => React.createElement("option", { key: m.id, value: m.id }, m.name))
-    ),
-    React.createElement("div", { className: "flex justify-end gap-2" },
-      React.createElement("button", { type: "submit", className: "bg-indigo-600 text-white px-4 py-1 rounded" }, "Save"),
-      React.createElement("button", { type: "button", onClick: onCancel, className: "bg-gray-400 text-white px-4 py-1 rounded" }, "Cancel")
-    )
-  );
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(FamilyTree));
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(FamilyTreeApp));
 </script>
 </body>
 </html>
