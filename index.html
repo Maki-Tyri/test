@@ -3,33 +3,58 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Family Tree - Editable</title>
+<title>Collapsible Family Tree</title>
 <style>
-  ul { list-style-type: none; padding-left: 1em; }
-  .node { cursor: pointer; margin: 5px 0; }
-  .children { margin-left: 20px; display: none; }
-  .node > span.name {
+  body {
+    font-family: Arial, sans-serif;
+    padding: 20px;
+    background: #f0f4f8;
+  }
+  .tree ul {
+    padding-left: 20px;
+    list-style: none;
+    border-left: 1px solid #ccc;
+    margin-left: 10px;
+  }
+  .tree li {
+    margin: 5px 0;
+    position: relative;
     cursor: pointer;
   }
-  .node.editing input {
-    font-size: 1em;
+  .tree li::before {
+    content: "";
+    position: absolute;
+    top: 12px;
+    left: -13px;
+    width: 10px;
+    height: 1px;
+    background: #ccc;
   }
-  button {
-    margin-left: 8px;
+  .tree li.collapsible > span::before {
+    content: "▼";
+    display: inline-block;
+    margin-right: 5px;
     font-size: 0.8em;
+    transition: transform 0.2s ease;
+  }
+  .tree li.collapsible.collapsed > span::before {
+    content: "▶";
+  }
+  .tree ul.collapsed {
+    display: none;
+  }
+  .node-name {
+    user-select: none;
   }
 </style>
 </head>
 <body>
 
-<h2>Editable Family Tree</h2>
-<div id="tree"></div>
-
-<!-- Firebase SDK -->
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+<h2>Family Tree</h2>
+<div class="tree" id="familyTree"></div>
 
 <script>
+  // Your Firebase config
   const firebaseConfig = {
     apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
     authDomain: "project-955237504610034331.firebaseapp.com",
@@ -41,161 +66,60 @@
     measurementId: "G-RCJ4P82PVM"
   };
 
+  // Initialize Firebase
   firebase.initializeApp(firebaseConfig);
   const db = firebase.database();
 
-  const treeRef = db.ref('familyTree');
+  // Recursive function to build tree UI from JSON data
+  function buildTree(data) {
+    const ul = document.createElement("ul");
 
-  // Load and render tree
-  treeRef.on('value', snapshot => {
+    for (const key in data) {
+      if (data.hasOwnProperty(key)) {
+        const li = document.createElement("li");
+        const node = data[key];
+        const span = document.createElement("span");
+        span.textContent = node.name;
+        span.className = "node-name";
+
+        // If node has children, make it collapsible
+        if (node.children && Object.keys(node.children).length > 0) {
+          li.classList.add("collapsible");
+          const childrenUl = buildTree(node.children);
+          li.appendChild(span);
+          li.appendChild(childrenUl);
+
+          // Initially collapsed
+          childrenUl.classList.add("collapsed");
+          li.classList.add("collapsed");
+
+          span.addEventListener("click", () => {
+            childrenUl.classList.toggle("collapsed");
+            li.classList.toggle("collapsed");
+          });
+        } else {
+          li.appendChild(span);
+        }
+
+        ul.appendChild(li);
+      }
+    }
+    return ul;
+  }
+
+  // Fetch data from Firebase Realtime DB
+  db.ref("/family").on("value", (snapshot) => {
+    const treeContainer = document.getElementById("familyTree");
+    treeContainer.innerHTML = ""; // Clear previous tree
     const data = snapshot.val();
-    const container = document.getElementById('tree');
-    container.innerHTML = '';
+
     if (data) {
-      container.appendChild(createTreeNode(data, []));
+      const tree = buildTree(data);
+      treeContainer.appendChild(tree);
     } else {
-      container.textContent = 'No family data yet.';
+      treeContainer.textContent = "No family data available.";
     }
   });
-
-  // Helper: Convert path array to Firebase DB ref
-  function pathToRef(path) {
-    return treeRef.child(path.join('/'));
-  }
-
-  // Create tree node element with path for updating
-  function createTreeNode(node, path) {
-    const li = document.createElement('li');
-    li.className = 'node';
-
-    // Name span
-    const span = document.createElement('span');
-    span.textContent = node.name || 'Unnamed';
-    span.className = 'name';
-    li.appendChild(span);
-
-    // Toggle children on name click
-    span.addEventListener('click', () => {
-      if (childrenUl.style.display === 'none') {
-        childrenUl.style.display = 'block';
-      } else {
-        childrenUl.style.display = 'none';
-      }
-    });
-
-    // Inline editing on double click
-    span.addEventListener('dblclick', () => {
-      li.classList.add('editing');
-      const input = document.createElement('input');
-      input.type = 'text';
-      input.value = span.textContent;
-      li.replaceChild(input, span);
-      input.focus();
-
-      input.addEventListener('blur', () => finishEditing(input, li, path));
-      input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') {
-          finishEditing(input, li, path);
-        }
-      });
-    });
-
-    // Add and Remove buttons
-    const btnAdd = document.createElement('button');
-    btnAdd.textContent = '+ Add Child';
-    btnAdd.title = 'Add child to this node';
-    btnAdd.addEventListener('click', e => {
-      e.stopPropagation(); // Prevent toggle
-      addChildNode(path);
-    });
-    li.appendChild(btnAdd);
-
-    // Don't allow root node removal
-    if (path.length > 0) {
-      const btnRemove = document.createElement('button');
-      btnRemove.textContent = '- Remove';
-      btnRemove.title = 'Remove this node and its children';
-      btnRemove.addEventListener('click', e => {
-        e.stopPropagation();
-        removeNode(path);
-      });
-      li.appendChild(btnRemove);
-    }
-
-    // Children list
-    const childrenUl = document.createElement('ul');
-    childrenUl.className = 'children';
-    childrenUl.style.display = 'none'; // collapsed default
-
-    if (node.children) {
-      for (const key in node.children) {
-        const childNode = createTreeNode(node.children[key], path.concat(['children', key]));
-        childrenUl.appendChild(childNode);
-      }
-    }
-
-    li.appendChild(childrenUl);
-
-    return li;
-  }
-
-  // Finish editing name, save to Firebase
-  function finishEditing(input, li, path) {
-    const newName = input.value.trim();
-    if (newName.length > 0) {
-      const nodeRef = pathToRef(path.concat(['name']));
-      nodeRef.set(newName).then(() => {
-        const span = document.createElement('span');
-        span.textContent = newName;
-        span.className = 'name';
-        li.replaceChild(span, input);
-        li.classList.remove('editing');
-
-        // Re-bind events
-        span.addEventListener('click', () => {
-          const childrenUl = li.querySelector('.children');
-          if (childrenUl.style.display === 'none') {
-            childrenUl.style.display = 'block';
-          } else {
-            childrenUl.style.display = 'none';
-          }
-        });
-        span.addEventListener('dblclick', () => {
-          li.classList.add('editing');
-          const input = document.createElement('input');
-          input.type = 'text';
-          input.value = span.textContent;
-          li.replaceChild(input, span);
-          input.focus();
-          input.addEventListener('blur', () => finishEditing(input, li, path));
-          input.addEventListener('keydown', e => {
-            if (e.key === 'Enter') {
-              finishEditing(input, li, path);
-            }
-          });
-        });
-      });
-    } else {
-      // Cancel editing if empty
-      const span = document.createElement('span');
-      span.textContent = li.querySelector('span.name').textContent;
-      li.replaceChild(span, input);
-      li.classList.remove('editing');
-    }
-  }
-
-  // Add a new child node with default name
-  function addChildNode(parentPath) {
-    const newChildRef = pathToRef(parentPath.concat(['children'])).push();
-    newChildRef.set({ name: 'New Member' });
-  }
-
-  // Remove node and its children
-  function removeNode(path) {
-    if (confirm('Are you sure you want to remove this member and all its descendants?')) {
-      pathToRef(path).remove();
-    }
-  }
 </script>
 
 </body>
