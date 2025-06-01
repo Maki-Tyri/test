@@ -11,220 +11,238 @@
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
 </head>
-<body class="bg-gradient-to-tr from-indigo-400 via-purple-400 to-pink-400 min-h-screen flex flex-col justify-between">
+<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen text-gray-900">
 
-<div id="root" class="flex-grow w-full max-w-5xl mx-auto p-4"></div>
+<div id="root" class="p-4 max-w-5xl mx-auto"></div>
 
-<footer class="text-center py-4 bg-white bg-opacity-20 backdrop-blur-md text-white mt-8 rounded-t-xl">
+<footer class="fixed bottom-0 w-full text-center py-2 bg-white bg-opacity-10 text-white backdrop-blur-md text-sm">
   &copy; 2025 Maki Web. All rights reserved
 </footer>
 
 <script type="text/javascript">
-  const { useState, useEffect } = React;
+const { useState, useEffect } = React;
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
-    authDomain: "project-955237504610034331.firebaseapp.com",
-    databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
-    projectId: "project-955237504610034331",
-    storageBucket: "project-955237504610034331.firebasestorage.app",
-    messagingSenderId: "76212939677",
-    appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
-    measurementId: "G-RCJ4P82PVM"
+const firebaseConfig = {
+  apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
+  authDomain: "project-955237504610034331.firebaseapp.com",
+  databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
+  projectId: "project-955237504610034331",
+  storageBucket: "project-955237504610034331.firebasestorage.app",
+  messagingSenderId: "76212939677",
+  appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
+  measurementId: "G-RCJ4P82PVM"
+};
+
+firebase.initializeApp(firebaseConfig);
+const auth = firebase.auth();
+const db = firebase.database();
+
+function Login({ onLogin }) {
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [isRegister, setIsRegister] = useState(false);
+  const [error, setError] = useState(null);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    try {
+      if (isRegister) {
+        await auth.createUserWithEmailAndPassword(email, password);
+      } else {
+        await auth.signInWithEmailAndPassword(email, password);
+      }
+      onLogin();
+    } catch (err) {
+      setError(err.message);
+    }
   };
 
-  firebase.initializeApp(firebaseConfig);
-  const auth = firebase.auth();
-  const db = firebase.database();
+  return React.createElement("div", { className: "max-w-md mx-auto mt-24 p-8 bg-white bg-opacity-70 rounded-lg shadow-lg backdrop-blur-md" },
+    React.createElement("h2", { className: "text-3xl font-bold mb-6 text-center" }, isRegister ? "Register" : "Login"),
+    React.createElement("form", { onSubmit: handleSubmit, className: "space-y-4" },
+      React.createElement("input", {
+        type: "email",
+        placeholder: "Email",
+        required: true,
+        value: email,
+        onChange: e => setEmail(e.target.value),
+        className: "w-full px-4 py-2 border rounded-md"
+      }),
+      React.createElement("input", {
+        type: "password",
+        placeholder: "Password",
+        required: true,
+        value: password,
+        onChange: e => setPassword(e.target.value),
+        className: "w-full px-4 py-2 border rounded-md"
+      }),
+      React.createElement("button", {
+        type: "submit",
+        className: "w-full bg-indigo-600 text-white py-2 rounded-md"
+      }, isRegister ? "Register" : "Login")
+    ),
+    error && React.createElement("p", { className: "text-red-600 text-center mt-4" }, error),
+    React.createElement("p", {
+      className: "mt-6 text-center text-indigo-600 cursor-pointer hover:underline",
+      onClick: () => setIsRegister(!isRegister)
+    }, isRegister ? "Already have an account? Login" : "No account? Register")
+  );
+}
 
-  function Login({ onLogin }) {
-    const [email, setEmail] = useState("");
-    const [password, setPassword] = useState("");
-    const [isRegister, setIsRegister] = useState(false);
-    const [error, setError] = useState(null);
+function FamilyMember({ member, members, onAddChild, onEdit }) {
+  const [collapsed, setCollapsed] = useState(false);
+  const spouse = members.find(m => m.spouseId === member.id || m.id === member.spouseId);
 
-    const handleSubmit = async (e) => {
-      e.preventDefault();
-      setError(null);
-      try {
-        if (isRegister) {
-          await auth.createUserWithEmailAndPassword(email, password);
-        } else {
-          await auth.signInWithEmailAndPassword(email, password);
-        }
-        onLogin();
-      } catch (err) {
-        setError(err.message);
-      }
-    };
+  return React.createElement("div", { className: "ml-6 border-l-2 border-indigo-300 pl-4 py-2 relative" },
+    React.createElement("div", { className: "flex items-center space-x-2" },
+      React.createElement("button", {
+        onClick: () => setCollapsed(!collapsed),
+        className: "text-indigo-700 font-bold text-lg w-5 h-5 flex items-center justify-center"
+      }, collapsed ? "▶" : "▼"),
+      React.createElement("span", { className: "font-semibold" }, member.name),
+      member.relation && React.createElement("span", { className: "text-sm text-gray-600" }, `(${member.relation})`),
+      member.birthDate && React.createElement("span", { className: "text-sm text-gray-500" }, `b. ${member.birthDate}`),
+      member.deceased && React.createElement("span", { className: "text-sm text-red-500 ml-2" }, `✝ ${member.deathDate || ''}`),
+      React.createElement("button", {
+        onClick: () => onAddChild(member.id),
+        className: "ml-2 bg-green-500 text-white px-2 rounded"
+      }, "+ Child"),
+      React.createElement("button", {
+        onClick: () => onEdit(member),
+        className: "bg-yellow-400 text-white px-2 rounded"
+      }, "Edit")
+    ),
+    spouse && React.createElement("div", { className: "ml-8 mt-1 text-sm text-pink-100 italic" }, `Spouse: ${spouse.name}`),
+    !collapsed && member.children && member.children.map(child =>
+      React.createElement(FamilyMember, {
+        key: child.id,
+        member: child,
+        members,
+        onAddChild,
+        onEdit
+      })
+    )
+  );
+}
 
-    return (
-      React.createElement("div", { className: "max-w-md mx-auto mt-24 p-8 bg-white bg-opacity-70 rounded-lg shadow-lg backdrop-blur-md" },
-        React.createElement("h2", { className: "text-3xl font-bold mb-6 text-center" }, isRegister ? "Register" : "Login"),
-        React.createElement("form", { onSubmit: handleSubmit, className: "space-y-4" },
-          React.createElement("input", { type: "email", required: true, placeholder: "Email", value: email, onChange: e => setEmail(e.target.value), className: "w-full px-4 py-2 border rounded" }),
-          React.createElement("input", { type: "password", required: true, placeholder: "Password", value: password, onChange: e => setPassword(e.target.value), className: "w-full px-4 py-2 border rounded" }),
-          React.createElement("button", { type: "submit", className: "w-full bg-indigo-600 text-white py-2 rounded" }, isRegister ? "Register" : "Login")
-        ),
-        error && React.createElement("p", { className: "text-red-600 text-center" }, error),
-        React.createElement("p", {
-          className: "text-indigo-600 text-center mt-4 cursor-pointer hover:underline",
-          onClick: () => setIsRegister(!isRegister)
-        }, isRegister ? "Already have an account? Login" : "No account? Register")
-      )
-    );
-  }
+function FamilyTree({ userId }) {
+  const [members, setMembers] = useState([]);
+  const [form, setForm] = useState({ name: "", relation: "", birthDate: "", deathDate: "", deceased: false, spouseId: "" });
+  const [editingId, setEditingId] = useState(null);
+  const [parentId, setParentId] = useState(null);
 
-  function FamilyMember({ member, onAddChild, onEdit }) {
-    const [collapsed, setCollapsed] = useState(false);
-    return React.createElement("div", { className: "ml-6 border-l-2 border-indigo-300 pl-4 py-1" },
-      React.createElement("div", { className: "flex items-center space-x-2" },
-        React.createElement("button", {
-          onClick: () => setCollapsed(!collapsed),
-          className: "text-xl w-6 h-6 flex items-center justify-center font-bold text-indigo-700"
-        }, collapsed ? "▶" : "▼"),
-        React.createElement("span", { className: "font-semibold text-lg" }, member.name),
-        React.createElement("span", { className: "text-sm text-gray-600" }, `(${member.relation})`),
-        React.createElement("button", { onClick: () => onAddChild(member.id), className: "bg-green-500 text-white px-2 rounded" }, "Add Child"),
-        React.createElement("button", { onClick: () => onEdit(member), className: "bg-yellow-500 text-white px-2 rounded" }, "Edit")
-      ),
-      !collapsed && member.children && member.children.map(child =>
-        React.createElement(FamilyMember, {
-          key: child.id,
-          member: child,
-          onAddChild,
-          onEdit
-        })
-      )
-    );
-  }
+  useEffect(() => {
+    const ref = db.ref(`families/${userId}`);
+    ref.on("value", snap => {
+      const val = snap.val() || {};
+      const arr = Object.values(val);
+      setMembers(arr);
+    });
+    return () => ref.off();
+  }, [userId]);
 
-  function FamilyTree({ userId }) {
-    const [treeData, setTreeData] = useState(null);
-    const [editingMember, setEditingMember] = useState(null);
-    const [addingParentId, setAddingParentId] = useState(null);
-    const [form, setForm] = useState({ name: "", relation: "", birthdate: "", spouse: "", isDeceased: false, deathdate: "" });
+  const tree = members.map(m => ({ ...m, children: members.filter(c => c.parentId === m.id) }))
+                      .filter(m => !m.parentId);
 
-    useEffect(() => {
-      const ref = db.ref(`families/${userId}`);
-      ref.on("value", snapshot => {
-        setTreeData(snapshot.val());
-      });
-      return () => ref.off();
-    }, [userId]);
+  const save = () => {
+    const id = editingId || Date.now().toString();
+    const data = { ...form, id, parentId: parentId || null };
+    db.ref(`families/${userId}/${id}`).set(data);
+    setForm({ name: "", relation: "", birthDate: "", deathDate: "", deceased: false, spouseId: "" });
+    setEditingId(null);
+    setParentId(null);
+  };
 
-    const buildTree = (data) => {
-      if (!data) return [];
-      const map = {};
-      Object.values(data).forEach(m => map[m.id] = { ...m, children: [] });
-      const roots = [];
-      Object.values(map).forEach(m => {
-        if (m.parentId && map[m.parentId]) {
-          map[m.parentId].children.push(m);
-        } else {
-          roots.push(m);
-        }
-      });
-      return roots;
-    };
+  return React.createElement("div", { className: "bg-white bg-opacity-80 p-6 rounded shadow-md backdrop-blur-md" },
+    React.createElement("h2", { className: "text-3xl font-bold mb-6 text-indigo-700" }, "Family Tree"),
 
-    const saveMember = async () => {
-      if (!form.name.trim()) return;
-      if (editingMember) {
-        await db.ref(`families/${userId}/${editingMember.id}`).update({ ...form });
-        setEditingMember(null);
-      } else {
-        const id = Date.now().toString();
-        await db.ref(`families/${userId}/${id}`).set({ id, ...form, parentId: addingParentId || null });
-        setAddingParentId(null);
-      }
-      setForm({ name: "", relation: "", birthdate: "", spouse: "", isDeceased: false, deathdate: "" });
-    };
+    tree.map(member =>
+      React.createElement(FamilyMember, {
+        key: member.id,
+        member,
+        members,
+        onAddChild: (pid) => { setParentId(pid); setEditingId(null); },
+        onEdit: (m) => { setForm(m); setEditingId(m.id); }
+      })
+    ),
 
-    const nestedTree = buildTree(treeData);
-
-    return React.createElement("div", { className: "p-6 bg-white bg-opacity-80 rounded-lg shadow-md backdrop-blur-md" },
-      React.createElement("h2", { className: "text-3xl font-bold text-center mb-4" }, "Family Tree"),
-
-      nestedTree.length === 0 && React.createElement("div", { className: "text-center mb-4" },
-        React.createElement("p", null, "No family members yet."),
-        React.createElement("button", {
-          onClick: () => setAddingParentId(null),
-          className: "mt-2 bg-indigo-600 text-white px-4 py-2 rounded"
-        }, "Add Root Member")
-      ),
-
-      nestedTree.map(member =>
-        React.createElement(FamilyMember, {
-          key: member.id,
-          member,
-          onAddChild: setAddingParentId,
-          onEdit: (m) => {
-            setEditingMember(m);
-            setForm({ name: m.name, relation: m.relation || "", birthdate: m.birthdate || "", spouse: m.spouse || "", isDeceased: !!m.isDeceased, deathdate: m.deathdate || "" });
-          }
+    React.createElement("div", { className: "mt-6 p-4 border rounded bg-indigo-50 max-w-md" },
+      React.createElement("h3", { className: "text-xl font-bold mb-2" }, editingId ? "Edit Member" : "Add Member"),
+      ["name", "birthDate", "deathDate"].map(field =>
+        React.createElement("input", {
+          key: field,
+          type: field === "birthDate" || field === "deathDate" ? "date" : "text",
+          placeholder: field.charAt(0).toUpperCase() + field.slice(1),
+          value: form[field] || "",
+          onChange: e => setForm({ ...form, [field]: e.target.value }),
+          className: "w-full mb-2 px-3 py-1 border rounded"
         })
       ),
-
-      (editingMember || addingParentId !== null) && React.createElement("div", { className: "mt-6 p-4 border rounded bg-indigo-50 max-w-md mx-auto" },
-        React.createElement("h3", { className: "text-xl font-semibold mb-2" }, editingMember ? "Edit Member" : "Add Member"),
-        ["name", "relation", "birthdate", "spouse", "deathdate"].map(field =>
-          React.createElement("input", {
-            key: field,
-            type: field.includes("date") ? "date" : "text",
-            placeholder: field.charAt(0).toUpperCase() + field.slice(1),
-            value: form[field],
-            onChange: e => setForm({ ...form, [field]: e.target.value }),
-            className: "w-full mb-2 px-3 py-2 border rounded"
-          })
-        ),
-        React.createElement("label", { className: "flex items-center space-x-2 mb-4" },
-          React.createElement("input", {
-            type: "checkbox",
-            checked: form.isDeceased,
-            onChange: e => setForm({ ...form, isDeceased: e.target.checked })
-          }),
-          React.createElement("span", null, "Deceased")
-        ),
-        React.createElement("div", { className: "flex justify-between" },
-          React.createElement("button", {
-            onClick: saveMember,
-            className: "bg-indigo-600 text-white px-4 py-2 rounded"
-          }, editingMember ? "Save" : "Add"),
-          React.createElement("button", {
-            onClick: () => {
-              setEditingMember(null);
-              setAddingParentId(null);
-              setForm({ name: "", relation: "", birthdate: "", spouse: "", isDeceased: false, deathdate: "" });
-            },
-            className: "bg-gray-300 text-gray-800 px-4 py-2 rounded"
-          }, "Cancel")
+      React.createElement("select", {
+        value: form.relation || "",
+        onChange: e => setForm({ ...form, relation: e.target.value }),
+        className: "w-full mb-2 px-3 py-1 border rounded"
+      },
+        React.createElement("option", { value: "" }, "-- Select Relation --"),
+        ["Father", "Mother", "Son", "Daughter", "Spouse", "Brother", "Sister"].map(r =>
+          React.createElement("option", { key: r, value: r }, r)
         )
+      ),
+      React.createElement("select", {
+        value: form.spouseId || "",
+        onChange: e => setForm({ ...form, spouseId: e.target.value }),
+        className: "w-full mb-2 px-3 py-1 border rounded"
+      },
+        React.createElement("option", { value: "" }, "-- Select Spouse (Optional) --"),
+        members.map(m => React.createElement("option", { key: m.id, value: m.id }, m.name))
+      ),
+      React.createElement("label", { className: "flex items-center space-x-2 mb-2" },
+        React.createElement("input", {
+          type: "checkbox",
+          checked: form.deceased || false,
+          onChange: e => setForm({ ...form, deceased: e.target.checked })
+        }),
+        React.createElement("span", null, "Deceased")
+      ),
+      React.createElement("div", { className: "flex justify-between" },
+        React.createElement("button", {
+          onClick: save,
+          className: "bg-indigo-600 text-white px-4 py-1 rounded"
+        }, editingId ? "Save" : "Add"),
+        React.createElement("button", {
+          onClick: () => {
+            setForm({ name: "", relation: "", birthDate: "", deathDate: "", deceased: false, spouseId: "" });
+            setEditingId(null); setParentId(null);
+          },
+          className: "bg-gray-400 text-white px-4 py-1 rounded"
+        }, "Cancel")
       )
-    );
-  }
+    )
+  );
+}
 
-  function App() {
-    const [user, setUser] = useState(null);
-    useEffect(() => {
-      const unsubscribe = auth.onAuthStateChanged(setUser);
-      return () => unsubscribe();
-    }, []);
-    return user
-      ? React.createElement("div", null,
-          React.createElement("header", { className: "flex justify-between items-center mb-4" },
-            React.createElement("h1", { className: "text-white text-4xl font-bold" }, "My Family Tree"),
-            React.createElement("button", {
-              onClick: () => auth.signOut(),
-              className: "bg-white bg-opacity-70 text-indigo-700 px-4 py-2 rounded"
-            }, "Logout")
-          ),
-          React.createElement(FamilyTree, { userId: user.uid })
-        )
-      : React.createElement(Login, { onLogin: () => {} });
-  }
+function App() {
+  const [user, setUser] = useState(null);
+  useEffect(() => {
+    const unsub = auth.onAuthStateChanged(u => setUser(u));
+    return () => unsub();
+  }, []);
+  if (!user) return React.createElement(Login, { onLogin: () => {} });
 
-  ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+  return React.createElement("div", null,
+    React.createElement("div", { className: "flex justify-between items-center mb-4" },
+      React.createElement("h1", { className: "text-4xl font-bold text-white" }, "My Family Tree"),
+      React.createElement("button", {
+        onClick: () => auth.signOut(),
+        className: "bg-white bg-opacity-70 text-indigo-800 px-4 py-2 rounded"
+      }, "Logout")
+    ),
+    React.createElement(FamilyTree, { userId: user.uid })
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
 </script>
 </body>
 </html>
