@@ -1,255 +1,199 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
   <meta charset="UTF-8">
-  <title>Family Tree Editor</title>
+  <title>Family Tree</title>
   <style>
     body {
       font-family: Arial, sans-serif;
-      padding: 20px;
-      background: #f9f9f9;
     }
-
     .tree-container {
-      border-left: 2px solid #ccc;
-      padding-left: 20px;
-    }
-
-    .tree-node {
+      display: flex;
+      justify-content: center;
       position: relative;
-      margin-top: 16px;
+      margin-top: 50px;
     }
-
-    .node-header {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      background: #fff;
-      padding: 4px 6px;
-      border: 1px solid #ccc;
-      border-radius: 4px;
+    .person-node {
+      border: 1px solid #aaa;
+      padding: 10px;
+      border-radius: 10px;
+      background: #f9f9f9;
+      margin: 10px;
+      text-align: center;
+      position: relative;
+      min-width: 120px;
     }
-
-    .arrow {
-      cursor: pointer;
+    .person-node .name {
       font-weight: bold;
-      user-select: none;
     }
-
-    .name-input, .birthday-input, .died-input {
-      padding: 2px 6px;
-      font-size: 14px;
-    }
-
-    .node-buttons button {
-      font-size: 12px;
-      margin-left: 4px;
-    }
-
-    .add-child-form, .add-spouse-form {
-      margin-top: 6px;
+    .generation {
       display: flex;
+      justify-content: center;
       align-items: center;
-      gap: 6px;
+      margin: 40px 0;
+      position: relative;
     }
-
-    .children-container {
-      margin-left: 20px;
-      border-left: 2px solid #ddd;
-      padding-left: 10px;
-    }
-
-    /* Spouse styling */
     .spouse-pair {
       display: flex;
       align-items: center;
-      gap: 12px;
+      margin: 0 20px;
       position: relative;
-      margin-top: 10px;
     }
-
-    .spouse-pair::before {
-      content: "";
+    .svg-line {
       position: absolute;
-      top: 50%;
+      top: 0;
       left: 0;
-      right: 0;
-      height: 2px;
-      background: #888;
+      pointer-events: none;
       z-index: 0;
-    }
-
-    .spouse-pair > div {
-      background: white;
-      z-index: 1;
-      padding: 0;
-    }
-
-    .spouse-pair .tree-node {
-      margin-top: 0;
     }
   </style>
 </head>
 <body>
-  <h2>Family Tree Editor</h2>
-  <div id="tree" class="tree-container"></div>
+  <h2 style="text-align: center;">Family Tree</h2>
+  <div class="tree-container">
+    <svg class="svg-line" width="100%" height="100%"></svg>
+    <div id="familyTree"></div>
+  </div>
+
+  <!-- Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
 
   <script>
-    const treeData = {
-      root: {
-        name: 'Root Person',
-        birthday: '',
-        died: '',
-        children: {},
-        spouses: {}
-      }
+    // Firebase setup
+    const firebaseConfig = {
+      apiKey: "YOUR_API_KEY",
+      authDomain: "YOUR_AUTH_DOMAIN",
+      databaseURL: "YOUR_DATABASE_URL",
+      projectId: "YOUR_PROJECT_ID",
+      storageBucket: "YOUR_STORAGE_BUCKET",
+      messagingSenderId: "YOUR_MESSAGING_SENDER_ID",
+      appId: "YOUR_APP_ID"
     };
 
-    let nodeIdCounter = 1;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-    function renderTree() {
-      const treeContainer = document.getElementById('tree');
-      treeContainer.innerHTML = '';
-      renderNode(treeData.root, treeContainer, 'root', null);
+    // Helper: Draw line between two HTML elements using SVG
+    function drawLine(fromElem, toElem) {
+      const svg = document.querySelector(".svg-line");
+      const rect1 = fromElem.getBoundingClientRect();
+      const rect2 = toElem.getBoundingClientRect();
+
+      const x1 = rect1.left + rect1.width / 2 + window.scrollX;
+      const y1 = rect1.bottom + window.scrollY;
+      const x2 = rect2.left + rect2.width / 2 + window.scrollX;
+      const y2 = rect2.top + window.scrollY;
+
+      const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+      line.setAttribute("x1", x1);
+      line.setAttribute("y1", y1);
+      line.setAttribute("x2", x2);
+      line.setAttribute("y2", y2);
+      line.setAttribute("stroke", "black");
+      line.setAttribute("stroke-width", "2");
+
+      svg.appendChild(line);
     }
 
-    function renderNode(node, container, nodeId, parentNode) {
-      // Handle spouses
-      if (Object.keys(node.spouses || {}).length > 0 && parentNode !== null) {
-        const spousePairDiv = document.createElement('div');
-        spousePairDiv.className = 'spouse-pair';
-
-        const selfDiv = document.createElement('div');
-        selfDiv.className = 'tree-node';
-        buildNodeContent(node, selfDiv, nodeId, parentNode);
-        spousePairDiv.appendChild(selfDiv);
-
-        for (const spouseId in node.spouses) {
-          const spouseNode = node.spouses[spouseId];
-          const spouseDiv = document.createElement('div');
-          spouseDiv.className = 'tree-node';
-          buildNodeContent(spouseNode, spouseDiv, spouseId, node);
-          spousePairDiv.appendChild(spouseDiv);
-        }
-
-        container.appendChild(spousePairDiv);
-
-        // Render children for only one parent (to avoid duplicates)
-        const childrenContainer = document.createElement('div');
-        childrenContainer.className = 'children-container';
-        for (const childId in node.children) {
-          const childNode = node.children[childId];
-          renderNode(childNode, childrenContainer, childId, node);
-        }
-        container.appendChild(childrenContainer);
-      } else {
-        const nodeDiv = document.createElement('div');
-        nodeDiv.className = 'tree-node';
-        buildNodeContent(node, nodeDiv, nodeId, parentNode);
-        container.appendChild(nodeDiv);
-
-        const childrenContainer = document.createElement('div');
-        childrenContainer.className = 'children-container';
-        for (const childId in node.children) {
-          const childNode = node.children[childId];
-          renderNode(childNode, childrenContainer, childId, node);
-        }
-        nodeDiv.appendChild(childrenContainer);
-      }
+    // Render person box
+    function createPersonBox(person) {
+      const div = document.createElement("div");
+      div.className = "person-node";
+      div.setAttribute("data-id", person.id);
+      div.innerHTML = `
+        <div class="name">${person.name}</div>
+        <div>Born: ${person.birthDate || '-'}</div>
+        <div>Died: ${person.died || '-'}</div>
+      `;
+      return div;
     }
 
-    function buildNodeContent(node, nodeDiv, nodeId, parentNode) {
-      const nodeHeader = document.createElement('div');
-      nodeHeader.className = 'node-header';
+    // Render tree
+    function renderTree(data) {
+      const container = document.getElementById("familyTree");
+      container.innerHTML = '';
+      const svg = document.querySelector(".svg-line");
+      svg.innerHTML = '';
 
-      const arrow = document.createElement('span');
-      arrow.className = 'arrow';
-      arrow.textContent = Object.keys(node.children).length > 0 ? '▼' : '▶';
-      arrow.onclick = () => {
-        const childrenDiv = nodeDiv.querySelector('.children-container');
-        if (childrenDiv) {
-          childrenDiv.style.display = childrenDiv.style.display === 'none' ? 'block' : 'none';
-          arrow.textContent = childrenDiv.style.display === 'none' ? '▶' : '▼';
+      const peopleById = {};
+      const childrenByParent = {};
+
+      Object.values(data).forEach(p => {
+        peopleById[p.id] = p;
+        if (p.parentId) {
+          if (!childrenByParent[p.parentId]) childrenByParent[p.parentId] = [];
+          childrenByParent[p.parentId].push(p);
         }
-      };
-      nodeHeader.appendChild(arrow);
+      });
 
-      const nameInput = document.createElement('input');
-      nameInput.className = 'name-input';
-      nameInput.placeholder = 'Name';
-      nameInput.value = node.name;
-      nameInput.oninput = (e) => {
-        node.name = e.target.value;
-      };
-      nodeHeader.appendChild(nameInput);
+      function buildGeneration(parentId, containerDiv) {
+        const children = childrenByParent[parentId] || [];
+        const generationDiv = document.createElement("div");
+        generationDiv.className = "generation";
 
-      const birthdayInput = document.createElement('input');
-      birthdayInput.className = 'birthday-input';
-      birthdayInput.type = 'date';
-      birthdayInput.value = node.birthday;
-      birthdayInput.oninput = (e) => {
-        node.birthday = e.target.value;
-      };
-      nodeHeader.appendChild(birthdayInput);
+        children.forEach(person => {
+          const pairDiv = document.createElement("div");
+          pairDiv.className = "spouse-pair";
 
-      const diedInput = document.createElement('input');
-      diedInput.className = 'died-input';
-      diedInput.type = 'date';
-      diedInput.value = node.died || '';
-      diedInput.placeholder = 'Died';
-      diedInput.oninput = (e) => {
-        node.died = e.target.value;
-      };
-      nodeHeader.appendChild(diedInput);
+          const personBox = createPersonBox(person);
+          pairDiv.appendChild(personBox);
 
-      const nodeButtons = document.createElement('div');
-      nodeButtons.className = 'node-buttons';
+          if (person.spouseId && peopleById[person.spouseId]) {
+            const spouse = peopleById[person.spouseId];
+            const spouseBox = createPersonBox(spouse);
+            pairDiv.appendChild(spouseBox);
 
-      const addChildBtn = document.createElement('button');
-      addChildBtn.textContent = 'Add Child';
-      addChildBtn.onclick = () => {
-        const childId = `node${nodeIdCounter++}`;
-        node.children[childId] = {
-          name: '',
-          birthday: '',
-          died: '',
-          children: {},
-          spouses: {}
-        };
-        renderTree();
-      };
-      nodeButtons.appendChild(addChildBtn);
+            // Draw line between spouses
+            setTimeout(() => drawLine(personBox, spouseBox), 100);
+          }
 
-      const addSpouseBtn = document.createElement('button');
-      addSpouseBtn.textContent = 'Add Spouse';
-      addSpouseBtn.onclick = () => {
-        const spouseId = `spouse${nodeIdCounter++}`;
-        node.spouses[spouseId] = {
-          name: '',
-          birthday: '',
-          died: '',
-          children: {},
-          spouses: {}
-        };
-        renderTree();
-      };
-      nodeButtons.appendChild(addSpouseBtn);
+          generationDiv.appendChild(pairDiv);
 
-      if (parentNode) {
-        const deleteBtn = document.createElement('button');
-        deleteBtn.textContent = 'Delete';
-        deleteBtn.onclick = () => {
-          delete parentNode.children[nodeId];
-          renderTree();
-        };
-        nodeButtons.appendChild(deleteBtn);
+          // Draw line to parent
+          if (parentId && peopleById[parentId]) {
+            const parentBox = document.querySelector(`[data-id="${parentId}"]`);
+            if (parentBox) {
+              setTimeout(() => drawLine(parentBox, personBox), 100);
+            }
+          }
+
+          buildGeneration(person.id, containerDiv);
+        });
+
+        if (children.length) containerDiv.appendChild(generationDiv);
       }
 
-      nodeHeader.appendChild(nodeButtons);
-      nodeDiv.appendChild(nodeHeader);
+      // Find root (no parentId)
+      const root = Object.values(data).find(p => !p.parentId);
+      if (!root) return;
+
+      const rootPair = document.createElement("div");
+      rootPair.className = "spouse-pair";
+
+      const rootBox = createPersonBox(root);
+      rootPair.appendChild(rootBox);
+
+      if (root.spouseId && peopleById[root.spouseId]) {
+        const spouseBox = createPersonBox(peopleById[root.spouseId]);
+        rootPair.appendChild(spouseBox);
+
+        setTimeout(() => drawLine(rootBox, spouseBox), 100);
+      }
+
+      const rootGen = document.createElement("div");
+      rootGen.className = "generation";
+      rootGen.appendChild(rootPair);
+      container.appendChild(rootGen);
+
+      buildGeneration(root.id, container);
     }
 
-    renderTree();
+    db.ref("family").on("value", snapshot => {
+      const data = snapshot.val();
+      if (data) renderTree(data);
+    });
   </script>
 </body>
 </html>
+
