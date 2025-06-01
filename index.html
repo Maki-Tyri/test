@@ -3,124 +3,120 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Collapsible Family Tree</title>
+<title>Collapsible Family Tree with Firebase Realtime DB</title>
 <style>
   body {
     font-family: Arial, sans-serif;
     padding: 20px;
-    background: #f0f4f8;
   }
-  .tree ul {
-    padding-left: 20px;
-    list-style: none;
-    border-left: 1px solid #ccc;
-    margin-left: 10px;
-  }
-  .tree li {
-    margin: 5px 0;
-    position: relative;
+  .node {
+    margin-left: 20px;
     cursor: pointer;
+    user-select: none;
   }
-  .tree li::before {
-    content: "";
-    position: absolute;
-    top: 12px;
-    left: -13px;
-    width: 10px;
-    height: 1px;
-    background: #ccc;
-  }
-  .tree li.collapsible > span::before {
-    content: "▼";
-    display: inline-block;
-    margin-right: 5px;
-    font-size: 0.8em;
-    transition: transform 0.2s ease;
-  }
-  .tree li.collapsible.collapsed > span::before {
-    content: "▶";
-  }
-  .tree ul.collapsed {
+  .children {
+    margin-left: 20px;
     display: none;
   }
-  .node-name {
-    user-select: none;
+  .expanded > .children {
+    display: block;
+  }
+  .toggle-icon {
+    display: inline-block;
+    width: 1em;
   }
 </style>
 </head>
 <body>
+  <h2>Family Tree</h2>
+  <div id="tree-container">Loading...</div>
 
-<h2>Family Tree</h2>
-<div class="tree" id="familyTree"></div>
+  <!-- Firebase SDK -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
-<script>
-  // Your Firebase config
-  const firebaseConfig = {
-    apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
-    authDomain: "project-955237504610034331.firebaseapp.com",
-    databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
-    projectId: "project-955237504610034331",
-    storageBucket: "project-955237504610034331.firebasestorage.app",
-    messagingSenderId: "76212939677",
-    appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
-    measurementId: "G-RCJ4P82PVM"
-  };
+  <script>
+    // Your Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
+      authDomain: "project-955237504610034331.firebaseapp.com",
+      databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
+      projectId: "project-955237504610034331",
+      storageBucket: "project-955237504610034331.firebasestorage.app",
+      messagingSenderId: "76212939677",
+      appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
+      measurementId: "G-RCJ4P82PVM"
+    };
 
-  // Initialize Firebase
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.database();
+    // Initialize Firebase
+    firebase.initializeApp(firebaseConfig);
+    const database = firebase.database();
 
-  // Recursive function to build tree UI from JSON data
-  function buildTree(data) {
-    const ul = document.createElement("ul");
+    // Helper to create tree nodes
+    function createNode(name, childrenObj) {
+      const nodeDiv = document.createElement('div');
+      nodeDiv.classList.add('node');
 
-    for (const key in data) {
-      if (data.hasOwnProperty(key)) {
-        const li = document.createElement("li");
-        const node = data[key];
-        const span = document.createElement("span");
-        span.textContent = node.name;
-        span.className = "node-name";
+      const toggleIcon = document.createElement('span');
+      toggleIcon.classList.add('toggle-icon');
 
-        // If node has children, make it collapsible
-        if (node.children && Object.keys(node.children).length > 0) {
-          li.classList.add("collapsible");
-          const childrenUl = buildTree(node.children);
-          li.appendChild(span);
-          li.appendChild(childrenUl);
+      const titleSpan = document.createElement('span');
+      titleSpan.textContent = name;
 
-          // Initially collapsed
-          childrenUl.classList.add("collapsed");
-          li.classList.add("collapsed");
+      nodeDiv.appendChild(toggleIcon);
+      nodeDiv.appendChild(titleSpan);
 
-          span.addEventListener("click", () => {
-            childrenUl.classList.toggle("collapsed");
-            li.classList.toggle("collapsed");
-          });
-        } else {
-          li.appendChild(span);
+      const childrenDiv = document.createElement('div');
+      childrenDiv.classList.add('children');
+
+      if (childrenObj && Object.keys(childrenObj).length > 0) {
+        toggleIcon.textContent = "▶";
+
+        nodeDiv.addEventListener('click', () => {
+          const isExpanded = nodeDiv.classList.toggle('expanded');
+          toggleIcon.textContent = isExpanded ? "▼" : "▶";
+        });
+
+        for (const key in childrenObj) {
+          const childNode = childrenObj[key];
+          const childTreeNode = createNode(childNode.name, childNode.children);
+          childrenDiv.appendChild(childTreeNode);
         }
-
-        ul.appendChild(li);
+      } else {
+        toggleIcon.textContent = "•";
       }
+
+      nodeDiv.appendChild(childrenDiv);
+
+      return nodeDiv;
     }
-    return ul;
-  }
 
-  // Fetch data from Firebase Realtime DB
-  db.ref("/family").on("value", (snapshot) => {
-    const treeContainer = document.getElementById("familyTree");
-    treeContainer.innerHTML = ""; // Clear previous tree
-    const data = snapshot.val();
+    function renderTree(treeData) {
+      const container = document.getElementById('tree-container');
+      container.innerHTML = '';
 
-    if (data) {
-      const tree = buildTree(data);
-      treeContainer.appendChild(tree);
-    } else {
-      treeContainer.textContent = "No family data available.";
+      if (!treeData) {
+        container.textContent = 'No data found';
+        return;
+      }
+
+      // Assume root node is id "1"
+      const rootNode = treeData["1"];
+      if (!rootNode) {
+        container.textContent = 'Root node not found';
+        return;
+      }
+
+      const tree = createNode(rootNode.name, rootNode.children);
+      container.appendChild(tree);
     }
-  });
-</script>
 
+    // Listen to realtime DB changes
+    const treeRef = database.ref('familyTree');
+    treeRef.on('value', (snapshot) => {
+      const data = snapshot.val();
+      renderTree(data);
+    });
+  </script>
 </body>
 </html>
