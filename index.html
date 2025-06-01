@@ -23,156 +23,107 @@
     .spouse-line {
       position: absolute;
       height: 3px;
-      background: #db2777; /* stronger pink */
+      background: #ec4899; /* pink-500 */
       top: 50%;
       left: 0;
       right: 0;
       border-radius: 2px;
       z-index: 0;
-      /* improved line style for non-siblings */
-      box-shadow: 0 0 4px #f472b6;
+      box-shadow: 0 0 6px #db2777aa;
     }
     .spouse-name {
       background: white;
-      padding: 0 0.4rem;
+      padding: 0 0.5rem;
       position: relative;
       z-index: 1;
       font-style: italic;
-      color: #be185d; /* deeper pink */
-      font-weight: 700;
-      font-size: 0.95rem;
-      border-radius: 4px;
-      border: 1.5px solid #db2777;
-      user-select: none;
-      cursor: default;
-      box-shadow: 0 1px 3px rgba(219, 39, 119, 0.4);
-    }
-
-    /* FamilyMember container polish */
-    .family-member {
-      margin-left: 1.5rem;
-      padding: 0.25rem 0.5rem;
-      border-left-width: 3px;
-      border-color: #818cf8; /* indigo-400 */
-      position: relative;
-      transition: background-color 0.3s ease;
-      border-radius: 0 6px 6px 0;
-    }
-    .family-member:hover {
-      background-color: rgba(147, 197, 253, 0.15); /* light indigo hover */
-    }
-
-    /* Member name styling */
-    .member-name {
-      font-weight: 700;
-      color: #4338ca; /* indigo-800 */
-      font-size: 1.05rem;
-      user-select: text;
-    }
-    .member-relation {
-      font-size: 0.85rem;
-      color: #6b7280; /* gray-500 */
-      font-style: italic;
-      margin-left: 0.25rem;
-    }
-    .member-dates {
-      font-size: 0.75rem;
-      color: #9ca3af; /* gray-400 */
-      margin-left: 0.4rem;
-    }
-    .member-deceased {
       color: #db2777; /* pink-600 */
       font-weight: 700;
-      margin-left: 0.5rem;
+      font-size: 0.95rem;
       user-select: none;
+      border-radius: 2px;
+      box-shadow: 0 0 8px #f472b6aa;
+      cursor: default;
+      white-space: nowrap;
     }
 
-    /* Buttons polish */
-    button.action-btn {
+    /* Member container improvements */
+    .member-container {
+      margin-left: 1.5rem;
+      padding-left: 1rem;
+      border-left: 3px solid #a78bfa; /* indigo-400 */
+      margin-bottom: 0.5rem;
+      position: relative;
+    }
+
+    /* Member header flex alignment */
+    .member-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      flex-wrap: wrap;
+    }
+
+    /* Buttons styling */
+    button.small-btn {
       font-size: 0.75rem;
       font-weight: 600;
-      padding: 0.15rem 0.4rem;
-      border-radius: 0.375rem;
+      padding: 2px 6px;
+      border-radius: 4px;
       border: none;
       cursor: pointer;
       user-select: none;
       transition: background-color 0.2s ease;
     }
-    button.action-btn:hover {
-      filter: brightness(110%);
-    }
     button.edit-btn {
-      color: #4f46e5; /* indigo-600 */
-      background-color: #c7d2fe; /* indigo-200 */
+      background-color: #6366f1; /* indigo-500 */
+      color: white;
     }
-    button.child-btn {
-      color: #15803d; /* green-700 */
-      background-color: #bbf7d0; /* green-200 */
+    button.edit-btn:hover {
+      background-color: #4f46e5; /* indigo-600 */
     }
-    button.spouse-btn {
-      color: #db2777; /* pink-600 */
-      background-color: #fecdd3; /* pink-200 */
+    button.add-child-btn {
+      background-color: #10b981; /* green-500 */
+      color: white;
+    }
+    button.add-child-btn:hover {
+      background-color: #059669; /* green-600 */
+    }
+    button.add-spouse-btn {
+      background-color: #ec4899; /* pink-500 */
+      color: white;
+    }
+    button.add-spouse-btn:hover {
+      background-color: #db2777; /* pink-600 */
     }
     button.delete-btn {
-      color: #b91c1c; /* red-700 */
-      background-color: #fecaca; /* red-200 */
-      margin-left: 0.5rem;
+      background-color: #ef4444; /* red-500 */
+      color: white;
+    }
+    button.delete-btn:hover {
+      background-color: #b91c1c; /* red-700 */
     }
 
-    /* MemberForm polish */
-    form.member-form {
+    /* Date and deceased icon styles */
+    .member-dates {
+      font-size: 0.75rem;
+      color: #6b7280; /* gray-500 */
+    }
+    .deceased-icon {
+      color: #db2777;
+      font-weight: 900;
+      font-size: 1.1rem;
+      user-select: none;
+    }
+
+    /* Form container styling */
+    .member-form {
       margin-left: 1.5rem;
-      padding: 1rem;
-      border-left: 4px solid #6366f1; /* indigo-500 */
-      background-color: #eef2ff; /* indigo-50 */
-      border-radius: 0 8px 8px 0;
-      box-shadow: 0 4px 8px rgba(99, 102, 241, 0.15);
-    }
-    form.member-form input[type="text"],
-    form.member-form select,
-    form.member-form input[type="date"] {
-      border: 1.5px solid #a5b4fc; /* indigo-300 */
-      padding: 0.5rem;
-      border-radius: 0.375rem;
-      font-size: 0.9rem;
-      transition: border-color 0.3s ease;
-      width: 100%;
-    }
-    form.member-form input[type="text"]:focus,
-    form.member-form select:focus,
-    form.member-form input[type="date"]:focus {
-      border-color: #4338ca; /* indigo-800 */
-      outline: none;
-      box-shadow: 0 0 5px #4338ca;
-    }
-    form.member-form label {
-      font-weight: 600;
-      font-size: 0.9rem;
-      color: #4338ca;
-    }
-    form.member-form button {
-      font-weight: 700;
-      padding: 0.5rem 1rem;
-      border-radius: 0.5rem;
-      border: none;
-      cursor: pointer;
-      transition: background-color 0.25s ease;
-    }
-    form.member-form button.save-btn {
-      background-color: #4338ca;
-      color: white;
-      margin-right: 0.5rem;
-    }
-    form.member-form button.save-btn:hover {
-      background-color: #3730a3;
-    }
-    form.member-form button.cancel-btn {
-      background-color: #a5b4fc;
-      color: #3730a3;
-    }
-    form.member-form button.cancel-btn:hover {
-      background-color: #818cf8;
-      color: white;
+      margin-top: 0.5rem;
+      border-left: 3px solid #a78bfa;
+      padding-left: 1rem;
+      background-color: #eef2ff; /* indigo-100 */
+      border-radius: 6px;
     }
   </style>
 </head>
@@ -249,7 +200,7 @@ function Login({ onLogin }) {
     ),
     error && React.createElement("p", { className: "text-red-600 text-center mt-4" }, error),
     React.createElement("p", {
-      className: "mt-6 text-indigo-600 text-center cursor-pointer hover:underline select-none",
+      className: "mt-6 text-center text-indigo-600 cursor-pointer hover:underline",
       onClick: () => setIsRegister(!isRegister)
     }, isRegister ? "Already have an account? Login" : "No account? Register")
   );
@@ -287,13 +238,13 @@ function MemberForm({ initialData = {}, onCancel, onSave, members, parentId, for
 
   const options = relationOptionsByContext[formType] || relationOptionsByContext.edit;
 
-  return React.createElement("form", { onSubmit: handleSubmit, className: "member-form" },
+  return React.createElement("form", { onSubmit: handleSubmit, className: "member-form space-y-3" },
     React.createElement("input", {
       type: "text",
       placeholder: "Name",
       value: form.name,
       onChange: e => setForm({ ...form, name: e.target.value }),
-      required: true
+      className: "w-full px-3 py-1 border rounded"
     }),
     // If formType is spouse, relation is fixed as "Spouse" and disabled
     formType === "spouse"
@@ -301,33 +252,33 @@ function MemberForm({ initialData = {}, onCancel, onSave, members, parentId, for
           type: "text",
           value: "Spouse",
           disabled: true,
-          className: "bg-gray-100 cursor-not-allowed"
+          className: "w-full px-3 py-1 border rounded bg-gray-100 cursor-not-allowed"
         })
       : React.createElement("select", {
           value: form.relation,
           onChange: e => setForm({ ...form, relation: e.target.value }),
-          required: true
+          className: "w-full px-3 py-1 border rounded"
         },
           React.createElement("option", { value: "" }, "-- Select Relation --"),
           options.map(r =>
             React.createElement("option", { key: r, value: r }, r)
           )
         ),
-    React.createElement("div", { className: "flex space-x-2 mt-2" },
+    React.createElement("div", { className: "flex space-x-2" },
       React.createElement("input", {
         type: "date",
         value: form.birthDate,
         onChange: e => setForm({ ...form, birthDate: e.target.value }),
-        placeholder: "Birth Date"
+        className: "flex-1 px-3 py-1 border rounded"
       }),
       React.createElement("input", {
         type: "date",
         value: form.deathDate,
         onChange: e => setForm({ ...form, deathDate: e.target.value }),
-        placeholder: "Death Date"
+        className: "flex-1 px-3 py-1 border rounded"
       })
     ),
-    React.createElement("label", { className: "flex items-center space-x-2 mt-2" },
+    React.createElement("label", { className: "flex items-center space-x-2" },
       React.createElement("input", {
         type: "checkbox",
         checked: form.deceased,
@@ -335,207 +286,295 @@ function MemberForm({ initialData = {}, onCancel, onSave, members, parentId, for
       }),
       React.createElement("span", null, "Deceased")
     ),
-    React.createElement("div", { className: "mt-3 flex space-x-2" },
-      React.createElement("button", { type: "submit", className: "save-btn" }, "Save"),
-      React.createElement("button", { type: "button", className: "cancel-btn", onClick: onCancel }, "Cancel")
+    React.createElement("select", {
+      value: form.spouseId,
+      onChange: e => setForm({ ...form, spouseId: e.target.value }),
+      className: "w-full px-3 py-1 border rounded"
+    },
+      React.createElement("option", { value: "" }, "-- Select Spouse (Optional) --"),
+      spouseOptions.map(m => React.createElement("option", { key: m.id, value: m.id }, m.name))
+    ),
+    React.createElement("div", { className: "flex justify-end space-x-2" },
+      React.createElement("button", {
+        type: "submit",
+        className: "bg-indigo-600 text-white px-4 py-1 rounded"
+      }, "Save"),
+      React.createElement("button", {
+        type: "button",
+        onClick: onCancel,
+        className: "bg-gray-400 text-white px-4 py-1 rounded"
+      }, "Cancel")
     )
   );
 }
 
-function SpouseLine({ spouses }) {
-  if (!spouses || spouses.length < 1) return null;
-
-  return React.createElement("div", { className: "spouse-line-container" },
-    React.createElement("div", { className: "spouse-line" }),
-    spouses.map(s => React.createElement("div", { key: s.id, className: "spouse-name" }, s.name))
-  );
-}
-
-function FamilyMember({ member, members, addMember, editMember, deleteMember }) {
-  const [isEditing, setIsEditing] = useState(false);
-  const [addingChild, setAddingChild] = useState(false);
-  const [addingSpouse, setAddingSpouse] = useState(false);
-
-  const spouses = members.filter(m => m.spouseId === member.id || member.spouseId === m.id);
+function FamilyMember({ member, members, onAddChild, onAddSpouse, onEdit, onDelete }) {
+  const [showAddChild, setShowAddChild] = useState(false);
+  const [showAddSpouse, setShowAddSpouse] = useState(false);
+  const [showEdit, setShowEdit] = useState(false);
 
   const children = members.filter(m => m.parentId === member.id);
+  // Filter spouse(s)
+  const spouses = members.filter(m => m.spouseId === member.id);
 
-  const handleEditSave = (data) => {
-    editMember(data);
-    setIsEditing(false);
+  // Function to toggle forms
+  const toggleAddChild = () => { setShowAddChild(!showAddChild); setShowAddSpouse(false); setShowEdit(false); };
+  const toggleAddSpouse = () => { setShowAddSpouse(!showAddSpouse); setShowAddChild(false); setShowEdit(false); };
+  const toggleEdit = () => { setShowEdit(!showEdit); setShowAddChild(false); setShowAddSpouse(false); };
+
+  // Date formatting helper
+  const formatDate = (dateStr) => {
+    if (!dateStr) return "";
+    const d = new Date(dateStr);
+    if (isNaN(d)) return "";
+    return d.toLocaleDateString();
   };
 
-  const handleAddChild = (data) => {
-    addMember(data);
-    setAddingChild(false);
-  };
-
-  const handleAddSpouse = (data) => {
-    addMember(data);
-    setAddingSpouse(false);
-  };
-
-  return React.createElement("div", { className: "family-member" },
-    isEditing
-      ? React.createElement(MemberForm, {
-          initialData: member,
-          onCancel: () => setIsEditing(false),
-          onSave: handleEditSave,
-          members,
-          formType: "edit"
-        })
-      : React.createElement("div", null,
-        React.createElement("span", { className: "member-name" }, member.name),
-        member.relation && React.createElement("span", { className: "member-relation" }, ` (${member.relation})`),
-        member.birthDate && React.createElement("span", { className: "member-dates" }, ` b. ${member.birthDate}`),
-        member.deathDate && React.createElement("span", { className: "member-dates" }, ` d. ${member.deathDate}`),
-        member.deceased && React.createElement("span", { className: "member-deceased" }, "†"),
-        React.createElement("div", { className: "mt-1 flex space-x-1" },
-          React.createElement("button", {
-            onClick: () => setAddingChild(true),
-            className: "action-btn child-btn",
-            title: "Add Child"
-          }, "+ Child"),
-          React.createElement("button", {
-            onClick: () => setAddingSpouse(true),
-            className: "action-btn spouse-btn",
-            title: "Add Spouse"
-          }, "+ Spouse"),
-          React.createElement("button", {
-            onClick: () => setIsEditing(true),
-            className: "action-btn edit-btn",
-            title: "Edit Member"
-          }, "Edit"),
-          React.createElement("button", {
-            onClick: () => {
-              if (confirm(`Delete member "${member.name}" and all their descendants?`)) {
-                deleteMember(member.id);
-              }
-            },
-            className: "action-btn delete-btn",
-            title: "Delete Member"
-          }, "Delete")
-        )
+  return React.createElement("div", { className: "member-container" },
+    React.createElement("div", { className: "member-header" },
+      React.createElement("span", { className: "font-bold text-lg" }, member.name),
+      member.deceased && React.createElement("span", { title: "Deceased", className: "deceased-icon" }, "†"),
+      React.createElement("span", { className: "member-dates" },
+        member.birthDate ? `(${formatDate(member.birthDate)}` : "",
+        member.deathDate ? ` - ${formatDate(member.deathDate)})` : member.birthDate ? `)` : ""
       ),
-    spouses.length > 0 && React.createElement(SpouseLine, { spouses }),
-    children.length > 0 && React.createElement("div", { className: "ml-6 border-l-2 border-indigo-400 pl-3 mt-2 space-y-1" },
-      children.map(c =>
-        React.createElement(FamilyMember, { key: c.id, member: c, members, addMember, editMember, deleteMember })
+      React.createElement("button", {
+        className: "small-btn add-child-btn",
+        title: "Add Child",
+        onClick: toggleAddChild
+      }, "+ Child"),
+      React.createElement("button", {
+        className: "small-btn add-spouse-btn",
+        title: "Add Spouse",
+        onClick: toggleAddSpouse
+      }, "+ Spouse"),
+      React.createElement("button", {
+        className: "small-btn edit-btn",
+        title: "Edit Member",
+        onClick: toggleEdit
+      }, "Edit"),
+      React.createElement("button", {
+        className: "small-btn delete-btn",
+        title: "Delete Member",
+        onClick: () => {
+          if(window.confirm(`Are you sure you want to delete ${member.name} and all their descendants?`)){
+            onDelete(member.id);
+          }
+        }
+      }, "Delete")
+    ),
+
+    // Add Child Form
+    showAddChild && React.createElement(MemberForm, {
+      formType: "child",
+      parentId: member.id,
+      onCancel: () => setShowAddChild(false),
+      onSave: (newMember) => {
+        onAddChild(newMember);
+        setShowAddChild(false);
+      },
+      members
+    }),
+
+    // Add Spouse Form
+    showAddSpouse && React.createElement(MemberForm, {
+      formType: "spouse",
+      parentId: null,
+      onCancel: () => setShowAddSpouse(false),
+      onSave: (newMember) => {
+        onAddSpouse(newMember, member.id);
+        setShowAddSpouse(false);
+      },
+      members
+    }),
+
+    // Edit Form
+    showEdit && React.createElement(MemberForm, {
+      formType: "edit",
+      initialData: member,
+      onCancel: () => setShowEdit(false),
+      onSave: (editedMember) => {
+        onEdit(editedMember);
+        setShowEdit(false);
+      },
+      members
+    }),
+
+    // Spouse lines & spouse names under member header
+    spouses.length > 0 && React.createElement("div", { className: "spouse-line-container" },
+      React.createElement("div", { className: "spouse-line" }),
+      spouses.map(sp =>
+        React.createElement("span", { key: sp.id, className: "spouse-name" }, sp.name)
       )
     ),
-    addingChild && React.createElement(MemberForm, {
-      onCancel: () => setAddingChild(false),
-      onSave: handleAddChild,
-      members,
-      parentId: member.id,
-      formType: "child"
-    }),
-    addingSpouse && React.createElement(MemberForm, {
-      onCancel: () => setAddingSpouse(false),
-      onSave: handleAddSpouse,
-      members,
-      parentId: null,
-      formType: "spouse"
-    })
+
+    // Children recursive
+    children.length > 0 && children.map(child =>
+      React.createElement(FamilyMember, {
+        key: child.id,
+        member: child,
+        members,
+        onAddChild,
+        onAddSpouse,
+        onEdit,
+        onDelete
+      })
+    )
   );
 }
 
-function FamilyTree({ members, addMember, editMember, deleteMember }) {
-  // Root members = those without parents
+function FamilyTreeApp() {
+  const [user, setUser] = useState(null);
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  // Listen to auth changes
+  useEffect(() => {
+    const unsubscribe = auth.onAuthStateChanged((u) => {
+      setUser(u);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  // Load members from DB
+  useEffect(() => {
+    if (!user) return;
+
+    const membersRef = db.ref(`familyTrees/${user.uid}/members`);
+    membersRef.on("value", (snapshot) => {
+      const data = snapshot.val() || {};
+      // Convert to array
+      const arr = Object.entries(data).map(([key, val]) => ({ ...val, id: key }));
+      setMembers(arr);
+    });
+
+    return () => membersRef.off();
+  }, [user]);
+
+  const saveMember = (member) => {
+    const ref = db.ref(`familyTrees/${user.uid}/members/${member.id}`);
+    ref.set(member);
+  };
+
+  // Add Child (with parentId set)
+  const handleAddChild = (newMember) => {
+    saveMember(newMember);
+  };
+
+  // Add Spouse (connect spouseId bidirectionally)
+  const handleAddSpouse = (newMember, spouseOfId) => {
+    const newId = newMember.id;
+    newMember.spouseId = spouseOfId;
+    saveMember(newMember);
+
+    // Update existing spouseOfId member spouseId to newMember.id
+    const spouseOf = members.find(m => m.id === spouseOfId);
+    if (spouseOf) {
+      const updated = { ...spouseOf, spouseId: newId };
+      saveMember(updated);
+    }
+  };
+
+  const handleEditMember = (editedMember) => {
+    // If spouseId changed, update old/new spouse relations accordingly
+
+    // Find previous member data
+    const prevMember = members.find(m => m.id === editedMember.id);
+    if (!prevMember) {
+      saveMember(editedMember);
+      return;
+    }
+
+    // If spouseId changed:
+    if (prevMember.spouseId !== editedMember.spouseId) {
+      // Update previous spouse to remove spouseId pointing to this member
+      if (prevMember.spouseId) {
+        const oldSpouse = members.find(m => m.id === prevMember.spouseId);
+        if (oldSpouse && oldSpouse.spouseId === editedMember.id) {
+          saveMember({ ...oldSpouse, spouseId: "" });
+        }
+      }
+      // Update new spouse's spouseId to this member's id
+      if (editedMember.spouseId) {
+        const newSpouse = members.find(m => m.id === editedMember.spouseId);
+        if (newSpouse && newSpouse.spouseId !== editedMember.id) {
+          saveMember({ ...newSpouse, spouseId: editedMember.id });
+        }
+      }
+    }
+    saveMember(editedMember);
+  };
+
+  // Recursive delete: delete member and all descendants
+  const deleteMemberRecursive = (id) => {
+    // Delete all descendants recursively first
+    const descendants = members.filter(m => m.parentId === id);
+    descendants.forEach(d => deleteMemberRecursive(d.id));
+
+    // Delete member itself
+    const ref = db.ref(`familyTrees/${user.uid}/members/${id}`);
+    ref.remove();
+
+    // If member has spouse, update that spouse spouseId to empty if points here
+    const member = members.find(m => m.id === id);
+    if (member && member.spouseId) {
+      const spouse = members.find(m => m.id === member.spouseId);
+      if (spouse && spouse.spouseId === id) {
+        const spouseRef = db.ref(`familyTrees/${user.uid}/members/${spouse.id}`);
+        spouseRef.update({ spouseId: "" });
+      }
+    }
+  };
+
+  if (loading) {
+    return React.createElement("p", { className: "text-white text-center mt-24 text-xl" }, "Loading...");
+  }
+
+  if (!user) {
+    return React.createElement(Login, { onLogin: () => setUser(auth.currentUser) });
+  }
+
+  // Find root members (no parentId)
   const roots = members.filter(m => !m.parentId);
 
   return React.createElement("div", null,
-    roots.map(r =>
-      React.createElement(FamilyMember, { key: r.id, member: r, members, addMember, editMember, deleteMember })
+    React.createElement("div", { className: "flex justify-between items-center mb-6" },
+      React.createElement("h1", { className: "text-4xl font-extrabold text-white drop-shadow-lg" }, "My Family Tree"),
+      React.createElement("button", {
+        onClick: () => auth.signOut(),
+        className: "bg-red-600 text-white px-4 py-2 rounded hover:bg-red-700"
+      }, "Logout")
+    ),
+
+    roots.length === 0 && React.createElement("p", { className: "text-white" }, "No family members yet. Start by adding yourself below."),
+
+    roots.map(root =>
+      React.createElement(FamilyMember, {
+        key: root.id,
+        member: root,
+        members,
+        onAddChild: handleAddChild,
+        onAddSpouse: handleAddSpouse,
+        onEdit: handleEditMember,
+        onDelete: deleteMemberRecursive
+      })
+    ),
+
+    // Add root member button/form (only if no roots)
+    roots.length === 0 && React.createElement("div", { className: "mt-6" },
+      React.createElement(MemberForm, {
+        formType: "child",
+        parentId: null,
+        onCancel: () => { },
+        onSave: (newMember) => handleAddChild(newMember),
+        members
+      })
     )
   );
 }
 
-function App() {
-  const [user, setUser] = useState(null);
-  const [members, setMembers] = useState([]);
-
-  // Listen auth state
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(u => {
-      setUser(u);
-      if (u) {
-        loadMembers(u.uid);
-      } else {
-        setMembers([]);
-      }
-    });
-    return unsubscribe;
-  }, []);
-
-  function loadMembers(uid) {
-    db.ref(`familyTrees/${uid}`).on("value", snapshot => {
-      const data = snapshot.val();
-      if (data) {
-        const arr = Object.entries(data).map(([id, val]) => ({ ...val, id }));
-        setMembers(arr);
-      } else {
-        setMembers([]);
-      }
-    });
-  }
-
-  function saveMember(member) {
-    if (!user) return;
-    db.ref(`familyTrees/${user.uid}/${member.id}`).set(member);
-  }
-
-  function deleteMemberRecursive(id) {
-    if (!user) return;
-
-    // Get all descendants recursively
-    function getDescendants(mid) {
-      let result = [];
-      const directChildren = members.filter(m => m.parentId === mid);
-      for (const child of directChildren) {
-        result.push(child.id);
-        result = result.concat(getDescendants(child.id));
-      }
-      return result;
-    }
-
-    const allToDelete = [id, ...getDescendants(id)];
-
-    allToDelete.forEach(mid => {
-      db.ref(`familyTrees/${user.uid}/${mid}`).remove();
-    });
-  }
-
-  const addMember = (member) => {
-    saveMember(member);
-  };
-
-  const editMember = (member) => {
-    saveMember(member);
-  };
-
-  const deleteMember = (id) => {
-    deleteMemberRecursive(id);
-  };
-
-  if (!user) {
-    return React.createElement(Login, { onLogin: () => {} });
-  }
-
-  return React.createElement("div", null,
-    React.createElement("div", { className: "mb-4 flex justify-between items-center" },
-      React.createElement("h1", { className: "text-4xl font-extrabold text-white drop-shadow-lg" }, "Family Tree"),
-      React.createElement("button", {
-        className: "text-sm text-white bg-red-600 hover:bg-red-700 rounded px-3 py-1",
-        onClick: () => auth.signOut()
-      }, "Logout")
-    ),
-    React.createElement(FamilyTree, { members, addMember, editMember, deleteMember })
-  );
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(FamilyTreeApp));
 </script>
-
 </body>
 </html>
