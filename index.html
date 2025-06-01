@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Family Tree with Gender Colors & Genogram Lines</title>
+<title>Family Tree with Add Member Interface</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
 <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -247,6 +247,112 @@ function FamilyMember({ member, members, expanded, toggleExpand }) {
   );
 }
 
+function AddMemberForm({ members, onAdd }) {
+  const [name, setName] = useState("");
+  const [gender, setGender] = useState("");
+  const [parentId, setParentId] = useState("");
+  const [spouseId, setSpouseId] = useState("");
+  const [relation, setRelation] = useState("");
+  const [deceased, setDeceased] = useState(false);
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setError("Name is required");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const id = "m_" + Date.now();
+      const newMember = {
+        id,
+        name: name.trim(),
+        gender: gender || undefined,
+        parentId: parentId || undefined,
+        spouseId: spouseId || undefined,
+        relation: relation.trim() || undefined,
+        deceased,
+      };
+      await onAdd(newMember);
+      setName("");
+      setGender("");
+      setParentId("");
+      setSpouseId("");
+      setRelation("");
+      setDeceased(false);
+    } catch (err) {
+      setError(err.message || "Failed to add member");
+    }
+    setLoading(false);
+  };
+
+  return React.createElement("form", {
+    onSubmit: handleSubmit,
+    className: "bg-indigo-50 p-4 rounded-md shadow-md mb-8 max-w-md mx-auto"
+  },
+    React.createElement("h2", { className: "text-xl font-bold mb-4 text-indigo-700" }, "Add Family Member"),
+    error && React.createElement("p", { className: "text-red-600 mb-2" }, error),
+    React.createElement("input", {
+      type: "text",
+      placeholder: "Full Name",
+      className: "w-full mb-2 px-3 py-2 border rounded",
+      value: name,
+      onChange: e => setName(e.target.value),
+      required: true
+    }),
+    React.createElement("select", {
+      className: "w-full mb-2 px-3 py-2 border rounded",
+      value: gender,
+      onChange: e => setGender(e.target.value)
+    },
+      React.createElement("option", { value: "" }, "Select Gender (optional)"),
+      React.createElement("option", { value: "male" }, "Male"),
+      React.createElement("option", { value: "female" }, "Female"),
+      React.createElement("option", { value: "unspecified" }, "Unspecified")
+    ),
+    React.createElement("select", {
+      className: "w-full mb-2 px-3 py-2 border rounded",
+      value: parentId,
+      onChange: e => setParentId(e.target.value)
+    },
+      React.createElement("option", { value: "" }, "Select Parent (optional)"),
+      members.map(m => React.createElement("option", { key: m.id, value: m.id }, m.name))
+    ),
+    React.createElement("select", {
+      className: "w-full mb-2 px-3 py-2 border rounded",
+      value: spouseId,
+      onChange: e => setSpouseId(e.target.value)
+    },
+      React.createElement("option", { value: "" }, "Select Spouse (optional)"),
+      members.map(m => React.createElement("option", { key: m.id, value: m.id }, m.name))
+    ),
+    React.createElement("input", {
+      type: "text",
+      placeholder: "Relation/Description (optional)",
+      className: "w-full mb-2 px-3 py-2 border rounded",
+      value: relation,
+      onChange: e => setRelation(e.target.value)
+    }),
+    React.createElement("label", { className: "inline-flex items-center mb-3" },
+      React.createElement("input", {
+        type: "checkbox",
+        className: "mr-2",
+        checked: deceased,
+        onChange: e => setDeceased(e.target.checked)
+      }),
+      "Deceased"
+    ),
+    React.createElement("button", {
+      type: "submit",
+      disabled: loading,
+      className: "bg-indigo-600 text-white px-4 py-2 rounded hover:bg-indigo-700 transition w-full"
+    }, loading ? "Adding..." : "Add Member")
+  );
+}
+
 function FamilyTreeApp() {
   const [user, setUser] = useState(null);
   const [members, setMembers] = useState([]);
@@ -256,63 +362,96 @@ function FamilyTreeApp() {
   const containerRef = useRef(null);
 
   useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(u => {
-      if (u) setUser(u);
-      else setUser(null);
+    const unsubscribeAuth = auth.onAuthStateChanged(u => {
+      setUser(u);
     });
-    return () => unsubscribe();
+    return () => unsubscribeAuth();
   }, []);
 
   useEffect(() => {
     if (!user) return;
-    const ref = db.ref(`users/${user.uid}/members`);
-    const handler = (snapshot) => {
-      const val = snapshot.val() || {};
-      setMembers(Object.values(val));
+    setLoading(true);
+    const membersRef = db.ref(`users/${user.uid}/members`);
+    membersRef.on("value", (snapshot) => {
+      const data = snapshot.val() || {};
+      const arr = Object.values(data);
+      setMembers(arr);
+      // expand all by default
+      let exp = {};
+      arr.forEach(m => exp[m.id] = true);
+      setExpanded(exp);
       setLoading(false);
-    };
-    ref.on("value", handler);
-    return () => ref.off("value", handler);
+    });
+    return () => membersRef.off();
   }, [user]);
+
+  const handleAddMember = async (member) => {
+    if (!user) throw new Error("Not logged in");
+    await db.ref(`users/${user.uid}/members/${member.id}`).set(member);
+
+    // If spouseId present, also update spouse's spouseId
+    if (member.spouseId) {
+      const spouseRef = db.ref(`users/${user.uid}/members/${member.spouseId}`);
+      spouseRef.once("value").then(snap => {
+        const spouse = snap.val();
+        if (spouse && spouse.spouseId !== member.id) {
+          spouseRef.update({ spouseId: member.id });
+        }
+      });
+    }
+  };
 
   const toggleExpand = (id) => {
     setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
-  if (!user) return React.createElement(Login, { onLogin: () => setUser(auth.currentUser) });
-  if (loading) return React.createElement("div", { className: "text-center text-white mt-10" }, "Loading...");
+  const filteredMembers = members.filter(m =>
+    m.name.toLowerCase().includes(search.toLowerCase())
+  );
 
-  const filtered = members.filter(m => m.name.toLowerCase().includes(search.toLowerCase()));
-  const rootMembers = filtered.filter(m => !m.parentId);
+  if (!user) {
+    return React.createElement(Login, { onLogin: () => {} });
+  }
 
-  return React.createElement("div", {
-    className: "bg-white bg-opacity-90 rounded-lg p-6 shadow-xl mt-4 mb-20 relative",
-    ref: containerRef,
-    style: { minHeight: "600px" }
-  },
-    React.createElement("div", { className: "flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6" },
-      React.createElement("h1", { className: "text-3xl font-bold text-indigo-700" }, "My Family Tree"),
+  return React.createElement("div", { className: "relative" },
+    React.createElement("div", { className: "flex justify-between items-center mb-6 max-w-6xl mx-auto" },
       React.createElement("input", {
-        type: "text",
-        placeholder: "Search member...",
-        className: "border border-gray-300 px-4 py-2 rounded w-full sm:w-64",
+        type: "search",
+        placeholder: "Search family members...",
+        className: "w-full max-w-md px-4 py-2 rounded border border-gray-300 focus:outline-indigo-600",
         value: search,
         onChange: e => setSearch(e.target.value)
-      })
-    ),
-    filtered.length === 0 && React.createElement("p", { className: "text-gray-500 italic" }, "No members found."),
-    rootMembers.map(root => React.createElement(FamilyMember, { key: root.id, member: root, members: filtered, expanded, toggleExpand })),
-    React.createElement(SvgLines, { members: filtered, containerRef }),
-    React.createElement("div", { className: "mt-8 text-center" },
+      }),
       React.createElement("button", {
-        onClick: () => auth.signOut(),
-        className: "bg-pink-600 hover:bg-pink-700 text-white px-5 py-2 rounded-md shadow-md transition"
+        className: "ml-4 bg-red-600 text-white px-3 py-2 rounded hover:bg-red-700 transition",
+        onClick: () => auth.signOut()
       }, "Logout")
-    )
+    ),
+    React.createElement(AddMemberForm, { members, onAdd: handleAddMember }),
+    loading ? React.createElement("p", { className: "text-center text-white text-lg mt-16" }, "Loading...") :
+      filteredMembers.length === 0 ? React.createElement("p", { className: "text-center text-white mt-12 text-lg" }, "No members found.") :
+        React.createElement("div", {
+          ref: containerRef,
+          className: "relative tree-container p-4 bg-white bg-opacity-90 rounded shadow max-w-6xl mx-auto mb-24"
+        },
+          filteredMembers.filter(m => !m.parentId).map(rootMember =>
+            React.createElement(FamilyMember, {
+              key: rootMember.id,
+              member: rootMember,
+              members: filteredMembers,
+              expanded,
+              toggleExpand
+            })
+          ),
+          React.createElement(SvgLines, { members: filteredMembers, containerRef })
+        )
   );
 }
 
-ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(FamilyTreeApp));
+ReactDOM.createRoot(document.getElementById("root")).render(
+  React.createElement(FamilyTreeApp)
+);
 </script>
+
 </body>
 </html>
