@@ -54,9 +54,38 @@
       color: red;
       margin-top: 10px;
     }
-    .logout-btn {
+    .logout-btn, .add-root-btn {
       margin-bottom: 20px;
       padding: 8px 12px;
+      border: none;
+      border-radius: 4px;
+    }
+    .logout-btn {
+      background-color: #f44336;
+      color: white;
+    }
+    .add-root-btn {
+      background-color: #4CAF50;
+      color: white;
+      margin-left: 10px;
+    }
+    .children-container {
+      margin-left: 20px;
+      border-left: 2px solid #ccc;
+      padding-left: 10px;
+      margin-top: 10px;
+    }
+    .spouse-container {
+      margin-top: 10px;
+      padding: 10px;
+      border: 1px dashed #888;
+      background: #fff;
+    }
+    .btn-small {
+      margin-top: 10px;
+      margin-right: 10px;
+      padding: 6px 12px;
+      font-size: 0.9rem;
     }
   </style>
 </head>
@@ -134,15 +163,25 @@
       );
     }
 
-    // Member component
-    function Member({ id, memberData, onSave }) {
+    // Member component (recursive for children)
+    function Member({ id, memberData, members, onSave, onAddChild, onAddSpouse }) {
       const [expanded, setExpanded] = useState(false);
       const [name, setName] = useState(memberData.name || '');
       const [birthDate, setBirthDate] = useState(memberData.birthDate || '');
       const [isDeceased, setIsDeceased] = useState(memberData.isDeceased || false);
       const [dateDied, setDateDied] = useState(memberData.dateDied || '');
-      const [spouse, setSpouse] = useState(memberData.spouse || '');
-      const [childrenInput, setChildrenInput] = useState((memberData.children || []).join(', '));
+      const [spouseId, setSpouseId] = useState(memberData.spouseId || null);
+      // Children is an array of member IDs
+      const childrenIds = memberData.children || [];
+
+      useEffect(() => {
+        // Update local states if memberData changes (e.g. from Firebase)
+        setName(memberData.name || '');
+        setBirthDate(memberData.birthDate || '');
+        setIsDeceased(memberData.isDeceased || false);
+        setDateDied(memberData.dateDied || '');
+        setSpouseId(memberData.spouseId || null);
+      }, [memberData]);
 
       const toggleExpand = () => setExpanded(!expanded);
 
@@ -150,13 +189,23 @@
         const updated = {
           name,
           birthDate,
-          spouse,
+          spouseId,
           isDeceased,
           dateDied: isDeceased ? dateDied : null,
-          children: childrenInput.split(',').map(c => c.trim()).filter(c => c)
+          children: childrenIds,
         };
         onSave(id, updated);
         setExpanded(false);
+      };
+
+      const addChildHandler = () => {
+        onAddChild(id);
+        setExpanded(true); // keep expanded so user can see child added
+      };
+
+      const addSpouseHandler = () => {
+        onAddSpouse(id, spouseId, setSpouseId);
+        setExpanded(true);
       };
 
       return (
@@ -175,14 +224,6 @@
                 Birth Date:
                 <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} />
               </label>
-              <label>
-                Spouse:
-                <input type="text" value={spouse} onChange={e => setSpouse(e.target.value)} />
-              </label>
-              <label>
-                Children (comma separated):
-                <input type="text" value={childrenInput} onChange={e => setChildrenInput(e.target.value)} />
-              </label>
               <label className="checkbox-label">
                 <input type="checkbox" checked={isDeceased} onChange={e => setIsDeceased(e.target.checked)} />
                 Deceased
@@ -193,7 +234,50 @@
                   <input type="date" value={dateDied} onChange={e => setDateDied(e.target.value)} />
                 </label>
               )}
+              <div>
+                <button className="btn-small" onClick={addChildHandler}>Add Child</button>
+                <button className="btn-small" onClick={addSpouseHandler}>
+                  {spouseId ? "Edit Spouse" : "Add Spouse"}
+                </button>
+              </div>
               <button onClick={saveData} style={{ marginTop: 10, padding: '8px 16px' }}>Save</button>
+
+              {/* Spouse section */}
+              {spouseId && members[spouseId] && (
+                <div className="spouse-container">
+                  <h4>Spouse:</h4>
+                  <Member
+                    id={spouseId}
+                    memberData={members[spouseId]}
+                    members={members}
+                    onSave={onSave}
+                    onAddChild={onAddChild}
+                    onAddSpouse={onAddSpouse}
+                  />
+                </div>
+              )}
+
+              {/* Children section */}
+              {childrenIds.length > 0 && (
+                <div className="children-container">
+                  <h4>Children:</h4>
+                  {childrenIds.map(childId => {
+                    const childData = members[childId];
+                    if (!childData) return <p key={childId}>Loading child data...</p>;
+                    return (
+                      <Member
+                        key={childId}
+                        id={childId}
+                        memberData={childData}
+                        members={members}
+                        onSave={onSave}
+                        onAddChild={onAddChild}
+                        onAddSpouse={onAddSpouse}
+                      />
+                    );
+                  })}
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -231,6 +315,64 @@
         database.ref('members/' + id).set(data);
       };
 
+      // Add root member - same as before
+      const addRootMember = () => {
+        const name = prompt("Enter new root member's name:");
+        if (!name) return alert("Name is required.");
+        const newMemberRef = database.ref('members').push();
+        newMemberRef.set({
+          name,
+          birthDate: '',
+          spouseId: null,
+          children: [],
+          isDeceased: false,
+          dateDied: null,
+        });
+      };
+
+      // Add child member
+      const addChild = (parentId) => {
+        const newChildRef = database.ref('members').push();
+        newChildRef.set({
+          name: '',
+          birthDate: '',
+          spouseId: null,
+          children: [],
+          isDeceased: false,
+          dateDied: null,
+        }).then(() => {
+          // After child is created, update parent's children array
+          const childId = newChildRef.key;
+          const parentChildren = members[parentId]?.children || [];
+          database.ref('members/' + parentId + '/children').set([...parentChildren, childId]);
+        });
+      };
+
+      // Add or edit spouse for a member
+      // spouseSetter is a setter to update spouseId state inside Member component
+      const addOrEditSpouse = (memberId, currentSpouseId, spouseSetter) => {
+        if (currentSpouseId) {
+          // Spouse exists, do nothing (or maybe could edit)
+          spouseSetter(currentSpouseId);
+          return;
+        }
+        // Create new spouse member
+        const newSpouseRef = database.ref('members').push();
+        newSpouseRef.set({
+          name: '',
+          birthDate: '',
+          spouseId: memberId, // Link back to this member as spouse
+          children: [],
+          isDeceased: false,
+          dateDied: null,
+        }).then(() => {
+          const spouseId = newSpouseRef.key;
+          spouseSetter(spouseId);
+          // Update current member spouseId
+          database.ref('members/' + memberId + '/spouseId').set(spouseId);
+        });
+      };
+
       if (loading) return <p>Loading...</p>;
 
       if (!user) return <Login onLogin={setUser} />;
@@ -239,11 +381,23 @@
         <div>
           <h1>Family Tree</h1>
           <button className="logout-btn" onClick={logout}>Logout</button>
+          <button className="add-root-btn" onClick={addRootMember}>Add Root Member</button>
 
           {Object.keys(members).length === 0 && <p>No members found.</p>}
 
           {Object.entries(members).map(([id, member]) => (
-            <Member key={id} id={id} memberData={member} onSave={saveMember} />
+            // Only show members that don't have a parent (root-level)
+            // To avoid duplicates, exclude members that are children of others or spouses of others
+            !Object.values(members).some(m => (m.children || []).includes(id) || m.spouseId === id) &&
+            <Member
+              key={id}
+              id={id}
+              memberData={member}
+              members={members}
+              onSave={saveMember}
+              onAddChild={addChild}
+              onAddSpouse={addOrEditSpouse}
+            />
           ))}
         </div>
       );
