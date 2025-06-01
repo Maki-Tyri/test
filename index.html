@@ -1,42 +1,83 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Collapsible Family Tree with Firebase Realtime DB</title>
-<style>
-  body {
-    font-family: Arial, sans-serif;
-    padding: 20px;
-  }
-  .node {
-    margin-left: 20px;
-    cursor: pointer;
-    user-select: none;
-  }
-  .children {
-    margin-left: 20px;
-    display: none;
-  }
-  .expanded > .children {
-    display: block;
-  }
-  .toggle-icon {
-    display: inline-block;
-    width: 1em;
-  }
-</style>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Family Tree App</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      padding: 10px;
+      max-width: 600px;
+      margin: auto;
+      background: #f0f2f5;
+    }
+    input, button {
+      font-size: 1rem;
+    }
+    button {
+      cursor: pointer;
+    }
+    .member {
+      border: 1px solid #aaa;
+      background: #fafafa;
+      border-radius: 5px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
+    .member-header {
+      display: flex;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+      font-weight: bold;
+    }
+    label {
+      display: block;
+      margin-top: 6px;
+    }
+    input[type="text"], input[type="date"] {
+      width: 100%;
+      padding: 6px;
+      box-sizing: border-box;
+      margin-top: 4px;
+    }
+    .checkbox-label {
+      display: flex;
+      align-items: center;
+      margin-top: 6px;
+    }
+    .checkbox-label input {
+      margin-right: 6px;
+    }
+    .error {
+      color: red;
+      margin-top: 10px;
+    }
+    .logout-btn {
+      margin-bottom: 20px;
+      padding: 8px 12px;
+    }
+  </style>
 </head>
 <body>
-  <h2>Family Tree</h2>
-  <div id="tree-container">Loading...</div>
+  <div id="root"></div>
 
-  <!-- Firebase SDK -->
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <!-- React, ReactDOM CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/babel-standalone@6.26.0/babel.min.js"></script>
 
-  <script>
-    // Your Firebase config
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-database-compat.js"></script>
+
+  <script type="text/babel">
+
+    const { useState, useEffect } = React;
+
+    // Firebase config and init
     const firebaseConfig = {
       apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
       authDomain: "project-955237504610034331.firebaseapp.com",
@@ -48,75 +89,168 @@
       measurementId: "G-RCJ4P82PVM"
     };
 
-    // Initialize Firebase
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const database = firebase.database();
 
-    // Helper to create tree nodes
-    function createNode(name, childrenObj) {
-      const nodeDiv = document.createElement('div');
-      nodeDiv.classList.add('node');
+    // Login Component
+    function Login({ onLogin }) {
+      const [email, setEmail] = useState('');
+      const [password, setPassword] = useState('');
+      const [error, setError] = useState('');
 
-      const toggleIcon = document.createElement('span');
-      toggleIcon.classList.add('toggle-icon');
+      const handleSubmit = e => {
+        e.preventDefault();
+        setError('');
+        auth.signInWithEmailAndPassword(email, password)
+          .then(userCredential => {
+            onLogin(userCredential.user);
+          })
+          .catch(err => setError(err.message));
+      };
 
-      const titleSpan = document.createElement('span');
-      titleSpan.textContent = name;
+      return (
+        <form onSubmit={handleSubmit} style={{maxWidth: 400, margin: 'auto'}}>
+          <h2>Login</h2>
+          <input
+            type="email"
+            placeholder="Email"
+            value={email}
+            onChange={e => setEmail(e.target.value)}
+            required
+            style={{ display: 'block', width: '100%', marginBottom: 10, padding: 8 }}
+          />
+          <input
+            type="password"
+            placeholder="Password"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            required
+            style={{ display: 'block', width: '100%', marginBottom: 10, padding: 8 }}
+          />
+          <button type="submit" style={{padding: 10, width: '100%'}}>Login</button>
+          {error && <p className="error">{error}</p>}
+        </form>
+      );
+    }
 
-      nodeDiv.appendChild(toggleIcon);
-      nodeDiv.appendChild(titleSpan);
+    // Member component
+    function Member({ id, memberData, onSave }) {
+      const [expanded, setExpanded] = useState(false);
+      const [name, setName] = useState(memberData.name || '');
+      const [birthDate, setBirthDate] = useState(memberData.birthDate || '');
+      const [isDeceased, setIsDeceased] = useState(memberData.isDeceased || false);
+      const [dateDied, setDateDied] = useState(memberData.dateDied || '');
+      const [spouse, setSpouse] = useState(memberData.spouse || '');
+      const [childrenInput, setChildrenInput] = useState((memberData.children || []).join(', '));
 
-      const childrenDiv = document.createElement('div');
-      childrenDiv.classList.add('children');
+      const toggleExpand = () => setExpanded(!expanded);
 
-      if (childrenObj && Object.keys(childrenObj).length > 0) {
-        toggleIcon.textContent = "▶";
+      const saveData = () => {
+        const updated = {
+          name,
+          birthDate,
+          spouse,
+          isDeceased,
+          dateDied: isDeceased ? dateDied : null,
+          children: childrenInput.split(',').map(c => c.trim()).filter(c => c)
+        };
+        onSave(id, updated);
+        setExpanded(false);
+      };
 
-        nodeDiv.addEventListener('click', () => {
-          const isExpanded = nodeDiv.classList.toggle('expanded');
-          toggleIcon.textContent = isExpanded ? "▼" : "▶";
+      return (
+        <div className="member">
+          <div className="member-header" onClick={toggleExpand}>
+            <span>{name || "Unnamed Member"}</span>
+            <button>{expanded ? "−" : "+"}</button>
+          </div>
+          {expanded && (
+            <div style={{ marginTop: 10 }}>
+              <label>
+                Name:
+                <input type="text" value={name} onChange={e => setName(e.target.value)} />
+              </label>
+              <label>
+                Birth Date:
+                <input type="date" value={birthDate} onChange={e => setBirthDate(e.target.value)} />
+              </label>
+              <label>
+                Spouse:
+                <input type="text" value={spouse} onChange={e => setSpouse(e.target.value)} />
+              </label>
+              <label>
+                Children (comma separated):
+                <input type="text" value={childrenInput} onChange={e => setChildrenInput(e.target.value)} />
+              </label>
+              <label className="checkbox-label">
+                <input type="checkbox" checked={isDeceased} onChange={e => setIsDeceased(e.target.checked)} />
+                Deceased
+              </label>
+              {isDeceased && (
+                <label>
+                  Date Died:
+                  <input type="date" value={dateDied} onChange={e => setDateDied(e.target.value)} />
+                </label>
+              )}
+              <button onClick={saveData} style={{ marginTop: 10, padding: '8px 16px' }}>Save</button>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // Main App
+    function App() {
+      const [user, setUser] = useState(null);
+      const [members, setMembers] = useState({});
+      const [loading, setLoading] = useState(true);
+
+      useEffect(() => {
+        const unsubscribe = auth.onAuthStateChanged(u => {
+          setUser(u);
+          setLoading(false);
+        });
+        return () => unsubscribe();
+      }, []);
+
+      useEffect(() => {
+        if (!user) return;
+
+        const membersRef = database.ref('members');
+        membersRef.on('value', snapshot => {
+          setMembers(snapshot.val() || {});
         });
 
-        for (const key in childrenObj) {
-          const childNode = childrenObj[key];
-          const childTreeNode = createNode(childNode.name, childNode.children);
-          childrenDiv.appendChild(childTreeNode);
-        }
-      } else {
-        toggleIcon.textContent = "•";
-      }
+        return () => database.ref('members').off();
+      }, [user]);
 
-      nodeDiv.appendChild(childrenDiv);
+      const logout = () => auth.signOut();
 
-      return nodeDiv;
+      const saveMember = (id, data) => {
+        database.ref('members/' + id).set(data);
+      };
+
+      if (loading) return <p>Loading...</p>;
+
+      if (!user) return <Login onLogin={setUser} />;
+
+      return (
+        <div>
+          <h1>Family Tree</h1>
+          <button className="logout-btn" onClick={logout}>Logout</button>
+
+          {Object.keys(members).length === 0 && <p>No members found.</p>}
+
+          {Object.entries(members).map(([id, member]) => (
+            <Member key={id} id={id} memberData={member} onSave={saveMember} />
+          ))}
+        </div>
+      );
     }
 
-    function renderTree(treeData) {
-      const container = document.getElementById('tree-container');
-      container.innerHTML = '';
+    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
 
-      if (!treeData) {
-        container.textContent = 'No data found';
-        return;
-      }
-
-      // Assume root node is id "1"
-      const rootNode = treeData["1"];
-      if (!rootNode) {
-        container.textContent = 'Root node not found';
-        return;
-      }
-
-      const tree = createNode(rootNode.name, rootNode.children);
-      container.appendChild(tree);
-    }
-
-    // Listen to realtime DB changes
-    const treeRef = database.ref('familyTree');
-    treeRef.on('value', (snapshot) => {
-      const data = snapshot.val();
-      renderTree(data);
-    });
   </script>
 </body>
 </html>
