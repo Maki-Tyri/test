@@ -673,30 +673,23 @@
                   onClick={() => onSelectSearchResult(person)}
                 >
                   {person.name} {person.isSpouse && <span className="text-sm text-gray-500">(spouse)</span>}
-                </div>
-              ))}
-            </div>
-          )}
-
-          <div className="relative w-full h-[80vh] overflow-auto border border-gray-300 rounded bg-white">
-  <div className="w-full h-full flex items-center justify-center min-w-[1000px] min-h-[600px]">
-    <div
-      className="transition-transform"
-      style={{
-        transform: `scale(${zoom})`,
-        transformOrigin: "center",
-      }}
-    >
-      <TreeNode
-        node={family}
-        onUpdate={updateNode}
-        onDelete={deleteNode}
-        highlightIds={highlightIds}
-        openIds={openIds}
-        scrollToId={scrollToId}
-        onScrollHandled={onScrollHandled}
-      />
-    </div>
+               <div className="relative w-full h-[80vh] overflow-scroll border border-gray-300 rounded bg-white">
+  <div
+    className="inline-block transition-transform p-4"
+    style={{
+      transform: `scale(${zoom})`,
+      transformOrigin: "top left",
+    }}
+  >
+    <TreeNode
+      node={family}
+      onUpdate={updateNode}
+      onDelete={deleteNode}
+      highlightIds={highlightIds}
+      openIds={openIds}
+      scrollToId={scrollToId}
+      onScrollHandled={onScrollHandled}
+    />
   </div>
 </div>
 
