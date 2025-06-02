@@ -3,172 +3,282 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Collapsible Family Tree with Spouse & Editing</title>
-  <!-- Tailwind CDN -->
+  <title>Family Tree with Add/Delete, Birthday, Deathday</title>
+  <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- React + ReactDOM CDN -->
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <!-- Babel CDN for JSX -->
+  <!-- Babel for JSX -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
   <style>
-    .fade-enter {
-      max-height: 0;
-      opacity: 0;
-      overflow: hidden;
+    /* Smooth open/close animation */
+    .children-container {
       transition: max-height 0.3s ease, opacity 0.3s ease;
-    }
-    .fade-enter-active {
-      max-height: 500px;
-      opacity: 1;
-    }
-    .fade-exit {
-      max-height: 500px;
-      opacity: 1;
-      transition: max-height 0.3s ease, opacity 0.3s ease;
-    }
-    .fade-exit-active {
-      max-height: 0;
-      opacity: 0;
       overflow: hidden;
     }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
 
-  <div id="root" class="w-full max-w-lg bg-white p-6 rounded shadow"></div>
+  <div id="root" class="w-full max-w-3xl bg-white p-6 rounded shadow"></div>
 
   <script type="text/babel">
 
     const { useState } = React;
 
-    // Sample family data with spouses
+    let nextId = 100; // For generating unique IDs for new nodes
+
+    // Initial data
     const initialFamilyData = {
       id: 1,
       name: "Lolo",
       spouse: "Lola",
+      birthday: "1930-01-01",
+      deathday: "2000-12-31",
       children: [
         {
           id: 2,
           name: "Tito",
           spouse: "Tita",
+          birthday: "1960-05-20",
+          deathday: "",
           children: [
-            { id: 3, name: "Anak ni Tito 1" },
-            { id: 4, name: "Anak ni Tito 2" },
+            { id: 3, name: "Anak ni Tito 1", birthday: "1985-04-15", deathday: "" },
+            { id: 4, name: "Anak ni Tito 2", birthday: "1987-09-10", deathday: "" },
           ],
         },
         {
           id: 5,
           name: "Tita",
           spouse: "Tito",
+          birthday: "1965-08-30",
+          deathday: "",
           children: [
-            { id: 6, name: "Anak ni Tita 1" },
+            { id: 6, name: "Anak ni Tita 1", birthday: "1990-02-25", deathday: "" },
           ],
         },
       ],
     };
 
-    function TreeNode({ node, onUpdate }) {
+    // Editable text or date field component
+    function EditableField({ label, value, type = "text", onChange }) {
+      const [editing, setEditing] = useState(false);
+      const [tempValue, setTempValue] = useState(value || "");
+
+      function save() {
+        onChange(tempValue);
+        setEditing(false);
+      }
+
+      return (
+        <div className="flex items-center space-x-1 text-sm text-gray-700">
+          <span className="font-semibold">{label}:</span>
+          {editing ? (
+            type === "date" ? (
+              <input
+                type="date"
+                value={tempValue}
+                onChange={e => setTempValue(e.target.value)}
+                onBlur={save}
+                onKeyDown={e => { if (e.key === "Enter") save(); }}
+                autoFocus
+                className="border border-gray-300 rounded px-1 py-0.5 w-32"
+              />
+            ) : (
+              <input
+                type="text"
+                value={tempValue}
+                onChange={e => setTempValue(e.target.value)}
+                onBlur={save}
+                onKeyDown={e => { if (e.key === "Enter") save(); }}
+                autoFocus
+                className="border border-gray-300 rounded px-1 py-0.5 w-32"
+              />
+            )
+          ) : (
+            <span
+              className="cursor-pointer hover:text-blue-600"
+              onClick={() => setEditing(true)}
+              title={`Click to edit ${label.toLowerCase()}`}
+            >
+              {value || <em className="text-gray-400">(none)</em>}
+            </span>
+          )}
+        </div>
+      );
+    }
+
+    // The main TreeNode component
+    function TreeNode({ node, onUpdate, onDelete }) {
       const [open, setOpen] = useState(false);
       const [editName, setEditName] = useState(false);
       const [editSpouse, setEditSpouse] = useState(false);
       const [tempName, setTempName] = useState(node.name);
       const [tempSpouse, setTempSpouse] = useState(node.spouse || "");
 
-      // Update handler helper
+      // Update node helper
       function updateNode(newNode) {
         onUpdate(newNode);
       }
 
-      function handleNameSave() {
+      // Save handlers
+      function saveName() {
         updateNode({ ...node, name: tempName });
         setEditName(false);
       }
 
-      function handleSpouseSave() {
+      function saveSpouse() {
         updateNode({ ...node, spouse: tempSpouse });
         setEditSpouse(false);
       }
 
+      // Update birthday
+      function updateBirthday(newBirthday) {
+        updateNode({ ...node, birthday: newBirthday });
+      }
+
+      // Update deathday
+      function updateDeathday(newDeathday) {
+        updateNode({ ...node, deathday: newDeathday });
+      }
+
+      // Add new child
+      function addChild() {
+        const newChild = {
+          id: nextId++,
+          name: "New Child",
+          spouse: "",
+          birthday: "",
+          deathday: "",
+          children: [],
+        };
+        const newChildren = node.children ? [...node.children, newChild] : [newChild];
+        updateNode({ ...node, children: newChildren });
+        setOpen(true);
+      }
+
+      // Delete this node
+      function handleDelete() {
+        if (confirm(`Delete ${node.name} and all descendants?`)) {
+          onDelete(node.id);
+        }
+      }
+
+      // Handle update child node
+      function updateChild(updatedChild) {
+        const updatedChildren = node.children.map(c =>
+          c.id === updatedChild.id ? updatedChild : c
+        );
+        updateNode({ ...node, children: updatedChildren });
+      }
+
+      // Handle delete child node
+      function deleteChild(childId) {
+        const updatedChildren = node.children.filter(c => c.id !== childId);
+        updateNode({ ...node, children: updatedChildren });
+      }
+
       return (
-        <div className="ml-4 mt-2">
-          <div className="flex items-center space-x-2 cursor-pointer select-none">
+        <div className="ml-4 mt-3 border-l-2 border-gray-300 pl-4 relative">
+          <div className="flex items-center space-x-2">
+            {/* Collapse/expand button */}
             {node.children && node.children.length > 0 ? (
               <button
                 onClick={() => setOpen(!open)}
-                className="text-blue-600 font-bold w-5 h-5 flex items-center justify-center"
+                className="text-blue-600 font-bold w-6 h-6 flex items-center justify-center select-none"
                 aria-label={open ? "Collapse" : "Expand"}
               >
                 {open ? "▼" : "▶"}
               </button>
             ) : (
-              <span className="w-5" />
+              <span className="w-6" />
             )}
 
-            <div className="flex space-x-2 items-center">
-              {/* Name */}
-              {editName ? (
-                <input
-                  type="text"
-                  className="border border-gray-300 rounded px-1 py-0.5 text-sm"
-                  value={tempName}
-                  onChange={e => setTempName(e.target.value)}
-                  onBlur={handleNameSave}
-                  onKeyDown={e => {
-                    if (e.key === "Enter") handleNameSave();
-                  }}
-                  autoFocus
-                />
-              ) : (
-                <span
-                  className="font-semibold text-gray-800 hover:text-blue-700"
-                  onClick={() => setEditName(true)}
-                  title="Click to edit name"
-                >
-                  {node.name}
-                </span>
-              )}
+            {/* Name */}
+            {editName ? (
+              <input
+                type="text"
+                value={tempName}
+                onChange={e => setTempName(e.target.value)}
+                onBlur={saveName}
+                onKeyDown={e => { if (e.key === "Enter") saveName(); }}
+                autoFocus
+                className="border border-gray-400 rounded px-1 py-0.5 font-semibold text-gray-900 w-32"
+              />
+            ) : (
+              <span
+                className="font-semibold text-gray-900 hover:text-blue-700 cursor-pointer"
+                onClick={() => setEditName(true)}
+                title="Click to edit name"
+              >
+                {node.name}
+              </span>
+            )}
 
-              {/* Spouse */}
-              {node.spouse !== undefined && (
-                <>
-                  <span className="text-gray-400"> &amp; </span>
-                  {editSpouse ? (
-                    <input
-                      type="text"
-                      className="border border-gray-300 rounded px-1 py-0.5 text-sm"
-                      value={tempSpouse}
-                      onChange={e => setTempSpouse(e.target.value)}
-                      onBlur={handleSpouseSave}
-                      onKeyDown={e => {
-                        if (e.key === "Enter") handleSpouseSave();
-                      }}
-                      autoFocus
-                    />
-                  ) : (
-                    <span
-                      className="italic text-gray-600 hover:text-blue-700 cursor-pointer"
-                      onClick={() => setEditSpouse(true)}
-                      title="Click to edit spouse"
-                    >
-                      {node.spouse || "(add spouse)"}
-                    </span>
-                  )}
-                </>
-              )}
-            </div>
+            {/* Spouse */}
+            {node.spouse !== undefined && (
+              <>
+                <span className="text-gray-400">&amp;</span>
+                {editSpouse ? (
+                  <input
+                    type="text"
+                    value={tempSpouse}
+                    onChange={e => setTempSpouse(e.target.value)}
+                    onBlur={saveSpouse}
+                    onKeyDown={e => { if (e.key === "Enter") saveSpouse(); }}
+                    autoFocus
+                    className="border border-gray-400 rounded px-1 py-0.5 italic text-gray-700 w-32"
+                  />
+                ) : (
+                  <span
+                    className="italic text-gray-700 hover:text-blue-700 cursor-pointer"
+                    onClick={() => setEditSpouse(true)}
+                    title="Click to edit spouse"
+                  >
+                    {node.spouse || <em>(add spouse)</em>}
+                  </span>
+                )}
+              </>
+            )}
+
+            {/* Delete button (except root) */}
+            {onDelete && (
+              <button
+                onClick={handleDelete}
+                title="Delete this person and descendants"
+                className="ml-auto text-red-600 hover:text-red-800 font-bold text-sm px-2 py-0.5 rounded border border-red-600 hover:border-red-800"
+              >
+                Delete
+              </button>
+            )}
           </div>
 
-          {/* Children with animation */}
+          {/* Birthday & Deathday */}
+          <div className="flex space-x-4 mt-1">
+            <EditableField
+              label="Birthday"
+              value={node.birthday}
+              type="date"
+              onChange={updateBirthday}
+            />
+            <EditableField
+              label="Deathday"
+              value={node.deathday}
+              type="date"
+              onChange={updateDeathday}
+            />
+          </div>
+
+          {/* Children container */}
           <div
+            className="children-container"
             style={{
-              maxHeight: open ? "1000px" : "0",
+              maxHeight: open ? "2000px" : "0",
               opacity: open ? 1 : 0,
-              overflow: "hidden",
-              transition: "max-height 0.3s ease, opacity 0.3s ease",
-              marginLeft: "1rem",
-              borderLeft: open ? "2px solid #CBD5E1" : "none",
+              marginTop: open ? "0.5rem" : "0",
               paddingLeft: open ? "1rem" : "0",
+              borderLeft: open ? "2px solid #CBD5E1" : "none",
             }}
           >
             {open && node.children && node.children.length > 0 && (
@@ -177,31 +287,54 @@
                   <TreeNode
                     key={child.id}
                     node={child}
-                    onUpdate={updatedChild => {
-                      // Replace the child in children array and call onUpdate
-                      const updatedChildren = node.children.map(c =>
-                        c.id === updatedChild.id ? updatedChild : c
-                      );
-                      updateNode({ ...node, children: updatedChildren });
-                    }}
+                    onUpdate={updateChild}
+                    onDelete={deleteChild}
                   />
                 ))}
               </div>
             )}
           </div>
+
+          {/* Add child button */}
+          <button
+            onClick={addChild}
+            className="mt-2 text-green-700 hover:text-green-900 font-semibold text-sm px-3 py-1 rounded border border-green-700 hover:border-green-900"
+            title="Add child"
+          >
+            + Add Child
+          </button>
         </div>
       );
     }
 
+    // Root component
     function FamilyTree() {
       const [data, setData] = useState(initialFamilyData);
 
+      // Recursive update function for root node
+      function updateRoot(updatedNode) {
+        setData(updatedNode);
+      }
+
+      // Recursive delete function for root node (cannot delete root)
+      function deleteNode(idToDelete) {
+        function recursiveDelete(node) {
+          if (!node.children) return node;
+          const filteredChildren = node.children
+            .filter(c => c.id !== idToDelete)
+            .map(c => recursiveDelete(c));
+          return { ...node, children: filteredChildren };
+        }
+        setData(prev => recursiveDelete(prev));
+      }
+
       return (
         <div>
-          <h1 className="text-2xl font-bold mb-4 text-center">Collapsible Family Tree</h1>
+          <h1 className="text-3xl font-bold mb-6 text-center">Family Tree</h1>
           <TreeNode
             node={data}
-            onUpdate={updatedNode => setData(updatedNode)}
+            onUpdate={updateRoot}
+            // Root node should not have delete button, so no onDelete passed
           />
         </div>
       );
