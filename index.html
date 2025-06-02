@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Family Tree with Search, Collapsible Birthday/Deathday</title>
+  <title>Family Tree Editable with Search</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -29,7 +29,6 @@
     const { useState, useRef, useEffect } = React;
     let nextId = 100;
 
-    // Initial family data with spouses array (max 2 spouses allowed)
     const initialFamilyData = {
       id: 1,
       name: "Lolo",
@@ -147,6 +146,7 @@
               className="cursor-pointer hover:text-blue-600"
               onClick={() => setShowDates(!showDates)}
               title="Click to toggle spouse details"
+              onDoubleClick={() => setEditName(true)}
             >
               {spouse.name || <em>(unnamed)</em>}
             </span>
@@ -196,7 +196,6 @@
       const [showDates, setShowDates] = useState(false);
       const ref = useRef(null);
 
-      // Expand if this node is in ancestors or descendants open sets or is the selected node itself
       useEffect(() => {
         if (
           ancestorsOpenIds.has(node.id) ||
@@ -207,7 +206,6 @@
         }
       }, [ancestorsOpenIds, descendantsOpenIds, scrollToId]);
 
-      // Scroll to node when selected
       useEffect(() => {
         if (scrollToId === node.id && ref.current) {
           ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -253,66 +251,57 @@
       }
 
       function updateChild(updatedChild) {
-        const updatedChildren = node.children.map(c =>
+        const newChildren = (node.children || []).map(c =>
           c.id === updatedChild.id ? updatedChild : c
         );
-        updateNode({ ...node, children: updatedChildren });
+        updateNode({ ...node, children: newChildren });
       }
 
-      function deleteChild(childId) {
-        const updatedChildren = node.children.filter(c => c.id !== childId);
-        updateNode({ ...node, children: updatedChildren });
+      function deleteChild(id) {
+        const newChildren = (node.children || []).filter(c => c.id !== id);
+        updateNode({ ...node, children: newChildren });
       }
 
+      // Spouse handlers
       function addSpouse() {
-        if (node.spouses.length >= 2) {
-          alert("Maximum 2 spouses allowed.");
-          return;
-        }
+        if (!node.spouses) node.spouses = [];
+        if (node.spouses.length >= 2) return;
         const newSpouse = {
           id: nextId++,
           name: "New Spouse",
           birthday: "",
           deathday: "",
         };
-        const updatedSpouses = [...node.spouses, newSpouse];
-        updateNode({ ...node, spouses: updatedSpouses });
+        const newSpouses = [...node.spouses, newSpouse];
+        updateNode({ ...node, spouses: newSpouses });
       }
 
       function updateSpouse(updatedSpouse) {
-        const updatedSpouses = node.spouses.map(s =>
-          s.id === updatedSpouse.id ? updatedSpouse : s
-        );
-        updateNode({ ...node, spouses: updatedSpouses });
+        const newSpouses = node.spouses.map(s => (s.id === updatedSpouse.id ? updatedSpouse : s));
+        updateNode({ ...node, spouses: newSpouses });
       }
 
-      function deleteSpouse(spouseId) {
-        const updatedSpouses = node.spouses.filter(s => s.id !== spouseId);
-        updateNode({ ...node, spouses: updatedSpouses });
+      function deleteSpouse(id) {
+        const newSpouses = node.spouses.filter(s => s.id !== id);
+        updateNode({ ...node, spouses: newSpouses });
       }
 
-      // Determine if node is highlighted
-      const isHighlighted = highlightIds.has(node.id);
+      const highlight = highlightIds.has(node.id);
 
       return (
         <div
           ref={ref}
-          className={`ml-4 mt-3 border-l-2 border-gray-300 pl-4 relative ${isHighlighted ? "highlight" : ""}`}
+          className={`border-l border-gray-300 pl-4 mb-4 ${highlight ? "highlight" : ""}`}
         >
           <div className="flex items-center space-x-2">
-            {node.children && node.children.length > 0 ? (
-              <button
-                onClick={() => setOpen(!open)}
-                className="text-blue-600 font-bold w-6 h-6 flex items-center justify-center select-none"
-                aria-label={open ? "Collapse" : "Expand"}
-              >
-                {open ? "▼" : "▶"}
-              </button>
-            ) : (
-              <span className="w-6" />
-            )}
+            <button
+              onClick={() => setOpen(!open)}
+              className="select-none text-blue-600 font-bold"
+              title={open ? "Collapse children" : "Expand children"}
+            >
+              {open ? "▼" : "▶"}
+            </button>
 
-            {/* Name */}
             {editName ? (
               <input
                 type="text"
@@ -321,22 +310,22 @@
                 onBlur={saveName}
                 onKeyDown={e => { if (e.key === "Enter") saveName(); }}
                 autoFocus
-                className="border border-gray-400 rounded px-1 py-0.5 font-semibold text-gray-900 w-32"
+                className="border border-gray-400 rounded px-1 py-0.5 w-48"
               />
             ) : (
               <span
-                className={`font-semibold text-gray-900 hover:text-blue-700 cursor-pointer select-none`}
+                className="cursor-pointer font-semibold text-lg hover:text-blue-700"
                 onClick={() => setShowDates(!showDates)}
-                title="Click to toggle birthday and deathday"
+                onDoubleClick={() => setEditName(true)}
+                title="Click to toggle dates, double-click to edit name"
               >
-                {node.name}
+                {node.name || <em>(unnamed)</em>}
               </span>
             )}
 
-            <span className="text-gray-400">&nbsp;Spouse(s):&nbsp;</span>
-
-            <div className="flex space-x-3">
-              {node.spouses.length > 0 ? (
+            {/* Add spouse button */}
+            <div className="flex space-x-2 ml-4">
+              {node.spouses && node.spouses.length > 0 ? (
                 node.spouses.map(spouse => (
                   <SpouseItem
                     key={spouse.id}
@@ -347,9 +336,10 @@
                   />
                 ))
               ) : (
-                <span className="italic text-gray-400">(none)</span>
+                <span className="italic text-gray-400">(no spouses)</span>
               )}
-              {node.spouses.length < 2 && (
+
+              {(!node.spouses || node.spouses.length < 2) && (
                 <button
                   onClick={addSpouse}
                   className="ml-2 text-green-600 font-bold select-none"
@@ -389,7 +379,7 @@
 
           {/* Children */}
           {open && node.children && node.children.length > 0 && (
-            <div className="children-container mt-2">
+            <div className="children-container mt-2 ml-6 border-l border-gray-300 pl-4">
               {node.children.map(child => (
                 <TreeNode
                   key={child.id}
@@ -407,16 +397,6 @@
           )}
         </div>
       );
-    }
-
-    // Find person by id recursively
-    function findPersonById(node, id) {
-      if (node.id === id) return node;
-      for (const child of node.children || []) {
-        const found = findPersonById(child, id);
-        if (found) return found;
-      }
-      return null;
     }
 
     // Find person by name (case insensitive, partial match)
@@ -446,7 +426,6 @@
     // Find all descendants of a node by id (return set of ids)
     function findDescendants(node, targetId) {
       if (node.id === targetId) {
-        // Return all descendant ids including this node
         const ids = new Set();
         function collect(n) {
           ids.add(n.id);
@@ -492,7 +471,7 @@
           return { ...node, children: newChildren };
         }
         setFamily(family => {
-          if (family.id === id) return family; // cannot delete root (lolo)
+          if (family.id === id) return family; // cannot delete root
           return recursiveDelete(family);
         });
       }
@@ -513,15 +492,12 @@
 
       // When user clicks a search result
       function onSelectSearchResult(person) {
-        // If person is spouse, scroll to parent and highlight spouse by id
         if (person.isSpouse) {
-          // Highlight spouse and parent
           setHighlightIds(new Set([person.id, person.parentId]));
           setAncestorsOpenIds(new Set());
           setDescendantsOpenIds(new Set());
           setScrollToId(person.parentId);
         } else {
-          // Highlight the whole bloodline: ancestors + descendants + self
           const ancestors = findAncestors(family, person.id) || new Set();
           const descendants = findDescendants(family, person.id) || new Set();
           const allHighlight = new Set([...ancestors, ...descendants, person.id]);
@@ -536,7 +512,7 @@
 
       return (
         <div>
-          <h1 className="text-2xl font-bold mb-4">Family Tree</h1>
+          <h1 className="text-3xl font-bold mb-6 text-center">Family Tree</h1>
 
           <div className="relative mb-6">
             <input
