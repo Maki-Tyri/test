@@ -1,204 +1,263 @@
+// public/index.html
+/*
 <!DOCTYPE html>
 <html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Family Tree App</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
-</head>
-<body class="bg-gray-100 text-gray-900">
-  <div id="root" class="p-4"></div>
-
-  <script type="text/babel">
-
-    const { useState, useEffect, useRef } = React;
-
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_AUTH_DOMAIN",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_STORAGE_BUCKET",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID",
-    };
-
-    firebase.initializeApp(firebaseConfig);
-    const db = firebase.firestore();
-
-    function App() {
-      const [people, setPeople] = useState([]);
-      const [search, setSearch] = useState('');
-      const [highlightId, setHighlightId] = useState(null);
-      const [ancestorIds, setAncestorIds] = useState(new Set());
-
-      useEffect(() => {
-        const unsub = db.collection('people').onSnapshot(snapshot => {
-          const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-          setPeople(data);
-        });
-        return () => unsub();
-      }, []);
-
-      const findAncestors = (id, acc = new Set()) => {
-        people.forEach(p => {
-          if (p.children?.includes(id)) {
-            acc.add(p.id);
-            findAncestors(p.id, acc);
-          }
-        });
-        return acc;
-      };
-
-      const handleSearch = () => {
-        const person = people.find(p => p.name.toLowerCase().includes(search.toLowerCase()));
-        if (person) {
-          setHighlightId(person.id);
-          const ancestorSet = findAncestors(person.id);
-          setAncestorIds(ancestorSet);
-          document.getElementById(person.id)?.scrollIntoView({ behavior: "smooth", block: "center" });
-        } else {
-          alert("Person not found.");
-        }
-      };
-
-      const rootPeople = people.filter(p =>
-        !people.some(other => other.children?.includes(p.id))
-      );
-
-      return (
-        <div className="space-y-4">
-          <h1 className="text-2xl font-bold">Family Tree</h1>
-          <div className="flex gap-2">
-            <input
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              placeholder="Search by name"
-              className="border p-1 rounded"
-            />
-            <button onClick={handleSearch} className="bg-blue-500 text-white px-2 py-1 rounded">Search</button>
-          </div>
-          <div className="space-y-6">
-            {rootPeople.map(p => (
-              <TreeNode
-                key={p.id}
-                person={p}
-                people={people}
-                db={db}
-                highlightId={highlightId}
-                ancestorIds={ancestorIds}
-              />
-            ))}
-          </div>
-        </div>
-      );
-    }
-
-    function TreeNode({ person, people, db, highlightId, ancestorIds }) {
-      const [editing, setEditing] = useState(false);
-      const [name, setName] = useState(person.name);
-      const [birthday, setBirthday] = useState(person.birthday || '');
-      const [deathday, setDeathday] = useState(person.deathday || '');
-      const [showChildren, setShowChildren] = useState(true);
-
-      const isHighlighted = person.id === highlightId;
-      const isAncestor = ancestorIds.has(person.id);
-
-      const children = people.filter(p => person.children?.includes(p.id));
-      const spouses = people.filter(p => person.spouses?.includes(p.id));
-
-      const updatePerson = () => {
-        db.collection('people').doc(person.id).update({
-          name, birthday, deathday
-        });
-        setEditing(false);
-      };
-
-      const addSpouse = () => {
-        const spouseName = prompt("Enter spouse's name:");
-        if (spouseName) {
-          const newRef = db.collection('people').doc();
-          newRef.set({ name: spouseName, spouses: [person.id] });
-          db.collection('people').doc(person.id).update({
-            spouses: firebase.firestore.FieldValue.arrayUnion(newRef.id)
-          });
-        }
-      };
-
-      const addChild = () => {
-        const childName = prompt("Enter child's name:");
-        if (childName) {
-          const newRef = db.collection('people').doc();
-          newRef.set({ name: childName });
-          db.collection('people').doc(person.id).update({
-            children: firebase.firestore.FieldValue.arrayUnion(newRef.id)
-          });
-        }
-      };
-
-      const remove = () => {
-        if (confirm("Delete this person?")) {
-          db.collection('people').doc(person.id).delete();
-        }
-      };
-
-      return (
-        <div className={`ml-4 border-l-2 pl-4 relative ${isHighlighted ? "bg-yellow-200" : isAncestor ? "bg-green-100" : ""}`} id={person.id}>
-          <div className="flex items-center gap-2">
-            <button onClick={() => setShowChildren(!showChildren)} className="text-xs">
-              {showChildren ? '▼' : '▶'}
-            </button>
-
-            {editing ? (
-              <>
-                <input value={name} onChange={e => setName(e.target.value)} className="border rounded px-1 text-sm" />
-                <input value={birthday} onChange={e => setBirthday(e.target.value)} className="border rounded px-1 text-sm" placeholder="Birthday"/>
-                <input value={deathday} onChange={e => setDeathday(e.target.value)} className="border rounded px-1 text-sm" placeholder="Deathday"/>
-                <button onClick={updatePerson} className="text-green-500">✔</button>
-                <button onClick={() => setEditing(false)} className="text-red-500">✖</button>
-              </>
-            ) : (
-              <>
-                <span className="font-semibold">{person.name}</span>
-                {person.birthday && <span className="text-xs text-gray-600">({person.birthday}{person.deathday ? ` – ${person.deathday}` : ""})</span>}
-                <button onClick={() => setEditing(true)} className="text-blue-500 text-xs">✎</button>
-                <button onClick={addSpouse} className="text-indigo-500 text-xs">➕ Spouse</button>
-                <button onClick={addChild} className="text-green-500 text-xs">➕ Child</button>
-                <button onClick={remove} className="text-red-500 text-xs">🗑</button>
-              </>
-            )}
-          </div>
-
-          {/* Spouses */}
-          {spouses.length > 0 && (
-            <div className="ml-4 mt-1 text-sm italic text-gray-700">
-              Spouses: {spouses.map(s => s.name).join(", ")}
-            </div>
-          )}
-
-          {/* Children */}
-          {showChildren && children.length > 0 && (
-            <div className="ml-4 mt-2 space-y-2">
-              {children.map(child => (
-                <TreeNode
-                  key={child.id}
-                  person={child}
-                  people={people}
-                  db={db}
-                  highlightId={highlightId}
-                  ancestorIds={ancestorIds}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      );
-    }
-
-    ReactDOM.createRoot(document.getElementById('root')).render(<App />);
-  </script>
-</body>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Family Tree App</title>
+  </head>
+  <body>
+    <div id="root"></div>
+  </body>
 </html>
+*/
+
+// src/index.css
+/*
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+*/
+
+// src/main.jsx (or index.jsx)
+import React from "react";
+import ReactDOM from "react-dom/client";
+import App from "./App";
+import "./index.css";
+
+ReactDOM.createRoot(document.getElementById("root")).render(
+  <React.StrictMode><App /></React.StrictMode>
+);
+
+// src/App.jsx
+import React, { useState } from "react";
+import FamilyTree from "./FamilyTree";
+
+const initialTree = {
+  id: "1",
+  name: "Lolo Juan",
+  children: [
+    {
+      id: "2",
+      name: "Tatay Pedro",
+      children: [
+        { id: "4", name: "Ako", children: [] }
+      ],
+    },
+    { id: "3", name: "Tiyo Mario", children: [] },
+  ],
+};
+
+export default function App() {
+  const [treeData, setTreeData] = useState(initialTree);
+
+  const updateNode = (id, updatedName) => {
+    const update = (node) => {
+      if (node.id === id) return { ...node, name: updatedName };
+      return { ...node, children: node.children.map(update) };
+    };
+    setTreeData(update(treeData));
+  };
+
+  const deleteNode = (id) => {
+    const remove = (node) => ({
+      ...node,
+      children: node.children.filter(c => c.id !== id).map(remove),
+    });
+    setTreeData(remove(treeData));
+  };
+
+  return (
+    <div className="w-full h-screen">
+      <FamilyTree family={treeData} updateNode={updateNode} deleteNode={deleteNode} />
+    </div>
+  );
+}
+
+// src/FamilyTree.jsx
+import React, { useRef, useState } from "react";
+import TreeNode from "./TreeNode";
+
+const FamilyTree = ({ family, updateNode, deleteNode }) => {
+  const [scale, setScale] = useState(1);
+  const [highlightIds, setHighlightIds] = useState([]);
+  const [openIds, setOpenIds] = useState([]);
+  const [scrollToId, setScrollToId] = useState(null);
+
+  const wrapperRef = useRef(null);
+  const isDragging = useRef(false);
+  const lastPosition = useRef({ x: 0, y: 0 });
+
+  const startDragging = (e) => {
+    isDragging.current = true;
+    lastPosition.current = { x: e.clientX, y: e.clientY };
+    document.body.style.userSelect = "none";
+  };
+
+  const stopDragging = () => {
+    isDragging.current = false;
+    document.body.style.userSelect = "auto";
+  };
+
+  const onDragging = (e) => {
+    if (!isDragging.current || !wrapperRef.current) return;
+    const dx = e.clientX - lastPosition.current.x;
+    const dy = e.clientY - lastPosition.current.y;
+    wrapperRef.current.scrollLeft -= dx;
+    wrapperRef.current.scrollTop -= dy;
+    lastPosition.current = { x: e.clientX, y: e.clientY };
+  };
+
+  const searchAndHighlight = (node, targetName, ancestors = []) => {
+    let matches = [];
+    if (node.name.toLowerCase().includes(targetName.toLowerCase())) {
+      matches.push(node.id);
+      matches.push(...ancestors);
+    }
+    for (let child of node.children || []) {
+      matches.push(...searchAndHighlight(child, targetName, [...ancestors, node.id]));
+    }
+    return matches;
+  };
+
+  const handleSearch = (e) => {
+    const name = e.target.value.trim();
+    if (!name) {
+      setHighlightIds([]);
+      setOpenIds([]);
+      return;
+    }
+    const matches = searchAndHighlight(family, name);
+    setHighlightIds(matches);
+    setOpenIds(matches);
+    setScrollToId(matches[0] || null);
+  };
+
+  const onScrollHandled = () => {
+    setScrollToId(null);
+  };
+
+  const zoomIn = () => setScale((s) => Math.min(s + 0.1, 3));
+  const zoomOut = () => setScale((s) => Math.max(s - 0.1, 0.3));
+
+  return (
+    <div className="w-screen h-screen flex flex-col">
+      <div className="p-2 flex gap-2 bg-gray-100 border-b">
+        <input
+          type="text"
+          placeholder="Search name..."
+          onChange={handleSearch}
+          className="p-1 border rounded flex-grow"
+        />
+        <button onClick={zoomOut} className="px-2 py-1 bg-gray-200 rounded">-</button>
+        <button onClick={zoomIn} className="px-2 py-1 bg-gray-200 rounded">+</button>
+      </div>
+
+      <div
+        ref={wrapperRef}
+        onMouseDown={startDragging}
+        onMouseMove={onDragging}
+        onMouseUp={stopDragging}
+        onMouseLeave={stopDragging}
+        className="flex-1 overflow-auto cursor-grab active:cursor-grabbing bg-white"
+      >
+        <div
+          style={{
+            transform: `scale(${scale})`,
+            transformOrigin: "top left",
+            width: "2000px",
+            height: "2000px",
+            padding: "2rem",
+          }}
+        >
+          <TreeNode
+            node={family}
+            onUpdate={updateNode}
+            onDelete={deleteNode}
+            highlightIds={highlightIds}
+            openIds={openIds}
+            scrollToId={scrollToId}
+            onScrollHandled={onScrollHandled}
+          />
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default FamilyTree;
+
+// src/TreeNode.jsx
+import React, { useEffect, useRef } from "react";
+
+const TreeNode = ({
+  node,
+  onUpdate,
+  onDelete,
+  highlightIds,
+  openIds,
+  scrollToId,
+  onScrollHandled,
+}) => {
+  const ref = useRef(null);
+  const isHighlighted = highlightIds.includes(node.id);
+  const isOpen = openIds.includes(node.id);
+
+  useEffect(() => {
+    if (scrollToId === node.id && ref.current) {
+      ref.current.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+      onScrollHandled();
+    }
+  }, [scrollToId, node.id, onScrollHandled]);
+
+  return (
+    <div ref={ref} className="relative inline-block text-center m-4">
+      <div
+        className={`inline-block px-4 py-2 border rounded shadow ${
+          isHighlighted ? "bg-yellow-200" : "bg-white"
+        }`}
+      >
+        <div>{node.name}</div>
+        <div className="mt-1 space-x-2 text-sm">
+          <button
+            onClick={() => {
+              const newName = prompt("New name:", node.name);
+              if (newName && newName.trim() !== "") onUpdate(node.id, newName.trim());
+            }}
+            aria-label="Edit"
+          >
+            ✏️
+          </button>
+          <button
+            onClick={() => {
+              if (window.confirm(`Delete ${node.name}?`)) onDelete(node.id);
+            }}
+            aria-label="Delete"
+          >
+            🗑️
+          </button>
+        </div>
+      </div>
+
+      {isOpen && node.children?.length > 0 && (
+        <div className="mt-4 flex justify-center space-x-8">
+          {node.children.map((child) => (
+            <TreeNode
+              key={child.id}
+              node={child}
+              onUpdate={onUpdate}
+              onDelete={onDelete}
+              highlightIds={highlightIds}
+              openIds={openIds}
+              scrollToId={scrollToId}
+              onScrollHandled={onScrollHandled}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default TreeNode;
