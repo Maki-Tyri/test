@@ -3,23 +3,19 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Family Tree App</title>
-  <!-- Tailwind CSS CDN -->
+  <title>Family Tree</title>
   <script src="https://cdn.tailwindcss.com"></script>
-  <!-- React and ReactDOM CDN -->
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
-  <!-- Framer Motion CDN -->
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
   <script crossorigin src="https://unpkg.com/framer-motion/dist/framer-motion.umd.js"></script>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-6">
-  <div id="root" class="max-w-4xl w-full"></div>
+<body class="bg-gray-50 p-6">
+  <div id="root" class="max-w-4xl mx-auto"></div>
 
-  <script type="text/javascript">
+  <script>
     const { useState } = React;
-    const { motion, AnimatePresence } = window["framer-motion"];
+    const { motion, AnimatePresence } = window['framer-motion'];
 
-    // Family data with nested children (grandkids)
     const familyData = {
       name: "John Doe",
       spouse: "Jane Doe",
@@ -42,72 +38,50 @@
       ],
     };
 
-    const cardVariants = {
-      hidden: { opacity: 0, y: 20 },
-      visible: { opacity: 1, y: 0 },
-      exit: { opacity: 0, y: -20 },
-    };
-
-    // Family member component with spouse toggle & children recursion
     function FamilyMember({ member }) {
       const [showSpouse, setShowSpouse] = useState(false);
 
-      return React.createElement(
-        motion.div,
-        {
+      return (
+        React.createElement(motion.div, {
           layout: true,
-          initial: "hidden",
-          animate: "visible",
-          exit: "exit",
-          variants: cardVariants,
-          className:
-            "bg-white shadow-md rounded p-4 m-2 border cursor-pointer max-w-xs",
-          onClick: () => setShowSpouse((prev) => !prev),
+          initial: { opacity: 0, y: 10 },
+          animate: { opacity: 1, y: 0 },
+          exit: { opacity: 0, y: -10 },
+          className: "bg-white rounded shadow p-4 m-2 border cursor-pointer max-w-xs",
+          onClick: () => setShowSpouse(!showSpouse),
         },
-        React.createElement("div", { className: "font-semibold text-lg" }, member.name),
-        member.spouse &&
-          React.createElement(
+          React.createElement("div", { className: "font-semibold text-lg" }, member.name),
+          member.spouse && React.createElement(
             AnimatePresence,
             null,
-            showSpouse &&
-              React.createElement(
-                motion.div,
-                {
-                  key: "spouse",
-                  initial: { opacity: 0, scale: 0.8 },
-                  animate: { opacity: 1, scale: 1 },
-                  exit: { opacity: 0, scale: 0.8 },
-                  className: "text-sm text-gray-600 mt-1",
-                },
-                "Spouse: " + member.spouse
-              )
+            showSpouse && React.createElement(motion.div, {
+              key: "spouse",
+              initial: { opacity: 0, scale: 0.8 },
+              animate: { opacity: 1, scale: 1 },
+              exit: { opacity: 0, scale: 0.8 },
+              className: "text-sm text-gray-600 mt-1"
+            }, `Spouse: ${member.spouse}`)
           ),
-        member.children && member.children.length > 0 &&
-          React.createElement(
+          member.children && member.children.length > 0 && React.createElement(
             motion.div,
             { layout: true, className: "ml-6 mt-4 border-l-2 border-gray-300 pl-4" },
             member.children.map((child, i) =>
               React.createElement(FamilyMember, { key: child.name + i, member: child })
             )
           )
+        )
       );
     }
 
-    // Main App component
     function App() {
-      return React.createElement(
-        "div",
-        { className: "min-h-screen bg-gray-50 p-6 flex justify-center" },
-        React.createElement(
-          "div",
-          { className: "max-w-4xl w-full" },
-          React.createElement("h1", { className: "text-3xl font-bold mb-6 text-center" }, "Family Tree"),
+      return (
+        React.createElement("div", { className: "min-h-screen flex flex-col items-center" },
+          React.createElement("h1", { className: "text-3xl font-bold mb-6" }, "Family Tree"),
           React.createElement(FamilyMember, { member: familyData })
         )
       );
     }
 
-    // Render the app
     ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(App));
   </script>
 </body>
