@@ -206,7 +206,6 @@ function Login({ onLogin }) {
   );
 }
 
-// Relation dropdown options by context
 const relationOptionsByContext = {
   child: ["Son", "Daughter"],
   spouse: ["Spouse"],
@@ -214,31 +213,23 @@ const relationOptionsByContext = {
 };
 
 function MemberForm({ initialData = {}, onCancel, onSave, members, parentId, formType }) {
-  // formType = "child" | "spouse" | "edit"
   const [form, setForm] = useState({
     name: initialData.name || "",
     relation: initialData.relation || (formType === "spouse" ? "Spouse" : ""),
     birthDate: initialData.birthDate || "",
     deathDate: initialData.deathDate || "",
     deceased: initialData.deceased || false,
-    spouseId: initialData.spouseId || "",
   });
 
-  // Filter spouse options for edit form excluding self and current spouse
-  let spouseOptions = [];
-  if (formType === "edit") {
-    spouseOptions = Object.values(members).filter(m =>
-      m.id !== initialData.id &&
-      m.parentId === initialData.parentId &&
-      m.relation === "Spouse"
-    );
-  }
+  // Determine context for relation dropdown options
+  const context = formType === "child" ? "child" : formType === "spouse" ? "spouse" : "edit";
+  const options = relationOptionsByContext[context] || [];
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm(prev => ({
-      ...prev,
-      [name]: type === "checkbox" ? checked : value
+    setForm((f) => ({
+      ...f,
+      [name]: type === "checkbox" ? checked : value,
     }));
   };
 
@@ -248,74 +239,59 @@ function MemberForm({ initialData = {}, onCancel, onSave, members, parentId, for
     onSave(form);
   };
 
-  return React.createElement("form", { onSubmit: handleSubmit, className: "member-form" },
-    React.createElement("div", { className: "mb-2" },
-      React.createElement("label", { className: "block mb-1 font-semibold" }, "Name"),
+  return React.createElement("form", { onSubmit: handleSubmit, className: "member-form space-y-3" },
+    React.createElement("div", { className: "flex flex-col" },
+      React.createElement("label", null, "Name"),
       React.createElement("input", {
+        type: "text",
         name: "name",
         value: form.name,
         onChange: handleChange,
-        className: "w-full rounded border px-3 py-2",
-        required: true
+        className: "px-3 py-1 rounded border"
       })
     ),
-    (formType === "child" || formType === "edit") && React.createElement("div", { className: "mb-2" },
-      React.createElement("label", { className: "block mb-1 font-semibold" }, "Relation"),
+    React.createElement("div", { className: "flex flex-col" },
+      React.createElement("label", null, "Relation"),
       React.createElement("select", {
         name: "relation",
         value: form.relation,
         onChange: handleChange,
-        className: "w-full rounded border px-3 py-2"
+        className: "px-3 py-1 rounded border"
       },
-        (relationOptionsByContext[formType] || []).map(rel =>
-          React.createElement("option", { key: rel, value: rel }, rel)
-        )
+        options.map((opt) => React.createElement("option", { key: opt, value: opt }, opt))
       )
     ),
-    React.createElement("div", { className: "mb-2" },
-      React.createElement("label", { className: "block mb-1 font-semibold" }, "Birth Date"),
+    React.createElement("div", { className: "flex flex-col" },
+      React.createElement("label", null, "Birth Date"),
       React.createElement("input", {
         type: "date",
         name: "birthDate",
         value: form.birthDate,
         onChange: handleChange,
-        className: "w-full rounded border px-3 py-2"
+        className: "px-3 py-1 rounded border"
       })
     ),
-    React.createElement("div", { className: "mb-2" },
-      React.createElement("label", { className: "block mb-1 font-semibold" }, "Death Date"),
+    React.createElement("div", { className: "flex flex-col" },
+      React.createElement("label", null, "Death Date"),
       React.createElement("input", {
         type: "date",
         name: "deathDate",
         value: form.deathDate,
         onChange: handleChange,
-        className: "w-full rounded border px-3 py-2"
+        className: "px-3 py-1 rounded border"
       })
     ),
-    React.createElement("div", { className: "mb-2 flex items-center gap-2" },
+    React.createElement("label", { className: "flex items-center space-x-2" },
       React.createElement("input", {
         type: "checkbox",
         name: "deceased",
         checked: form.deceased,
-        onChange: handleChange,
-        id: "deceased-checkbox"
+        onChange: handleChange
       }),
-      React.createElement("label", { htmlFor: "deceased-checkbox", className: "font-semibold" }, "Deceased")
+      React.createElement("span", null, "Deceased")
     ),
-    formType === "edit" && React.createElement("div", { className: "mb-2" },
-      React.createElement("label", { className: "block mb-1 font-semibold" }, "Spouse"),
-      React.createElement("select", {
-        name: "spouseId",
-        value: form.spouseId,
-        onChange: handleChange,
-        className: "w-full rounded border px-3 py-2"
-      },
-        React.createElement("option", { value: "" }, "(None)"),
-        spouseOptions.map(sp => React.createElement("option", { key: sp.id, value: sp.id }, sp.name))
-      )
-    ),
-    React.createElement("div", { className: "flex gap-3 mt-3" },
-      React.createElement("button", { type: "submit", className: "small-btn add-child-btn" }, "Save"),
+    React.createElement("div", { className: "flex gap-4" },
+      React.createElement("button", { type: "submit", className: "small-btn edit-btn" }, "Save"),
       React.createElement("button", {
         type: "button",
         onClick: onCancel,
@@ -333,282 +309,282 @@ function Member({
   onEditMember,
   onDeleteMember,
   level = 0,
-  rootId
+  parentId = null
 }) {
   const [showChildren, setShowChildren] = useState(true);
-  const [showChildForm, setShowChildForm] = useState(false);
-  const [showSpouseForm, setShowSpouseForm] = useState(false);
+  const [showAddChildForm, setShowAddChildForm] = useState(false);
+  const [showAddSpouseForm, setShowAddSpouseForm] = useState(false);
   const [showEditForm, setShowEditForm] = useState(false);
 
-  // Get children of this member
-  const children = Object.values(members).filter(m => m.parentId === member.id && m.relation !== "Spouse");
+  const children = members.filter((m) => m.parentId === member.id);
+  const spouse = member.spouseId ? members.find((m) => m.id === member.spouseId) : null;
 
-  // Get spouses of this member
-  const spouses = Object.values(members).filter(m => m.parentId === member.parentId && m.relation === "Spouse" && (m.id === member.spouseId || member.spouseId === m.id));
-
-  // Find spouse if any
-  const spouse = member.spouseId ? members[member.spouseId] : null;
-
-  const handleAddChild = (childData) => {
-    onAddChild(member.id, childData);
-    setShowChildForm(false);
+  // Handle add child save
+  const handleAddChildSave = (data) => {
+    onAddChild(member.id, data);
+    setShowAddChildForm(false);
+    setShowChildren(true);
   };
-  const handleAddSpouse = (spouseData) => {
-    onAddSpouse(member.parentId, spouseData, member.id);
-    setShowSpouseForm(false);
+
+  // Handle add spouse save
+  const handleAddSpouseSave = (data) => {
+    onAddSpouse(member.id, data);
+    setShowAddSpouseForm(false);
   };
-  const handleEditMember = (editData) => {
-    onEditMember(member.id, editData);
+
+  // Handle edit save
+  const handleEditSave = (data) => {
+    onEditMember(member.id, data);
     setShowEditForm(false);
+  };
+
+  // Toggle children visibility
+  const toggleChildren = () => {
+    setShowChildren(!showChildren);
   };
 
   return React.createElement("div", { className: "member-container" },
     React.createElement("div", { className: "member-header" },
-      React.createElement("div", { className: "font-bold text-lg" }, member.name),
-      member.deceased && React.createElement("span", { className: "deceased-icon" }, "✝"),
-      React.createElement("div", { className: "member-dates" }, 
-        member.birthDate ? `b. ${member.birthDate}` : "",
-        member.deathDate ? ` - d. ${member.deathDate}` : ""
-      ),
       React.createElement("button", {
         className: "small-btn add-child-btn",
-        title: "Add Child",
-        onClick: () => setShowChildForm(!showChildForm)
-      }, "+Child"),
-      !spouse && React.createElement("button", {
+        onClick: () => setShowAddChildForm(!showAddChildForm),
+        title: "Add Child"
+      }, "+ Child"),
+      !showChildren && children.length > 0 &&
+      React.createElement("button", {
+        className: "small-btn add-child-btn",
+        onClick: toggleChildren,
+        title: "Show Children"
+      }, `Show ${children.length} child${children.length > 1 ? "ren" : ""}`),
+      showChildren && children.length > 0 &&
+      React.createElement("button", {
+        className: "small-btn delete-btn",
+        onClick: toggleChildren,
+        title: "Hide Children"
+      }, `Hide ${children.length} child${children.length > 1 ? "ren" : ""}`),
+      React.createElement("button", {
         className: "small-btn add-spouse-btn",
-        title: "Add Spouse",
-        onClick: () => setShowSpouseForm(!showSpouseForm)
-      }, "+Spouse"),
+        onClick: () => setShowAddSpouseForm(!showAddSpouseForm),
+        disabled={!!spouse},
+        title={spouse ? "Already has a spouse" : "Add Spouse"}
+      }, "+ Spouse"),
       React.createElement("button", {
         className: "small-btn edit-btn",
-        title: "Edit Member",
-        onClick: () => setShowEditForm(!showEditForm)
+        onClick: () => setShowEditForm(!showEditForm),
+        title: "Edit Member"
       }, "Edit"),
       React.createElement("button", {
         className: "small-btn delete-btn",
-        title: "Delete Member",
-        onClick: () => {
-          if (confirm(`Delete member "${member.name}" and all descendants?`)) {
-            onDeleteMember(member.id);
-          }
-        }
-      }, "Del"),
-      children.length > 0 && React.createElement("button", {
-        className: "small-btn",
-        onClick: () => setShowChildren(!showChildren),
-        title: showChildren ? "Hide Children" : "Show Children"
-      }, showChildren ? "−" : "+")
+        onClick={() => onDeleteMember(member.id)},
+        title: "Delete Member"
+      }, "Delete")
     ),
-    showChildForm && React.createElement(MemberForm, {
-      formType: "child",
-      onCancel: () => setShowChildForm(false),
-      onSave: handleAddChild,
-      parentId: member.id,
-      members
-    }),
-    showSpouseForm && React.createElement(MemberForm, {
-      formType: "spouse",
-      onCancel: () => setShowSpouseForm(false),
-      onSave: handleAddSpouse,
-      parentId: member.parentId,
-      members
-    }),
-    showEditForm && React.createElement(MemberForm, {
-      formType: "edit",
-      initialData: member,
-      onCancel: () => setShowEditForm(false),
-      onSave: handleEditMember,
-      members
-    }),
+    React.createElement("div", { className: "mt-1" },
+      React.createElement("strong", { className: "text-lg" }, member.name),
+      React.createElement("span", { className: "member-dates ml-2" },
+        member.birthDate ? `(${member.birthDate}` : "",
+        member.deathDate ? ` - ${member.deathDate})` : (member.birthDate ? ")" : ""),
+        member.deceased && React.createElement("span", { className: "deceased-icon", title: "Deceased" }, "†")
+      )
+    ),
     spouse && React.createElement("div", { className: "spouse-line-container" },
       React.createElement("div", { className: "spouse-line" }),
-      React.createElement("div", { className: "spouse-name" }, spouse.name)
+      React.createElement("span", { className: "spouse-name" }, spouse.name)
     ),
-    showChildren && children.map(child =>
-      React.createElement(Member, {
-        key: child.id,
-        member: child,
-        members,
-        onAddChild,
-        onAddSpouse,
-        onEditMember,
-        onDeleteMember,
-        level: level + 1,
-        rootId
-      })
+    showAddChildForm && React.createElement(MemberForm, {
+      onCancel: () => setShowAddChildForm(false),
+      onSave: handleAddChildSave,
+      formType: "child"
+    }),
+    showAddSpouseForm && React.createElement(MemberForm, {
+      onCancel: () => setShowAddSpouseForm(false),
+      onSave: handleAddSpouseSave,
+      formType: "spouse"
+    }),
+    showEditForm && React.createElement(MemberForm, {
+      initialData: member,
+      onCancel: () => setShowEditForm(false),
+      onSave: handleEditSave,
+      formType: "edit"
+    }),
+    showChildren && children.length > 0 && React.createElement("div", { className: "mt-2 ml-6 border-l-2 border-indigo-300" },
+      children.map((child) =>
+        React.createElement(Member, {
+          key: child.id,
+          member: child,
+          members: members,
+          onAddChild,
+          onAddSpouse,
+          onEditMember,
+          onDeleteMember,
+          level: level + 1,
+          parentId: member.id
+        })
+      )
     )
   );
 }
 
-function FamilyTree() {
-  const [members, setMembers] = useState({});
+function FamilyTreeApp() {
+  const [members, setMembers] = useState([]);
+  const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
-  const [rootId, setRootId] = useState(null);
 
   useEffect(() => {
-    // Load from Firebase Realtime DB on mount
-    const user = auth.currentUser;
-    if (!user) return;
-
-    const dbRef = db.ref(`users/${user.uid}/familyTree`);
-    dbRef.on("value", snapshot => {
-      const data = snapshot.val() || {};
-      setMembers(data);
-
-      // Find root member with no parentId
-      const roots = Object.values(data).filter(m => !m.parentId);
-      setRootId(roots.length ? roots[0].id : null);
-
-      setLoading(false);
+    const unsubscribe = auth.onAuthStateChanged(async (u) => {
+      if (u) {
+        setUser(u);
+        // Listen to database changes
+        const membersRef = db.ref(`familyTree/${u.uid}/members`);
+        membersRef.on("value", (snapshot) => {
+          const data = snapshot.val();
+          if (data) {
+            setMembers(Object.values(data));
+          } else {
+            setMembers([]);
+          }
+          setLoading(false);
+        });
+      } else {
+        setUser(null);
+        setMembers([]);
+        setLoading(false);
+      }
     });
-
-    return () => dbRef.off();
+    return () => unsubscribe();
   }, []);
 
-  const saveMembers = (newMembers) => {
-    const user = auth.currentUser;
+  const saveMembersToDB = (newMembers) => {
     if (!user) return;
-    setMembers(newMembers);
-    db.ref(`users/${user.uid}/familyTree`).set(newMembers);
+    const membersRef = db.ref(`familyTree/${user.uid}/members`);
+    const membersById = {};
+    newMembers.forEach((m) => {
+      membersById[m.id] = m;
+    });
+    membersRef.set(membersById);
   };
 
+  // Utility to generate unique IDs
+  const generateId = () => Math.random().toString(36).substr(2, 9);
+
+  // Add child to a parent
   const addChild = (parentId, childData) => {
-    const id = "m" + Date.now();
     const newChild = {
-      id,
+      id: generateId(),
       parentId,
       ...childData
     };
-    saveMembers({
-      ...members,
-      [id]: newChild
-    });
+    const updated = [...members, newChild];
+    setMembers(updated);
+    saveMembersToDB(updated);
   };
 
-  const addSpouse = (parentId, spouseData, memberId) => {
-    const id = "m" + Date.now();
+  // Add spouse to a member
+  const addSpouse = (memberId, spouseData) => {
     const newSpouse = {
-      id,
-      parentId,
-      ...spouseData,
-      relation: "Spouse"
+      id: generateId(),
+      spouseId: memberId,
+      ...spouseData
     };
-    const updatedMembers = {
-      ...members,
-      [id]: newSpouse,
-      [memberId]: {
-        ...members[memberId],
-        spouseId: id
-      }
-    };
-    saveMembers(updatedMembers);
+    // Update original member with spouseId
+    const updated = members.map((m) => {
+      if (m.id === memberId) return { ...m, spouseId: newSpouse.id };
+      return m;
+    });
+    updated.push(newSpouse);
+    setMembers(updated);
+    saveMembersToDB(updated);
   };
 
-  const editMember = (id, editData) => {
-    const updatedMembers = {
-      ...members,
-      [id]: {
-        ...members[id],
-        ...editData
-      }
-    };
-    saveMembers(updatedMembers);
+  // Edit member
+  const editMember = (memberId, newData) => {
+    const updated = members.map((m) => (m.id === memberId ? { ...m, ...newData } : m));
+    setMembers(updated);
+    saveMembersToDB(updated);
   };
 
-  // Recursively delete member and descendants
-  const deleteMember = (id) => {
-    const toDelete = [id];
-    const collectDescendants = (memberId) => {
-      Object.values(members).forEach(m => {
-        if (m.parentId === memberId) {
-          toDelete.push(m.id);
-          collectDescendants(m.id);
-        }
+  // Delete member and their descendants + spouse links
+  const deleteMember = (memberId) => {
+    // Remove member and their descendants recursively
+    const idsToRemove = new Set();
+    const gatherDescendants = (id) => {
+      idsToRemove.add(id);
+      members.forEach((m) => {
+        if (m.parentId === id) gatherDescendants(m.id);
       });
+      // Also remove spouse
+      const member = members.find((m) => m.id === id);
+      if (member?.spouseId) idsToRemove.add(member.spouseId);
     };
-    collectDescendants(id);
+    gatherDescendants(memberId);
 
-    // Also if this member has a spouse, delete spouse
-    const member = members[id];
-    if (member.spouseId) toDelete.push(member.spouseId);
+    const updated = members.filter((m) => !idsToRemove.has(m.id));
 
-    const newMembers = {...members};
-    toDelete.forEach(did => {
-      delete newMembers[did];
+    // Also remove spouseId reference from others
+    const cleaned = updated.map((m) => {
+      if (m.spouseId && idsToRemove.has(m.spouseId)) {
+        return { ...m, spouseId: null };
+      }
+      return m;
     });
 
-    saveMembers(newMembers);
+    setMembers(cleaned);
+    saveMembersToDB(cleaned);
   };
-
-  if (loading) return React.createElement("div", { className: "text-white text-center mt-20" }, "Loading family tree...");
-
-  if (!rootId) {
-    // No root member yet - show form to add
-    return React.createElement("div", { className: "max-w-md mx-auto mt-24 p-8 bg-white bg-opacity-70 rounded-lg shadow-lg backdrop-blur-md" },
-      React.createElement("h2", { className: "text-3xl font-bold mb-6 text-center" }, "Create Root Member"),
-      React.createElement(MemberForm, {
-        onCancel: () => {},
-        onSave: (data) => {
-          const id = "m" + Date.now();
-          const newRoot = {
-            id,
-            parentId: null,
-            ...data
-          };
-          saveMembers({
-            ...members,
-            [id]: newRoot
-          });
-          setRootId(id);
-        },
-        formType: "child",
-        members
-      })
-    );
-  }
-
-  return React.createElement("div", null,
-    React.createElement(Member, {
-      member: members[rootId],
-      members,
-      onAddChild: addChild,
-      onAddSpouse: addSpouse,
-      onEditMember: editMember,
-      onDeleteMember: deleteMember,
-      rootId
-    })
-  );
-}
-
-function App() {
-  const [user, setUser] = useState(null);
-
-  useEffect(() => {
-    const unsubscribe = auth.onAuthStateChanged(u => {
-      setUser(u);
-    });
-    return unsubscribe;
-  }, []);
 
   if (!user) {
-    return React.createElement(Login, { onLogin: () => setUser(auth.currentUser) });
+    return React.createElement(Login, { onLogin: () => setLoading(true) });
   }
 
-  return React.createElement("div", { className: "max-w-5xl mx-auto p-6 bg-white bg-opacity-90 rounded-lg shadow-lg mt-10" },
-    React.createElement("div", { className: "flex justify-between items-center mb-6" },
-      React.createElement("h1", { className: "text-4xl font-extrabold text-indigo-700" }, "Family Tree"),
-      React.createElement("button", {
-        className: "small-btn delete-btn",
-        onClick: () => auth.signOut()
-      }, "Logout")
+  if (loading) {
+    return React.createElement("div", { className: "text-center mt-24 text-white font-bold text-xl" }, "Loading...");
+  }
+
+  // Find top-level members (no parent)
+  const topMembers = members.filter((m) => !m.parentId);
+
+  return React.createElement("div", { className: "text-white" },
+    React.createElement("h1", { className: "text-4xl font-extrabold mb-6 text-center drop-shadow-lg" }, "Family Tree"),
+    topMembers.length === 0 && React.createElement("p", { className: "text-center" }, "No members yet. Add your first member."),
+    topMembers.map((m) =>
+      React.createElement(Member, {
+        key: m.id,
+        member: m,
+        members,
+        onAddChild: addChild,
+        onAddSpouse: addSpouse,
+        onEditMember: editMember,
+        onDeleteMember: deleteMember
+      })
     ),
-    React.createElement(FamilyTree, null)
+    React.createElement("button", {
+      className: "mt-8 block mx-auto px-6 py-3 bg-indigo-600 rounded-md font-semibold hover:bg-indigo-700",
+      onClick: () => {
+        const newId = generateId();
+        const newMember = {
+          id: newId,
+          name: `Member ${members.length + 1}`,
+          birthDate: "",
+          deathDate: "",
+          deceased: false
+        };
+        const updated = [...members, newMember];
+        setMembers(updated);
+        saveMembersToDB(updated);
+      }
+    }, "+ Add Top-level Member"),
+    React.createElement("button", {
+      className: "mt-4 block mx-auto px-6 py-3 bg-red-600 rounded-md font-semibold hover:bg-red-700",
+      onClick: async () => {
+        await auth.signOut();
+        setUser(null);
+        setMembers([]);
+      }
+    }, "Logout")
   );
 }
 
-const root = ReactDOM.createRoot(document.getElementById("root"));
-root.render(React.createElement(App));
+ReactDOM.createRoot(document.getElementById("root")).render(React.createElement(FamilyTreeApp));
 </script>
 
 </body>
