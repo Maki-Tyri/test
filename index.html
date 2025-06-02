@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" >
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Family Tree with up to Two Spouses</title>
+  <title>Family Tree with Search, Collapsible Birthday/Deathday</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
   <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
@@ -13,15 +13,20 @@
       transition: max-height 0.3s ease, opacity 0.3s ease;
       overflow: hidden;
     }
+    .highlight {
+      background-color: #ffe58f;
+      border-radius: 0.25rem;
+      box-shadow: 0 0 8px 2px #ffd666aa;
+    }
   </style>
 </head>
-<body class="bg-gray-50 min-h-screen flex items-center justify-center p-4">
+<body class="bg-gray-50 min-h-screen flex flex-col items-center p-4">
 
-  <div id="root" class="w-full max-w-3xl bg-white p-6 rounded shadow"></div>
+  <div id="root" class="w-full max-w-4xl bg-white p-6 rounded shadow"></div>
 
   <script type="text/babel">
 
-    const { useState } = React;
+    const { useState, useRef, useEffect } = React;
     let nextId = 100;
 
     // Initial family data with spouses array (max 2 spouses allowed)
@@ -110,9 +115,10 @@
       );
     }
 
-    function SpouseItem({ spouse, onUpdate, onDelete }) {
+    function SpouseItem({ spouse, onUpdate, onDelete, highlight }) {
       const [editName, setEditName] = useState(false);
       const [tempName, setTempName] = useState(spouse.name);
+      const [showDates, setShowDates] = useState(false);
 
       function saveName() {
         onUpdate({ ...spouse, name: tempName });
@@ -124,7 +130,7 @@
       }
 
       return (
-        <div className="flex items-center space-x-2 text-sm text-gray-700 italic">
+        <div className={`flex items-center space-x-2 text-sm text-gray-700 italic ${highlight ? "highlight" : ""}`}>
           {/* Name */}
           {editName ? (
             <input
@@ -139,43 +145,76 @@
           ) : (
             <span
               className="cursor-pointer hover:text-blue-600"
-              onClick={() => setEditName(true)}
-              title="Click to edit spouse name"
+              onClick={() => setShowDates(!showDates)}
+              title="Click to toggle spouse details"
             >
               {spouse.name || <em>(unnamed)</em>}
             </span>
           )}
 
-          <EditableField
-            label="Bday"
-            type="date"
-            value={spouse.birthday}
-            onChange={val => updateField("birthday", val)}
-          />
-          <EditableField
-            label="Dday"
-            type="date"
-            value={spouse.deathday}
-            onChange={val => updateField("deathday", val)}
-          />
-
-          <button
-            onClick={() => onDelete(spouse.id)}
-            className="text-red-600 hover:text-red-800 font-bold select-none"
-            title="Delete spouse"
-          >
-            ×
-          </button>
+          {/* Birthday & Deathday - toggle visible */}
+          {showDates && (
+            <>
+              <EditableField
+                label="Bday"
+                type="date"
+                value={spouse.birthday}
+                onChange={val => updateField("birthday", val)}
+              />
+              <EditableField
+                label="Dday"
+                type="date"
+                value={spouse.deathday}
+                onChange={val => updateField("deathday", val)}
+              />
+              <button
+                onClick={() => onDelete(spouse.id)}
+                className="text-red-600 hover:text-red-800 font-bold select-none"
+                title="Delete spouse"
+              >
+                ×
+              </button>
+            </>
+          )}
         </div>
       );
     }
 
-    function TreeNode({ node, onUpdate, onDelete }) {
+    function TreeNode({
+      node,
+      onUpdate,
+      onDelete,
+      highlightIds = new Set(),
+      ancestorsOpenIds = new Set(),
+      descendantsOpenIds = new Set(),
+      scrollToId = null,
+      onScrollHandled,
+    }) {
       const [open, setOpen] = useState(false);
       const [editName, setEditName] = useState(false);
       const [tempName, setTempName] = useState(node.name);
+      const [showDates, setShowDates] = useState(false);
+      const ref = useRef(null);
 
-      // Update node helper
+      // Expand if this node is in ancestors or descendants open sets or is the selected node itself
+      useEffect(() => {
+        if (
+          ancestorsOpenIds.has(node.id) ||
+          descendantsOpenIds.has(node.id) ||
+          node.id === scrollToId
+        ) {
+          setOpen(true);
+        }
+      }, [ancestorsOpenIds, descendantsOpenIds, scrollToId]);
+
+      // Scroll to node when selected
+      useEffect(() => {
+        if (scrollToId === node.id && ref.current) {
+          ref.current.scrollIntoView({ behavior: "smooth", block: "center" });
+          onScrollHandled && onScrollHandled();
+        }
+      }, [scrollToId]);
+
       function updateNode(newNode) {
         onUpdate(newNode);
       }
@@ -185,15 +224,14 @@
         setEditName(false);
       }
 
-      // Update birthday/deathday
       function updateBirthday(val) {
         updateNode({ ...node, birthday: val });
       }
+
       function updateDeathday(val) {
         updateNode({ ...node, deathday: val });
       }
 
-      // Add child
       function addChild() {
         const newChild = {
           id: nextId++,
@@ -208,14 +246,12 @@
         setOpen(true);
       }
 
-      // Delete this node
       function handleDelete() {
         if (confirm(`Delete ${node.name} and all descendants?`)) {
           onDelete(node.id);
         }
       }
 
-      // Update child node
       function updateChild(updatedChild) {
         const updatedChildren = node.children.map(c =>
           c.id === updatedChild.id ? updatedChild : c
@@ -223,13 +259,11 @@
         updateNode({ ...node, children: updatedChildren });
       }
 
-      // Delete child node
       function deleteChild(childId) {
         const updatedChildren = node.children.filter(c => c.id !== childId);
         updateNode({ ...node, children: updatedChildren });
       }
 
-      // Add spouse (max 2)
       function addSpouse() {
         if (node.spouses.length >= 2) {
           alert("Maximum 2 spouses allowed.");
@@ -245,7 +279,6 @@
         updateNode({ ...node, spouses: updatedSpouses });
       }
 
-      // Update spouse
       function updateSpouse(updatedSpouse) {
         const updatedSpouses = node.spouses.map(s =>
           s.id === updatedSpouse.id ? updatedSpouse : s
@@ -253,14 +286,19 @@
         updateNode({ ...node, spouses: updatedSpouses });
       }
 
-      // Delete spouse
       function deleteSpouse(spouseId) {
         const updatedSpouses = node.spouses.filter(s => s.id !== spouseId);
         updateNode({ ...node, spouses: updatedSpouses });
       }
 
+      // Determine if node is highlighted
+      const isHighlighted = highlightIds.has(node.id);
+
       return (
-        <div className="ml-4 mt-3 border-l-2 border-gray-300 pl-4 relative">
+        <div
+          ref={ref}
+          className={`ml-4 mt-3 border-l-2 border-gray-300 pl-4 relative ${isHighlighted ? "highlight" : ""}`}
+        >
           <div className="flex items-center space-x-2">
             {node.children && node.children.length > 0 ? (
               <button
@@ -287,9 +325,9 @@
               />
             ) : (
               <span
-                className="font-semibold text-gray-900 hover:text-blue-700 cursor-pointer"
-                onClick={() => setEditName(true)}
-                title="Click to edit name"
+                className={`font-semibold text-gray-900 hover:text-blue-700 cursor-pointer select-none`}
+                onClick={() => setShowDates(!showDates)}
+                title="Click to toggle birthday and deathday"
               >
                 {node.name}
               </span>
@@ -305,100 +343,235 @@
                     spouse={spouse}
                     onUpdate={updateSpouse}
                     onDelete={deleteSpouse}
+                    highlight={highlightIds.has(spouse.id)}
                   />
                 ))
               ) : (
-                <span className="italic text-gray-400">(no spouses)</span>
+                <span className="italic text-gray-400">(none)</span>
               )}
-
-              {/* Add spouse button if less than 2 */}
               {node.spouses.length < 2 && (
                 <button
                   onClick={addSpouse}
-                  className="text-green-600 hover:text-green-800 font-bold text-xl select-none"
-                  title="Add Spouse"
+                  className="ml-2 text-green-600 font-bold select-none"
+                  title="Add spouse"
                 >
                   +
                 </button>
               )}
             </div>
 
-            {/* Birthday & Deathday of main person */}
-            <EditableField label="Bday" type="date" value={node.birthday} onChange={updateBirthday} />
-            <EditableField label="Dday" type="date" value={node.deathday} onChange={updateDeathday} />
-
-            {/* Actions */}
             <button
               onClick={addChild}
-              className="ml-2 text-green-600 hover:text-green-800 font-bold text-xl select-none"
-              title="Add Child"
+              className="ml-auto text-green-700 font-bold select-none"
+              title="Add child"
             >
-              +
+              + Child
             </button>
+
             {node.id !== 1 && (
               <button
                 onClick={handleDelete}
-                className="ml-1 text-red-600 hover:text-red-800 font-bold select-none"
-                title="Delete this person"
+                className="ml-2 text-red-600 font-bold select-none"
+                title="Delete person"
               >
                 ×
               </button>
             )}
           </div>
 
+          {/* Birthday & Deathday - toggle visible */}
+          {showDates && (
+            <div className="ml-8 mt-1 flex space-x-4">
+              <EditableField label="Bday" type="date" value={node.birthday} onChange={updateBirthday} />
+              <EditableField label="Dday" type="date" value={node.deathday} onChange={updateDeathday} />
+            </div>
+          )}
+
           {/* Children */}
-          <div
-            className="children-container"
-            style={{
-              maxHeight: open ? "1000px" : "0",
-              opacity: open ? 1 : 0,
-            }}
-          >
-            {open && node.children && node.children.length > 0 && (
-              <div className="mt-2 border-l-2 border-gray-400 pl-4">
-                {node.children.map(child => (
-                  <TreeNode
-                    key={child.id}
-                    node={child}
-                    onUpdate={updateChild}
-                    onDelete={deleteChild}
-                  />
-                ))}
-              </div>
-            )}
-          </div>
+          {open && node.children && node.children.length > 0 && (
+            <div className="children-container mt-2">
+              {node.children.map(child => (
+                <TreeNode
+                  key={child.id}
+                  node={child}
+                  onUpdate={updateChild}
+                  onDelete={deleteChild}
+                  highlightIds={highlightIds}
+                  ancestorsOpenIds={ancestorsOpenIds}
+                  descendantsOpenIds={descendantsOpenIds}
+                  scrollToId={scrollToId}
+                  onScrollHandled={onScrollHandled}
+                />
+              ))}
+            </div>
+          )}
         </div>
       );
     }
 
+    // Find person by id recursively
+    function findPersonById(node, id) {
+      if (node.id === id) return node;
+      for (const child of node.children || []) {
+        const found = findPersonById(child, id);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    // Find person by name (case insensitive, partial match)
+    function findPersonByName(node, name, found = []) {
+      if (node.name.toLowerCase().includes(name.toLowerCase())) found.push(node);
+      for (const spouse of node.spouses || []) {
+        if (spouse.name.toLowerCase().includes(name.toLowerCase())) {
+          found.push({ ...spouse, isSpouse: true, parentId: node.id });
+        }
+      }
+      for (const child of node.children || []) {
+        findPersonByName(child, name, found);
+      }
+      return found;
+    }
+
+    // Find all ancestors of a node by id (return set of ids)
+    function findAncestors(node, targetId, path = []) {
+      if (node.id === targetId) return new Set(path);
+      for (const child of node.children || []) {
+        const result = findAncestors(child, targetId, [...path, node.id]);
+        if (result) return result;
+      }
+      return null;
+    }
+
+    // Find all descendants of a node by id (return set of ids)
+    function findDescendants(node, targetId) {
+      if (node.id === targetId) {
+        // Return all descendant ids including this node
+        const ids = new Set();
+        function collect(n) {
+          ids.add(n.id);
+          (n.children || []).forEach(c => collect(c));
+          (n.spouses || []).forEach(s => ids.add(s.id));
+        }
+        collect(node);
+        return ids;
+      }
+      for (const child of node.children || []) {
+        const result = findDescendants(child, targetId);
+        if (result) return result;
+      }
+      return null;
+    }
+
     function FamilyTree() {
-      const [rootNode, setRootNode] = useState(initialFamilyData);
+      const [family, setFamily] = useState(initialFamilyData);
+      const [searchTerm, setSearchTerm] = useState("");
+      const [searchResults, setSearchResults] = useState([]);
+      const [highlightIds, setHighlightIds] = useState(new Set());
+      const [ancestorsOpenIds, setAncestorsOpenIds] = useState(new Set());
+      const [descendantsOpenIds, setDescendantsOpenIds] = useState(new Set());
+      const [scrollToId, setScrollToId] = useState(null);
 
-      function updateRootNode(updatedNode) {
-        setRootNode(updatedNode);
+      // Update family helper
+      function updateNode(updatedNode) {
+        function recursiveUpdate(node) {
+          if (node.id === updatedNode.id) return updatedNode;
+          return {
+            ...node,
+            children: (node.children || []).map(recursiveUpdate),
+          };
+        }
+        setFamily(family => recursiveUpdate(family));
       }
 
-      function deleteNodeById(node, idToDelete) {
-        if (!node.children) return node;
-
-        const filteredChildren = node.children.filter(child => child.id !== idToDelete);
-        const newChildren = filteredChildren.map(child => deleteNodeById(child, idToDelete));
-        return { ...node, children: newChildren };
+      function deleteNode(id) {
+        function recursiveDelete(node) {
+          if (!node.children) return node;
+          const filteredChildren = node.children.filter(c => c.id !== id);
+          const newChildren = filteredChildren.map(recursiveDelete);
+          return { ...node, children: newChildren };
+        }
+        setFamily(family => {
+          if (family.id === id) return family; // cannot delete root (lolo)
+          return recursiveDelete(family);
+        });
       }
 
-      function handleDelete(id) {
-        if (id === rootNode.id) {
-          alert("Cannot delete root person.");
+      // Search effect
+      useEffect(() => {
+        if (searchTerm.trim().length === 0) {
+          setSearchResults([]);
+          setHighlightIds(new Set());
+          setAncestorsOpenIds(new Set());
+          setDescendantsOpenIds(new Set());
+          setScrollToId(null);
           return;
         }
-        const updatedRoot = deleteNodeById(rootNode, id);
-        setRootNode(updatedRoot);
+        const found = findPersonByName(family, searchTerm.trim());
+        setSearchResults(found);
+      }, [searchTerm, family]);
+
+      // When user clicks a search result
+      function onSelectSearchResult(person) {
+        // If person is spouse, scroll to parent and highlight spouse by id
+        if (person.isSpouse) {
+          // Highlight spouse and parent
+          setHighlightIds(new Set([person.id, person.parentId]));
+          setAncestorsOpenIds(new Set());
+          setDescendantsOpenIds(new Set());
+          setScrollToId(person.parentId);
+        } else {
+          // Highlight the whole bloodline: ancestors + descendants + self
+          const ancestors = findAncestors(family, person.id) || new Set();
+          const descendants = findDescendants(family, person.id) || new Set();
+          const allHighlight = new Set([...ancestors, ...descendants, person.id]);
+          setHighlightIds(allHighlight);
+          setAncestorsOpenIds(ancestors);
+          setDescendantsOpenIds(descendants);
+          setScrollToId(person.id);
+        }
+        setSearchResults([]);
+        setSearchTerm(person.name);
       }
 
       return (
         <div>
-          <h1 className="text-2xl font-bold mb-4 text-center">Family Tree (Up to 2 Spouses)</h1>
-          <TreeNode node={rootNode} onUpdate={updateRootNode} onDelete={handleDelete} />
+          <h1 className="text-2xl font-bold mb-4">Family Tree</h1>
+
+          <div className="relative mb-6">
+            <input
+              type="text"
+              placeholder="Search family by name..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+              className="w-full border border-gray-300 rounded px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+            />
+            {searchResults.length > 0 && (
+              <ul className="absolute z-10 bg-white border border-gray-300 rounded w-full max-h-48 overflow-y-auto mt-1 shadow-lg">
+                {searchResults.map((person, i) => (
+                  <li
+                    key={`${person.id}-${i}`}
+                    onClick={() => onSelectSearchResult(person)}
+                    className="px-3 py-2 cursor-pointer hover:bg-blue-100"
+                    title={person.isSpouse ? `Spouse of ID ${person.parentId}` : ""}
+                  >
+                    {person.name} {person.isSpouse && "(Spouse)"}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+
+          <TreeNode
+            node={family}
+            onUpdate={updateNode}
+            onDelete={deleteNode}
+            highlightIds={highlightIds}
+            ancestorsOpenIds={ancestorsOpenIds}
+            descendantsOpenIds={descendantsOpenIds}
+            scrollToId={scrollToId}
+            onScrollHandled={() => setScrollToId(null)}
+          />
         </div>
       );
     }
@@ -406,5 +579,6 @@
     ReactDOM.createRoot(document.getElementById("root")).render(<FamilyTree />);
 
   </script>
+
 </body>
 </html>
