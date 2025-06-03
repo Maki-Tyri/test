@@ -14,171 +14,492 @@
     window.firebaseImports = { initializeApp, getDatabase, ref, onValue, set, update };
   </script>
   <style>
-    .highlight {
-      background-color: #ffe58f;
-      border-radius: 0.25rem;
-      box-shadow: 0 0 8px 2px #ffd666aa;
-      animation: none;
-    }
-
-    .blink-highlight {
-      animation: blink 1s infinite;
-      background-color: #ffd666;
-      border-radius: 0.25rem;
-      box-shadow: 0 0 8px 2px #ffb700cc;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .node-box {
-      display: inline-block;
-      border: 2px solid #93c5fd;
-      border-radius: 0.5rem;
-      padding: 0.5rem 0.75rem;
-      margin-bottom: 0.5rem;
-      background: white;
-      box-shadow: 0 2px 6px rgb(147 197 253 / 0.5);
-      position: relative;
-      max-width: 100%;
-    }
-
-    .tree-node-container {
-      border-left: 2px solid #93c5fd;
-      margin-left: 1rem;
-      padding-left: 1rem;
-    }
-
-    #tree-scroll-container {
-      width: 100%;
-      max-width: 100vw;
-      height: 70vh;
-      overflow: auto;
-      border: 1px solid #cbd5e1;
-      border-radius: 0.5rem;
-      padding: 1rem;
-      background: #f9fafb;
-      box-sizing: border-box;
-      user-select: none;
-    }
-
-    .toggle-expand-btn {
-      margin-bottom: 1rem;
-      padding: 0.5rem 1rem;
-      background-color: #3b82f6;
-      color: white;
-      font-weight: 600;
-      border-radius: 0.375rem;
-      cursor: pointer;
-      user-select: none;
-      transition: background-color 0.2s ease;
-    }
-    .toggle-expand-btn:hover {
-      background-color: #2563eb;
-    }
+    .highlight { background-color: #ffe58f; border-radius: 0.25rem; box-shadow: 0 0 8px 2px #ffd666aa; }
+    .blink-highlight { animation: blink 1s infinite; background-color: #ffd666; border-radius: 0.25rem; box-shadow: 0 0 8px 2px #ffb700cc; }
+    @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+    .node-box { border: 2px solid #93c5fd; border-radius: 0.5rem; padding: 0.5rem 0.75rem; margin-bottom: 0.5rem; background: white; min-width: 220px; box-shadow: 0 2px 6px rgb(147 197 253 / 0.5); position: relative; }
+    .tree-node-container { border-left: 2px solid #93c5fd; margin-left: 1rem; padding-left: 1rem; }
+    #tree-scroll-container { width: 100%; max-width: 100vw; height: 70vh; overflow: auto; border: 1px solid #cbd5e1; border-radius: 0.5rem; padding: 1rem; background: #f9fafb; box-sizing: border-box; user-select: none; }
+    .toggle-expand-btn { margin-bottom: 1rem; padding: 0.5rem 1rem; background-color: #3b82f6; color: white; font-weight: 600; border-radius: 0.375rem; cursor: pointer; user-select: none; transition: background-color 0.2s ease; }
+    .toggle-expand-btn:hover { background-color: #2563eb; }
+    .remove-btn { background: #ef4444; color: white; border-radius: 0.375rem; padding: 0.1rem 0.4rem; font-weight: 600; cursor: pointer; user-select: none; margin-left: 0.5rem; }
+    .remove-btn:hover { background: #dc2626; }
+    .add-btn { background: #10b981; color: white; border-radius: 0.375rem; padding: 0.1rem 0.5rem; font-weight: 600; cursor: pointer; user-select: none; margin-top: 0.25rem; }
+    .add-btn:hover { background: #059669; }
+    .input-small { border: 1px solid #cbd5e1; border-radius: 0.375rem; padding: 0.15rem 0.3rem; font-size: 0.875rem; width: 100%; }
+    .input-small:focus { outline: 2px solid #3b82f6; }
+    .spouse-section { margin-top: 0.5rem; background: #eff6ff; padding: 0.5rem; border-radius: 0.5rem; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col items-center p-4">
   <div id="root" class="w-full max-w-6xl bg-white p-6 rounded shadow"></div>
-  <script type="text/babel">
-    const { useState, useEffect } = React;
-    const { initializeApp, getDatabase, ref, onValue, set } = window.firebaseImports;
 
+  <script type="text/babel">
+
+    const {
+      useState,
+      useEffect,
+      useRef,
+    } = React;
+
+    const {
+      initializeApp,
+      getDatabase,
+      ref,
+      onValue,
+      set,
+      update
+    } = window.firebaseImports;
+
+    // Firebase config (replace with your own)
     const firebaseConfig = {
-      apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
-      authDomain: "project-955237504610034331.firebaseapp.com",
-      databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
-      projectId: "project-955237504610034331",
-      storageBucket: "project-955237504610034331.appspot.com",
-      messagingSenderId: "76212939677",
-      appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
-      measurementId: "G-RCJ4P82PVM"
+      apiKey: "AIzaSyA-REPLACE-WITH-YOURS",
+      authDomain: "yourproject.firebaseapp.com",
+      databaseURL: "https://yourproject-default-rtdb.firebaseio.com",
+      projectId: "yourproject",
+      storageBucket: "yourproject.appspot.com",
+      messagingSenderId: "123456789",
+      appId: "1:123456789:web:abcdefg",
     };
 
+    // Init Firebase
     const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+    const db = getDatabase(app);
 
-    function TreeNode({ node, search, highlightSet }) {
-      const isMatch = search && node.name.toLowerCase().includes(search.toLowerCase());
-      const isBlink = highlightSet.has(node.id);
+    // Generate unique ID (simple)
+    function generateId() {
+      return Math.random().toString(36).slice(2, 10);
+    }
+
+    // Recursively find node by id
+    function findNodeById(node, id) {
+      if (node.id === id) return node;
+      for (const c of node.children || []) {
+        const found = findNodeById(c, id);
+        if (found) return found;
+      }
+      return null;
+    }
+
+    // Recursively update node by id with updater function
+    function updateNodeById(node, id, updater) {
+      if (node.id === id) {
+        return updater(node);
+      }
+      if (!node.children) return node;
+      return {
+        ...node,
+        children: node.children.map(c => updateNodeById(c, id, updater))
+      };
+    }
+
+    // Recursively remove node by id
+    function removeNodeById(node, id) {
+      if (!node.children) return node;
+      return {
+        ...node,
+        children: node.children
+          .filter(c => c.id !== id)
+          .map(c => removeNodeById(c, id))
+      };
+    }
+
+    // Recursively collect all node IDs (for expand/collapse all)
+    function collectAllNodeIds(node) {
+      const ids = new Set([node.id]);
+      (node.children || []).forEach(c => {
+        for (const id of collectAllNodeIds(c)) ids.add(id);
+      });
+      return ids;
+    }
+
+    // Find ancestors of a node by id
+    function findAncestorIds(root, targetId, path = []) {
+      if (root.id === targetId) return path.map(n => n.id);
+      for (const child of root.children || []) {
+        const found = findAncestorIds(child, targetId, [...path, root]);
+        if (found.length) return found;
+      }
+      return [];
+    }
+
+    // Flatten all nodes to a list
+    function flattenNodes(node) {
+      let arr = [node];
+      (node.children || []).forEach(c => {
+        arr = arr.concat(flattenNodes(c));
+      });
+      return arr;
+    }
+
+    // Highlight nodes by IDs
+    function isHighlighted(id, highlightIds, blinkId) {
+      if (id === blinkId) return "blink-highlight";
+      if (highlightIds.has(id)) return "highlight";
+      return "";
+    }
+
+    // Component to edit a node's fields inline
+    function EditableField({ label, value, onChange, type = "text" }) {
       return (
-        <div className={`mb-2`}>
-          <div className={`node-box ${isMatch ? "highlight" : ""} ${isBlink ? "blink-highlight" : ""}`}>
-            {node.name}
+        <div className="mb-1">
+          <label className="block text-xs font-semibold text-gray-600">{label}</label>
+          <input
+            type={type}
+            className="input-small"
+            value={value || ""}
+            onChange={e => onChange(e.target.value)}
+            placeholder={label}
+          />
+        </div>
+      );
+    }
+
+    // Spouse Editor
+    function SpouseEditor({ spouse, onChange, onRemove }) {
+      return (
+        <div className="spouse-section">
+          <div className="flex justify-between items-center mb-1">
+            <div className="font-semibold text-sm text-gray-700">Spouse</div>
+            <button
+              className="remove-btn"
+              onClick={onRemove}
+              title="Remove spouse"
+              type="button"
+            >✕</button>
           </div>
-          {node.children && node.children.length > 0 && (
+          <EditableField
+            label="Name"
+            value={spouse.name}
+            onChange={name => onChange({ ...spouse, name })}
+          />
+          <EditableField
+            label="Birthday"
+            type="date"
+            value={spouse.birthday}
+            onChange={birthday => onChange({ ...spouse, birthday })}
+          />
+          <EditableField
+            label="Deathday"
+            type="date"
+            value={spouse.deathday}
+            onChange={deathday => onChange({ ...spouse, deathday })}
+          />
+        </div>
+      );
+    }
+
+    // Single Tree Node Component
+    function TreeNode({
+      node,
+      openIds,
+      toggleOpen,
+      onUpdateNode,
+      onAddChild,
+      onRemoveNode,
+      onAddSpouse,
+      onUpdateSpouse,
+      onRemoveSpouse,
+      highlightIds,
+      blinkId,
+      scrollToId,
+    }) {
+      const isOpen = openIds.has(node.id);
+      const nodeRef = useRef(null);
+
+      // Scroll into view if scrollToId matches
+      useEffect(() => {
+        if (scrollToId === node.id && nodeRef.current) {
+          nodeRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+        }
+      }, [scrollToId, node.id]);
+
+      // Editable fields handlers
+      const updateField = (field, val) => {
+        onUpdateNode(node.id, { ...node, [field]: val });
+      };
+
+      const updateSpouse = (newSpouse) => {
+        onUpdateSpouse(node.id, newSpouse);
+      };
+
+      return (
+        <div ref={nodeRef} className={`node-box ${isHighlighted(node.id, highlightIds, blinkId)}`}>
+          <div className="flex items-center justify-between">
+            <button
+              className="text-sm font-semibold text-blue-600 hover:underline focus:outline-none"
+              type="button"
+              onClick={() => toggleOpen(node.id)}
+              aria-label={isOpen ? "Collapse" : "Expand"}
+            >
+              {isOpen ? "▼" : "▶"}
+            </button>
+            <div className="flex-1 ml-2">
+              <EditableField label="Name" value={node.name} onChange={val => updateField("name", val)} />
+              <EditableField label="Birthday" type="date" value={node.birthday} onChange={val => updateField("birthday", val)} />
+              <EditableField label="Deathday" type="date" value={node.deathday} onChange={val => updateField("deathday", val)} />
+            </div>
+            {node.id !== "root" && (
+              <button
+                className="remove-btn"
+                onClick={() => onRemoveNode(node.id)}
+                title="Remove node"
+                type="button"
+              >✕</button>
+            )}
+          </div>
+
+          {/* Spouse Section */}
+          {node.spouse ? (
+            <SpouseEditor
+              spouse={node.spouse}
+              onChange={updateSpouse}
+              onRemove={() => onRemoveSpouse(node.id)}
+            />
+          ) : (
+            <button
+              className="add-btn"
+              onClick={() => onAddSpouse(node.id)}
+              type="button"
+            >+ Add Spouse</button>
+          )}
+
+          {/* Children */}
+          {isOpen && (
             <div className="tree-node-container">
-              {node.children.map((child, idx) => (
-                <TreeNode key={idx} node={child} search={search} highlightSet={highlightSet} />
+              {(node.children || []).map(child => (
+                <TreeNode
+                  key={child.id}
+                  node={child}
+                  openIds={openIds}
+                  toggleOpen={toggleOpen}
+                  onUpdateNode={onUpdateNode}
+                  onAddChild={onAddChild}
+                  onRemoveNode={onRemoveNode}
+                  onAddSpouse={onAddSpouse}
+                  onUpdateSpouse={onUpdateSpouse}
+                  onRemoveSpouse={onRemoveSpouse}
+                  highlightIds={highlightIds}
+                  blinkId={blinkId}
+                  scrollToId={scrollToId}
+                />
               ))}
+              <button
+                className="add-btn"
+                onClick={() => onAddChild(node.id)}
+                type="button"
+              >+ Add Child</button>
             </div>
           )}
         </div>
       );
     }
 
-    function collectAncestorIds(tree, targetName) {
-      const ancestors = new Set();
-      function dfs(node, path) {
-        if (node.name.toLowerCase().includes(targetName.toLowerCase())) {
-          path.forEach(p => ancestors.add(p.id));
-          ancestors.add(node.id);
-          return true;
-        }
-        for (const child of node.children || []) {
-          if (dfs(child, [...path, node])) return true;
-        }
-        return false;
-      }
-      dfs(tree, []);
-      return ancestors;
-    }
-
-    function App() {
+    function FamilyTreeApp() {
       const [treeData, setTreeData] = useState(null);
+      const [openIds, setOpenIds] = useState(new Set());
       const [search, setSearch] = useState("");
-      const [highlightSet, setHighlightSet] = useState(new Set());
+      const [highlightIds, setHighlightIds] = useState(new Set());
+      const [blinkId, setBlinkId] = useState(null);
+      const [scrollToId, setScrollToId] = useState(null);
 
+      // Firebase reference
+      const dbRef = ref(db, "familyTree");
+
+      // Listen for realtime updates
       useEffect(() => {
-        const treeRef = ref(database, "/tree");
-        const unsub = onValue(treeRef, (snap) => {
-          const data = snap.val();
-          if (data) {
-            setTreeData(data);
+        const unsubscribe = onValue(dbRef, snapshot => {
+          if (snapshot.exists()) {
+            setTreeData(snapshot.val());
+          } else {
+            // Create default root node if none exists
+            const rootNode = {
+              id: "root",
+              name: "Root Person",
+              birthday: "",
+              deathday: "",
+              children: [],
+              spouse: null,
+            };
+            set(dbRef, rootNode);
+            setTreeData(rootNode);
           }
         });
-        return () => unsub();
+        return () => unsubscribe();
       }, []);
 
-      useEffect(() => {
-        if (!treeData || !search.trim()) {
-          setHighlightSet(new Set());
+      // Update Firebase node
+      function updateFirebaseTree(newTree) {
+        set(dbRef, newTree);
+      }
+
+      // Toggle expand/collapse
+      function toggleOpen(id) {
+        setOpenIds(prev => {
+          const newSet = new Set(prev);
+          if (newSet.has(id)) newSet.delete(id);
+          else newSet.add(id);
+          return newSet;
+        });
+      }
+
+      // Expand all nodes
+      function expandAll() {
+        if (!treeData) return;
+        const allIds = collectAllNodeIds(treeData);
+        setOpenIds(allIds);
+      }
+
+      // Collapse all nodes
+      function collapseAll() {
+        setOpenIds(new Set());
+      }
+
+      // Add child to a node
+      function addChild(parentId) {
+        if (!treeData) return;
+        const newChild = {
+          id: generateId(),
+          name: "New Child",
+          birthday: "",
+          deathday: "",
+          children: [],
+          spouse: null,
+        };
+        const updatedTree = updateNodeById(treeData, parentId, node => {
+          const children = node.children ? [...node.children, newChild] : [newChild];
+          return { ...node, children };
+        });
+        updateFirebaseTree(updatedTree);
+      }
+
+      // Remove node by id
+      function removeNode(id) {
+        if (id === "root") return; // Don't remove root
+        if (!treeData) return;
+        if (treeData.id === id) {
+          // Edge case: removing root (don't allow)
           return;
         }
-        const set = collectAncestorIds(treeData, search.trim());
-        setHighlightSet(set);
+        const updatedTree = removeNodeById(treeData, id);
+        updateFirebaseTree(updatedTree);
+      }
+
+      // Update a node's data by id
+      function updateNode(id, newNodeData) {
+        if (!treeData) return;
+        const updatedTree = updateNodeById(treeData, id, () => newNodeData);
+        updateFirebaseTree(updatedTree);
+      }
+
+      // Add spouse
+      function addSpouse(nodeId) {
+        if (!treeData) return;
+        const newSpouse = {
+          name: "New Spouse",
+          birthday: "",
+          deathday: "",
+        };
+        const updatedTree = updateNodeById(treeData, nodeId, node => ({ ...node, spouse: newSpouse }));
+        updateFirebaseTree(updatedTree);
+      }
+
+      // Update spouse
+      function updateSpouse(nodeId, newSpouse) {
+        if (!treeData) return;
+        const updatedTree = updateNodeById(treeData, nodeId, node => ({ ...node, spouse: newSpouse }));
+        updateFirebaseTree(updatedTree);
+      }
+
+      // Remove spouse
+      function removeSpouse(nodeId) {
+        if (!treeData) return;
+        const updatedTree = updateNodeById(treeData, nodeId, node => ({ ...node, spouse: null }));
+        updateFirebaseTree(updatedTree);
+      }
+
+      // Search & highlight
+      useEffect(() => {
+        if (!treeData || search.trim() === "") {
+          setHighlightIds(new Set());
+          setBlinkId(null);
+          setScrollToId(null);
+          return;
+        }
+        const flatNodes = flattenNodes(treeData);
+        const searchLower = search.toLowerCase();
+        const matchedNodes = flatNodes.filter(n => n.name.toLowerCase().includes(searchLower));
+
+        if (matchedNodes.length === 0) {
+          setHighlightIds(new Set());
+          setBlinkId(null);
+          setScrollToId(null);
+          return;
+        }
+
+        // Highlight matched nodes
+        const highlightSet = new Set(matchedNodes.map(n => n.id));
+        setHighlightIds(highlightSet);
+
+        // Blink first matched node
+        setBlinkId(matchedNodes[0].id);
+
+        // Scroll to first matched node
+        setScrollToId(matchedNodes[0].id);
+
+        // Expand all ancestors of first matched node
+        const ancestorIds = findAncestorIds(treeData, matchedNodes[0].id);
+        setOpenIds(new Set(ancestorIds));
       }, [search, treeData]);
 
-      if (!treeData) return <div>Loading...</div>;
+      if (!treeData) {
+        return <div>Loading...</div>;
+      }
 
       return (
-        <div>
-          <input
-            className="mb-4 border px-2 py-1 rounded w-full"
-            placeholder="Search name..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-          <div id="tree-scroll-container">
-            <TreeNode node={treeData} search={search} highlightSet={highlightSet} />
+        <>
+          <div className="mb-4 flex items-center space-x-3">
+            <input
+              type="search"
+              placeholder="Search by name..."
+              className="input-small flex-1"
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+              aria-label="Search by name"
+            />
+            <button
+              onClick={expandAll}
+              className="toggle-expand-btn"
+              type="button"
+            >Expand All</button>
+            <button
+              onClick={collapseAll}
+              className="toggle-expand-btn"
+              type="button"
+            >Collapse All</button>
           </div>
-        </div>
+          <div id="tree-scroll-container" role="tree" aria-label="Family Tree">
+            <TreeNode
+              node={treeData}
+              openIds={openIds}
+              toggleOpen={toggleOpen}
+              onUpdateNode={updateNode}
+              onAddChild={addChild}
+              onRemoveNode={removeNode}
+              onAddSpouse={addSpouse}
+              onUpdateSpouse={updateSpouse}
+              onRemoveSpouse={removeSpouse}
+              highlightIds={highlightIds}
+              blinkId={blinkId}
+              scrollToId={scrollToId}
+            />
+          </div>
+          <p className="mt-4 text-sm text-gray-600">* Click on ▶/▼ to expand/collapse nodes. You can edit fields inline, add/remove children & spouses.</p>
+        </>
       );
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+    ReactDOM.createRoot(document.getElementById("root")).render(<FamilyTreeApp />);
   </script>
 </body>
 </html>
