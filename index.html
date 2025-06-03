@@ -1,32 +1,37 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <title>Family Tree</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-database-compat.js"></script>
-    <style>
-      .blink {
-        animation: blink-animation 1s steps(2, start) 4;
-      }
-      @keyframes blink-animation {
-        to {
-          visibility: hidden;
-        }
-      }
-    </style>
-  </head>
-  <body class="p-4 bg-gray-100">
-    <div id="root"></div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Family Tree App</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    .blink {
+      animation: blinker 0.6s linear 3;
+    }
+    @keyframes blinker {
+      50% { background-color: yellow; }
+    }
+  </style>
+</head>
+<body class="bg-gray-100 p-4">
+  <div id="app" class="container mx-auto"></div>
 
-    <script type="text/babel">
-      const { useState, useEffect } = React;
+  <!-- React + Babel CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
 
-      const firebaseConfig = {
+  <!-- Firebase CDN -->
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.6.11/firebase-database-compat.js"></script>
+
+  <!-- App Script -->
+  <script type="text/babel">
+    const { useState, useEffect } = React;
+
+    // ✅ Firebase config
+    const firebaseConfig = {
   apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
   authDomain: "project-955237504610034331.firebaseapp.com",
   databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
@@ -36,172 +41,114 @@
   appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
   measurementId: "G-RCJ4P82PVM"
 };
-      firebase.initializeApp(firebaseConfig);
-      const db = firebase.database();
 
-      function TreeNode({ person, people, onEdit, onAddChild, onAddSpouse, collapsed, toggleCollapse, highlightedIds, blinkingId }) {
-        if (!person) return null;
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.database();
 
-        const children = Object.values(people).filter(p => p.parentId === person.id);
-        const spouse = Object.values(people).find(p => p.spouseId === person.id);
+    // 🔁 Recursive Tree Node Component
+    function TreeNode({ nodeId, data, searchTerm, onUpdate }) {
+      const [collapsed, setCollapsed] = useState(false);
+      const [editing, setEditing] = useState(false);
+      const [name, setName] = useState(data.name);
+      const [spouse, setSpouse] = useState(data.spouse || "");
+      const isMatch = searchTerm && data.name.toLowerCase().includes(searchTerm.toLowerCase());
+      const [highlight, setHighlight] = useState(false);
 
-        const isHighlighted = highlightedIds.has(person.id);
-        const isBlinking = blinkingId === person.id;
+      useEffect(() => {
+        if (isMatch) {
+          setHighlight(true);
+          setTimeout(() => setHighlight(false), 1800);
+        }
+      }, [isMatch]);
 
-        return (
-          <div className="ml-4 border-l pl-4">
-            <div
-              className={`p-2 rounded cursor-pointer mb-2 ${isHighlighted ? "bg-yellow-200" : "bg-white"} ${isBlinking ? "blink" : ""}`}
-              onClick={() => toggleCollapse(person.id)}
-            >
-              <input
-                className="font-bold text-lg bg-transparent border-b border-gray-300 focus:outline-none"
-                value={person.name}
-                onChange={e => onEdit(person.id, { name: e.target.value })}
-              />
-              <button onClick={() => onAddChild(person.id)} className="ml-2 text-blue-500 text-sm">Add Child</button>
-              <button onClick={() => onAddSpouse(person.id)} className="ml-2 text-green-500 text-sm">Add Spouse</button>
-            </div>
-            {!collapsed[person.id] && (
-              <div>
-                {spouse && (
-                  <TreeNode
-                    person={spouse}
-                    people={people}
-                    onEdit={onEdit}
-                    onAddChild={onAddChild}
-                    onAddSpouse={onAddSpouse}
-                    collapsed={collapsed}
-                    toggleCollapse={toggleCollapse}
-                    highlightedIds={highlightedIds}
-                    blinkingId={blinkingId}
-                  />
-                )}
-                {children.map(child => (
-                  <TreeNode
-                    key={child.id}
-                    person={child}
-                    people={people}
-                    onEdit={onEdit}
-                    onAddChild={onAddChild}
-                    onAddSpouse={onAddSpouse}
-                    collapsed={collapsed}
-                    toggleCollapse={toggleCollapse}
-                    highlightedIds={highlightedIds}
-                    blinkingId={blinkingId}
-                  />
-                ))}
-              </div>
+      const handleSave = () => {
+        db.ref("family/" + nodeId).update({ name, spouse });
+        setEditing(false);
+      };
+
+      const handleAddChild = () => {
+        const childId = db.ref("family").push().key;
+        db.ref(`family/${nodeId}/children`).push(childId);
+        db.ref(`family/${childId}`).set({ name: "New Child", children: [] });
+      };
+
+      const highlightClass = highlight ? "blink font-bold" : "";
+
+      return (
+        <div className="ml-4 mt-2">
+          <div className={`p-2 bg-white shadow rounded ${highlightClass}`}>
+            <button onClick={() => setCollapsed(!collapsed)} className="mr-2 font-bold">
+              {collapsed ? "+" : "-"}
+            </button>
+            {editing ? (
+              <span>
+                <input className="border px-1" value={name} onChange={e => setName(e.target.value)} />
+                <input className="border px-1 ml-2" placeholder="Spouse" value={spouse} onChange={e => setSpouse(e.target.value)} />
+                <button onClick={handleSave} className="ml-2 text-green-600">💾</button>
+              </span>
+            ) : (
+              <span>
+                {data.name} {data.spouse ? `❤️ ${data.spouse}` : ""}
+                <button onClick={() => setEditing(true)} className="ml-2 text-blue-500">✏️</button>
+              </span>
             )}
+            <button onClick={handleAddChild} className="ml-2 text-purple-500">➕ Child</button>
           </div>
-        );
-      }
-
-      function FamilyTree() {
-        const [people, setPeople] = useState({});
-        const [collapsed, setCollapsed] = useState({});
-        const [searchTerm, setSearchTerm] = useState('');
-        const [highlightedIds, setHighlightedIds] = useState(new Set());
-        const [blinkingId, setBlinkingId] = useState(null);
-
-        useEffect(() => {
-          const peopleRef = db.ref('people');
-          peopleRef.on('value', snapshot => {
-            setPeople(snapshot.val() || {});
-          });
-          return () => peopleRef.off();
-        }, []);
-
-        const addPerson = (data) => {
-          const id = Date.now().toString();
-          db.ref(`people/${id}`).set({ id, name: "New Person", ...data });
-        };
-
-        const handleEdit = (id, updates) => {
-          db.ref(`people/${id}`).update(updates);
-        };
-
-        const handleAddChild = (parentId) => {
-          addPerson({ parentId });
-        };
-
-        const handleAddSpouse = (personId) => {
-          const spouseId = Date.now().toString();
-          db.ref(`people/${spouseId}`).set({
-            id: spouseId,
-            name: "New Spouse",
-            spouseId: personId,
-          });
-          db.ref(`people/${personId}`).update({ spouseId });
-        };
-
-        const toggleCollapse = (id) => {
-          setCollapsed(prev => ({ ...prev, [id]: !prev[id] }));
-        };
-
-        const findAncestors = (personId, allPeople, ancestors = new Set()) => {
-          const person = allPeople[personId];
-          if (!person || !person.parentId) return ancestors;
-          const parent = allPeople[person.parentId];
-          if (parent) {
-            ancestors.add(parent.id);
-            findAncestors(parent.id, allPeople, ancestors);
-          }
-          return ancestors;
-        };
-
-        const handleSearch = () => {
-          const found = Object.values(people).find(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
-          if (found) {
-            const ancestorIds = findAncestors(found.id, people);
-            setHighlightedIds(new Set([...ancestorIds, found.id]));
-            setBlinkingId(found.id);
-            setTimeout(() => setBlinkingId(null), 2000);
-          } else {
-            setHighlightedIds(new Set());
-            setBlinkingId(null);
-          }
-        };
-
-        const roots = Object.values(people).filter(p => !p.parentId);
-
-        return (
-          <div>
-            <h1 className="text-3xl font-bold mb-4">Family Tree</h1>
-
-            <div className="mb-4">
-              <input
-                type="text"
-                className="border px-2 py-1 mr-2"
-                placeholder="Search name"
-                value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-              />
-              <button className="bg-blue-500 text-white px-3 py-1 rounded" onClick={handleSearch}>
-                Search
-              </button>
-              <button className="ml-2 text-sm text-gray-600" onClick={() => addPerson({})}>Add Root Person</button>
+          {!collapsed && data.children && (
+            <div className="ml-4 border-l pl-2">
+              {data.children.map((childId) =>
+                <TreeNode key={childId} nodeId={childId} data={onUpdate[childId]} searchTerm={searchTerm} onUpdate={onUpdate} />
+              )}
             </div>
+          )}
+        </div>
+      );
+    }
 
-            {roots.map(person => (
-              <TreeNode
-                key={person.id}
-                person={person}
-                people={people}
-                onEdit={handleEdit}
-                onAddChild={handleAddChild}
-                onAddSpouse={handleAddSpouse}
-                collapsed={collapsed}
-                toggleCollapse={toggleCollapse}
-                highlightedIds={highlightedIds}
-                blinkingId={blinkingId}
-              />
-            ))}
+    function App() {
+      const [tree, setTree] = useState({});
+      const [rootId, setRootId] = useState(null);
+      const [searchTerm, setSearchTerm] = useState("");
+
+      useEffect(() => {
+        const ref = db.ref("family");
+        ref.on("value", snapshot => {
+          const data = snapshot.val() || {};
+          setTree(data);
+          const root = Object.entries(data).find(([_, val]) => val.root);
+          if (root) setRootId(root[0]);
+        });
+      }, []);
+
+      const handleAddRoot = () => {
+        const rootKey = db.ref("family").push().key;
+        db.ref(`family/${rootKey}`).set({ name: "Root", children: [], root: true });
+      };
+
+      return (
+        <div>
+          <h1 className="text-2xl font-bold mb-4">👨‍👩‍👧‍👦 Family Tree</h1>
+          <div className="mb-4">
+            <input
+              className="border px-2 py-1"
+              placeholder="Search name..."
+              value={searchTerm}
+              onChange={e => setSearchTerm(e.target.value)}
+            />
           </div>
-        );
-      }
+          {!rootId ? (
+            <button onClick={handleAddRoot} className="bg-blue-500 text-white px-3 py-1 rounded">Add Root</button>
+          ) : tree[rootId] ? (
+            <TreeNode nodeId={rootId} data={tree[rootId]} searchTerm={searchTerm} onUpdate={tree} />
+          ) : (
+            <p>Loading...</p>
+          )}
+        </div>
+      );
+    }
 
-      ReactDOM.createRoot(document.getElementById('root')).render(<FamilyTree />);
-    </script>
-  </body>
+    const root = ReactDOM.createRoot(document.getElementById("app"));
+    root.render(<App />);
+  </script>
+</body>
 </html>
