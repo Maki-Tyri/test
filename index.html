@@ -3,338 +3,342 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Vertical Dynastic Family Tree</title>
+<title>Classic Family Tree Style</title>
 <style>
-  body {
-    margin: 0;
-    font-family: sans-serif;
-    overflow: hidden;
+  body, html {
+    margin: 0; padding: 0; height: 100%;
+    font-family: monospace, monospace;
+    background: #f8f8f8;
   }
-  #tree-container {
-    width: 100vw;
+  #app {
     height: 100vh;
-    overflow: scroll;
-    position: relative;
-    background-color: #f0f0f0;
+    overflow: auto;
     padding: 20px;
+    box-sizing: border-box;
+    background: #fff;
+    white-space: nowrap;
   }
   .node {
-    border: 1px solid #333;
-    background: #fff;
-    padding: 10px;
+    display: inline-block;
+    position: relative;
+    vertical-align: top;
+    margin: 8px 20px;
+    padding: 10px 15px;
+    background: #e0e7ff;
     border-radius: 8px;
-    position: absolute;
-    min-width: 180px;
-    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
-    text-align: center;
-    user-select: none;
+    border: 1px solid #667eea;
+    min-width: 240px;
+    box-shadow: 1px 2px 5px rgba(100,100,200,0.2);
   }
-  .node input {
-    display: block;
+  .node.spouse {
+    background: #ffe0e0;
+    border-color: #ee6677;
+  }
+  .node > input[type="text"], .node > input[type="date"] {
     width: 100%;
-    margin-bottom: 5px;
+    margin: 4px 0;
+    font-family: monospace;
+    font-size: 0.85em;
     box-sizing: border-box;
   }
   .controls {
-    margin-top: 5px;
+    margin-top: 6px;
   }
   .controls button {
-    margin-right: 5px;
-    margin-top: 5px;
+    margin-right: 8px;
+    font-size: 0.85em;
+    cursor: pointer;
+    background: #667eea;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
   }
+  .controls button:hover {
+    background: #4353c8;
+  }
+  .tree {
+    display: flex;
+    flex-direction: column;
+    position: relative;
+  }
+  .children {
+    display: flex;
+    margin-left: 40px;
+    border-left: 2px solid #667eea;
+    padding-left: 20px;
+  }
+  /* Lines connecting spouses */
+  .spouse-container {
+    display: flex;
+    align-items: center;
+    margin-top: 6px;
+  }
+  .spouse-line {
+    height: 2px;
+    background: #ee6677;
+    flex-grow: 1;
+    margin: 0 6px;
+  }
+  /* Connector vertical line between parent and children */
+  .connector-vertical {
+    position: absolute;
+    width: 2px;
+    background: #667eea;
+  }
+  /* Highlight searched node */
   .highlight {
     animation: blink 1s infinite alternate;
+    border-color: #ff9933 !important;
+    box-shadow: 0 0 8px 2px #ff9933;
   }
   @keyframes blink {
-    from {
-      background-color: yellow;
-    }
-    to {
-      background-color: white;
-    }
-  }
-  svg {
-    position: absolute;
-    top: 0;
-    left: 0;
-    z-index: 0;
-    pointer-events: none;
+    from { box-shadow: 0 0 8px 2px #ff9933; }
+    to { box-shadow: none; }
   }
 </style>
 </head>
 <body>
-<input
-  type="text"
-  id="searchInput"
-  placeholder="Search name..."
-  style="position: fixed; top: 10px; left: 10px; z-index: 1000;"
-/>
-<button
-  onclick="addRootNode()"
-  style="position: fixed; top: 10px; left: 200px; z-index: 1000;"
->
-  Add Root
-</button>
 
-<div id="tree-container">
-  <svg id="connection-lines"></svg>
+<div style="position:fixed;top:10px;left:10px;z-index:10;background:#fff;padding:8px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.2);">
+  <input id="searchInput" type="text" placeholder="Search name..." style="font-family: monospace; font-size:1em; padding:4px;" />
+  <button onclick="addRoot()" style="margin-left:12px;cursor:pointer;">Add Root</button>
 </div>
 
+<div id="app"></div>
+
 <script>
-  const treeContainer = document.getElementById("tree-container");
-  const svg = document.getElementById("connection-lines");
-  const searchInput = document.getElementById("searchInput");
-
+  // Tree data model
   let nodeIdCounter = 0;
-
-  // Data structure for nodes: { id: {name, birthday, death, spouseId, childrenIds, parentId} }
-  const nodes = {};
-
-  // Root nodes (no parents)
-  const roots = [];
-
-  function createNodeObject(parentId = null) {
-    const id = "node-" + nodeIdCounter++;
-    nodes[id] = {
-      id,
+  function createNode(parent=null) {
+    return {
+      id: "node-" + nodeIdCounter++,
       name: "",
       birthday: "",
       death: "",
-      spouseId: null,
-      childrenIds: [],
-      parentId,
+      parent: parent, // reference to parent node or null if root
+      spouse: null,   // reference to spouse node or null
+      children: [],
       collapsed: false,
     };
-    if (parentId === null) {
-      roots.push(id);
-    } else {
-      nodes[parentId].childrenIds.push(id);
+  }
+
+  let roots = [];
+
+  // Helper: find node by id recursively
+  function findNodeById(node, id) {
+    if (node.id === id) return node;
+    for (const child of node.children) {
+      let found = findNodeById(child, id);
+      if (found) return found;
     }
-    return id;
-  }
-
-  function createNodeElement(nodeId) {
-    const nodeData = nodes[nodeId];
-    const node = document.createElement("div");
-    node.className = "node";
-    node.id = nodeId;
-
-    node.innerHTML = `
-      <input type="text" placeholder="Name" value="${nodeData.name}" />
-      <input type="date" placeholder="Birthday" value="${nodeData.birthday}" />
-      <input type="date" placeholder="Death (if any)" value="${nodeData.death}" />
-      <div class="controls">
-        <button onclick="addSpouse('${nodeId}')">Add Spouse</button>
-        <button onclick="addChild('${nodeId}')">Add Child</button>
-        <button onclick="toggleCollapse('${nodeId}')">${nodeData.collapsed ? "Expand" : "Collapse"}</button>
-      </div>
-    `;
-
-    // Event listeners for inputs
-    const inputs = node.querySelectorAll("input");
-    inputs[0].addEventListener("input", (e) => {
-      nodes[nodeId].name = e.target.value;
-      renderTree();
-    });
-    inputs[1].addEventListener("input", (e) => {
-      nodes[nodeId].birthday = e.target.value;
-    });
-    inputs[2].addEventListener("input", (e) => {
-      nodes[nodeId].death = e.target.value;
-    });
-
-    treeContainer.appendChild(node);
-    return node;
-  }
-
-  function addRootNode() {
-    const id = createNodeObject(null);
-    createNodeElement(id);
-    layoutAndRender();
-  }
-
-  function addChild(parentId) {
-    if (nodes[parentId].collapsed) {
-      nodes[parentId].collapsed = false; // auto-expand if collapsed
+    if (node.spouse) {
+      if (node.spouse.id === id) return node.spouse;
     }
-    const id = createNodeObject(parentId);
-    createNodeElement(id);
-    layoutAndRender();
+    return null;
+  }
+  function findNodeByIdInRoots(id) {
+    for (const root of roots) {
+      let found = findNodeById(root, id);
+      if (found) return found;
+    }
+    return null;
   }
 
-  function addSpouse(nodeId) {
-    if (nodes[nodeId].spouseId !== null) {
+  // Add root
+  function addRoot() {
+    const root = createNode();
+    roots.push(root);
+    render();
+  }
+
+  // Add child to a node
+  function addChild(node) {
+    const child = createNode(node);
+    node.children.push(child);
+    render();
+  }
+
+  // Add spouse to a node
+  function addSpouse(node) {
+    if (node.spouse !== null) {
       alert("Spouse already exists!");
       return;
     }
-    const spouseId = createNodeObject(null);
-    nodes[spouseId].parentId = nodes[nodeId].parentId;
-    nodes[nodeId].spouseId = spouseId;
-    nodes[spouseId].spouseId = nodeId;
-
-    createNodeElement(spouseId);
-    layoutAndRender();
+    const spouse = createNode(node.parent);
+    node.spouse = spouse;
+    spouse.spouse = node;
+    // Spouse shares same parent as node, so add to parent's children if exists
+    if (node.parent) {
+      node.parent.children.push(spouse);
+    } else {
+      // If no parent (root node), add spouse as another root for layout purposes
+      roots.push(spouse);
+    }
+    render();
   }
 
-  function toggleCollapse(nodeId) {
-    nodes[nodeId].collapsed = !nodes[nodeId].collapsed;
-    layoutAndRender();
+  // Toggle collapse children
+  function toggleCollapse(node) {
+    node.collapsed = !node.collapsed;
+    render();
   }
 
-  // Vertical dynastic layout function:
-  // Generation in columns, nodes stacked vertically,
-  // spouses side by side horizontally,
-  // children in next column to the right.
-  function layoutAndRender() {
-    clearNodes();
-    clearSvg();
+  // Render tree recursively
+  function renderNode(node, container) {
+    const nodeDiv = document.createElement("div");
+    nodeDiv.classList.add("node");
+    nodeDiv.id = node.id;
 
-    // Flatten visible nodes by applying collapse
-    function getVisibleChildren(id) {
-      if (nodes[id].collapsed) return [];
-      let result = [];
-      for (const c of nodes[id].childrenIds) {
-        result.push(c);
-        result = result.concat(getVisibleChildren(c));
-      }
-      return result;
-    }
+    // Input fields
+    nodeDiv.innerHTML = `
+      <input type="text" placeholder="Name" value="${node.name}" />
+      <input type="date" value="${node.birthday}" />
+      <input type="date" value="${node.death}" />
+      <div class="controls">
+        <button class="add-child">Add Child</button>
+        <button class="add-spouse">Add Spouse</button>
+        <button class="toggle-collapse">${node.collapsed ? "Expand" : "Collapse"}</button>
+      </div>
+    `;
 
-    // Assign column (generation) levels
-    let levelMap = {};
-    let maxDepth = 0;
-    function assignLevels(id, level = 0) {
-      if (!levelMap[level]) levelMap[level] = [];
-      levelMap[level].push(id);
-      maxDepth = Math.max(maxDepth, level);
-      if (!nodes[id].collapsed) {
-        for (const c of nodes[id].childrenIds) {
-          assignLevels(c, level + 1);
-        }
-      }
-    }
-
-    for (const rootId of roots) {
-      assignLevels(rootId, 0);
-    }
-
-    // Positions map: nodeId -> {x,y}
-    let positions = {};
-
-    const verticalSpacing = 180; // spacing between nodes vertically
-    const horizontalSpacing = 230; // spacing between columns
-
-    // For each level (column), stack nodes vertically
-    for (let level = 0; level <= maxDepth; level++) {
-      const ids = levelMap[level] || [];
-      for (let i = 0; i < ids.length; i++) {
-        const id = ids[i];
-        positions[id] = {
-          x: level * horizontalSpacing,
-          y: i * verticalSpacing,
-        };
-      }
-    }
-
-    // Position spouses side-by-side horizontally (offset X)
-    for (const id in nodes) {
-      const spouseId = nodes[id].spouseId;
-      if (
-        spouseId !== null &&
-        positions[id] &&
-        positions[spouseId] &&
-        positions[spouseId].x === positions[id].x &&
-        positions[spouseId].y === positions[id].y
-      ) {
-        // push spouse right of main node
-        positions[spouseId].x = positions[id].x + 180;
-      }
-    }
-
-    // Create elements and position
-    for (const id in nodes) {
-      const parentId = nodes[id].parentId;
-      if (parentId !== null && nodes[parentId].collapsed) {
-        continue; // skip hidden nodes
-      }
-
-      const nodeEl = document.getElementById(id) || createNodeElement(id);
-      nodeEl.style.left = positions[id].x + "px";
-      nodeEl.style.top = positions[id].y + "px";
-    }
-
-    drawLines(positions);
-  }
-
-  // Clear all nodes from container
-  function clearNodes() {
-    const currentNodes = new Set(Object.keys(nodes));
-    [...treeContainer.children].forEach((el) => {
-      if (el.classList && el.classList.contains("node") && !currentNodes.has(el.id)) {
-        el.remove();
-      }
+    // Input event listeners
+    const inputs = nodeDiv.querySelectorAll("input");
+    inputs[0].addEventListener("input", e => {
+      node.name = e.target.value;
     });
-  }
+    inputs[1].addEventListener("input", e => {
+      node.birthday = e.target.value;
+    });
+    inputs[2].addEventListener("input", e => {
+      node.death = e.target.value;
+    });
 
-  // Draw connection lines between parents and children
-  function drawLines(positions) {
-    clearSvg();
-    for (const id in nodes) {
-      const node = nodes[id];
-      const parentId = node.parentId;
-      if (parentId === null) continue;
+    // Button events
+    nodeDiv.querySelector(".add-child").onclick = () => addChild(node);
+    nodeDiv.querySelector(".add-spouse").onclick = () => addSpouse(node);
+    nodeDiv.querySelector(".toggle-collapse").onclick = () => toggleCollapse(node);
 
-      if (!positions[id] || !positions[parentId]) continue;
+    container.appendChild(nodeDiv);
 
-      const startX = positions[parentId].x + 180; // right edge of parent box approx
-      const startY = positions[parentId].y + 50; // vertical center of parent box approx
-      const endX = positions[id].x; // left edge of child box approx
-      const endY = positions[id].y + 50; // vertical center of child box approx
+    // Spouse rendering
+    if (node.spouse && !container.querySelector(`#${node.spouse.id}`)) {
+      // Spouse container with line
+      const spouseContainer = document.createElement("div");
+      spouseContainer.className = "spouse-container";
 
-      const line = document.createElementNS(
-        "http://www.w3.org/2000/svg",
-        "line"
-      );
-      line.setAttribute("x1", startX);
-      line.setAttribute("y1", startY);
-      line.setAttribute("x2", endX);
-      line.setAttribute("y2", endY);
-      line.setAttribute("stroke", "#000");
-      line.setAttribute("stroke-width", "2");
-      svg.appendChild(line);
+      const spouseDiv = document.createElement("div");
+      spouseDiv.classList.add("node", "spouse");
+      spouseDiv.id = node.spouse.id;
+      spouseDiv.innerHTML = `
+        <input type="text" placeholder="Name" value="${node.spouse.name}" />
+        <input type="date" value="${node.spouse.birthday}" />
+        <input type="date" value="${node.spouse.death}" />
+        <div class="controls">
+          <button class="add-child">Add Child</button>
+          <button class="toggle-collapse">${node.spouse.collapsed ? "Expand" : "Collapse"}</button>
+        </div>
+      `;
+
+      // Inputs spouse
+      const sInputs = spouseDiv.querySelectorAll("input");
+      sInputs[0].addEventListener("input", e => {
+        node.spouse.name = e.target.value;
+      });
+      sInputs[1].addEventListener("input", e => {
+        node.spouse.birthday = e.target.value;
+      });
+      sInputs[2].addEventListener("input", e => {
+        node.spouse.death = e.target.value;
+      });
+
+      // Buttons spouse
+      spouseDiv.querySelector(".add-child").onclick = () => addChild(node.spouse);
+      spouseDiv.querySelector(".toggle-collapse").onclick = () => toggleCollapse(node.spouse);
+
+      // Add line between spouses
+      const line = document.createElement("div");
+      line.className = "spouse-line";
+
+      spouseContainer.appendChild(line);
+      spouseContainer.appendChild(spouseDiv);
+
+      container.appendChild(spouseContainer);
     }
-  }
 
-  function clearSvg() {
-    while (svg.firstChild) {
-      svg.removeChild(svg.firstChild);
-    }
-  }
+    // Children container
+    if (node.children.length > 0 && !node.collapsed) {
+      const childrenDiv = document.createElement("div");
+      childrenDiv.className = "children";
+      container.appendChild(childrenDiv);
 
-  // Search and highlight logic
-  searchInput.addEventListener("input", () => {
-    const term = searchInput.value.toLowerCase();
-    for (const id in nodes) {
-      const node = nodes[id];
-      const nodeEl = document.getElementById(id);
-      if (!nodeEl) continue;
-      if (node.name.toLowerCase().includes(term) && term !== "") {
-        nodeEl.classList.add("highlight");
-        // Auto expand ancestors for found node
-        let p = node.parentId;
-        while (p !== null) {
-          nodes[p].collapsed = false;
-          p = nodes[p].parentId;
-        }
-      } else {
-        nodeEl.classList.remove("highlight");
+      for (const child of node.children) {
+        renderNode(child, childrenDiv);
       }
     }
-    layoutAndRender();
+  }
+
+  // Render all roots
+  function render() {
+    const app = document.getElementById("app");
+    app.innerHTML = "";
+
+    for (const root of roots) {
+      renderNode(root, app);
+    }
+
+    highlightSearchResults();
+  }
+
+  // Search & highlight
+  const searchInput = document.getElementById("searchInput");
+  searchInput.addEventListener("input", () => {
+    highlightSearchResults();
   });
 
-  // Initial empty state
-  layoutAndRender();
+  function highlightSearchResults() {
+    const term = searchInput.value.toLowerCase();
+    if (term === "") {
+      document.querySelectorAll(".node").forEach(n => n.classList.remove("highlight"));
+      return;
+    }
+
+    // Expand ancestors of matched nodes
+    function expandAncestors(node) {
+      if (node.parent) {
+        node.parent.collapsed = false;
+        expandAncestors(node.parent);
+      }
+    }
+
+    // Clear highlights
+    document.querySelectorAll(".node").forEach(n => n.classList.remove("highlight"));
+
+    // Highlight matching nodes and expand parents
+    function checkNode(node) {
+      let matched = node.name.toLowerCase().includes(term);
+      if (matched) {
+        const nodeDiv = document.getElementById(node.id);
+        if (nodeDiv) nodeDiv.classList.add("highlight");
+        expandAncestors(node);
+      }
+      if (node.spouse) {
+        if (node.spouse.name.toLowerCase().includes(term)) {
+          const spouseDiv = document.getElementById(node.spouse.id);
+          if (spouseDiv) spouseDiv.classList.add("highlight");
+          expandAncestors(node.spouse);
+          matched = true;
+        }
+      }
+      node.children.forEach(c => checkNode(c));
+    }
+    roots.forEach(r => checkNode(r));
+    render(); // re-render after expansion
+  }
+
+  // Start with one root by default
+  addRoot();
 </script>
+
 </body>
 </html>
