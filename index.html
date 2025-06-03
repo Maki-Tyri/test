@@ -1,332 +1,340 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Dynastic Family Tree</title>
-  <style>
-    body {
-      margin: 0;
-      font-family: sans-serif;
-      overflow: hidden;
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Vertical Dynastic Family Tree</title>
+<style>
+  body {
+    margin: 0;
+    font-family: sans-serif;
+    overflow: hidden;
+  }
+  #tree-container {
+    width: 100vw;
+    height: 100vh;
+    overflow: scroll;
+    position: relative;
+    background-color: #f0f0f0;
+    padding: 20px;
+  }
+  .node {
+    border: 1px solid #333;
+    background: #fff;
+    padding: 10px;
+    border-radius: 8px;
+    position: absolute;
+    min-width: 180px;
+    box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
+    text-align: center;
+    user-select: none;
+  }
+  .node input {
+    display: block;
+    width: 100%;
+    margin-bottom: 5px;
+    box-sizing: border-box;
+  }
+  .controls {
+    margin-top: 5px;
+  }
+  .controls button {
+    margin-right: 5px;
+    margin-top: 5px;
+  }
+  .highlight {
+    animation: blink 1s infinite alternate;
+  }
+  @keyframes blink {
+    from {
+      background-color: yellow;
     }
-    #tree-container {
-      width: 100vw;
-      height: 100vh;
-      overflow: scroll;
-      position: relative;
-      background-color: #f0f0f0;
-      padding: 20px;
+    to {
+      background-color: white;
     }
-    .node {
-      border: 1px solid #333;
-      background: #fff;
-      padding: 10px;
-      border-radius: 8px;
-      position: absolute;
-      min-width: 180px;
-      box-shadow: 2px 2px 8px rgba(0, 0, 0, 0.1);
-      text-align: center;
-      user-select: none;
-    }
-    .node input {
-      display: block;
-      width: 100%;
-      margin-bottom: 5px;
-      box-sizing: border-box;
-    }
-    .controls {
-      margin-top: 5px;
-    }
-    .controls button {
-      margin-right: 5px;
-      margin-top: 5px;
-    }
-    .highlight {
-      animation: blink 1s infinite alternate;
-    }
-    @keyframes blink {
-      from {
-        background-color: yellow;
-      }
-      to {
-        background-color: white;
-      }
-    }
-    svg {
-      position: absolute;
-      top: 0;
-      left: 0;
-      z-index: 0;
-      pointer-events: none;
-    }
-  </style>
+  }
+  svg {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+</style>
 </head>
 <body>
-  <input
-    type="text"
-    id="searchInput"
-    placeholder="Search name..."
-    style="position: fixed; top: 10px; left: 10px; z-index: 1000;"
-  />
-  <button
-    onclick="addRootNode()"
-    style="position: fixed; top: 10px; left: 200px; z-index: 1000;"
-  >
-    Add Root
-  </button>
+<input
+  type="text"
+  id="searchInput"
+  placeholder="Search name..."
+  style="position: fixed; top: 10px; left: 10px; z-index: 1000;"
+/>
+<button
+  onclick="addRootNode()"
+  style="position: fixed; top: 10px; left: 200px; z-index: 1000;"
+>
+  Add Root
+</button>
 
-  <div id="tree-container">
-    <svg id="connection-lines"></svg>
-  </div>
+<div id="tree-container">
+  <svg id="connection-lines"></svg>
+</div>
 
-  <script>
-    const treeContainer = document.getElementById("tree-container");
-    const svg = document.getElementById("connection-lines");
-    const searchInput = document.getElementById("searchInput");
+<script>
+  const treeContainer = document.getElementById("tree-container");
+  const svg = document.getElementById("connection-lines");
+  const searchInput = document.getElementById("searchInput");
 
-    let nodeIdCounter = 0;
+  let nodeIdCounter = 0;
 
-    // Data structure for nodes: { id: {name, birthday, death, spouseId, childrenIds, parentId} }
-    const nodes = {};
+  // Data structure for nodes: { id: {name, birthday, death, spouseId, childrenIds, parentId} }
+  const nodes = {};
 
-    // Root nodes (no parents)
-    const roots = [];
+  // Root nodes (no parents)
+  const roots = [];
 
-    function createNodeObject(parentId = null) {
-      const id = "node-" + nodeIdCounter++;
-      nodes[id] = {
-        id,
-        name: "",
-        birthday: "",
-        death: "",
-        spouseId: null,
-        childrenIds: [],
-        parentId,
-        collapsed: false,
-      };
-      if (parentId === null) {
-        roots.push(id);
-      } else {
-        nodes[parentId].childrenIds.push(id);
-      }
-      return id;
+  function createNodeObject(parentId = null) {
+    const id = "node-" + nodeIdCounter++;
+    nodes[id] = {
+      id,
+      name: "",
+      birthday: "",
+      death: "",
+      spouseId: null,
+      childrenIds: [],
+      parentId,
+      collapsed: false,
+    };
+    if (parentId === null) {
+      roots.push(id);
+    } else {
+      nodes[parentId].childrenIds.push(id);
     }
+    return id;
+  }
 
-    function createNodeElement(nodeId) {
-      const nodeData = nodes[nodeId];
-      const node = document.createElement("div");
-      node.className = "node";
-      node.id = nodeId;
+  function createNodeElement(nodeId) {
+    const nodeData = nodes[nodeId];
+    const node = document.createElement("div");
+    node.className = "node";
+    node.id = nodeId;
 
-      node.innerHTML = `
-        <input type="text" placeholder="Name" value="${nodeData.name}" />
-        <input type="date" placeholder="Birthday" value="${nodeData.birthday}" />
-        <input type="date" placeholder="Death (if any)" value="${nodeData.death}" />
-        <div class="controls">
-          <button onclick="addSpouse('${nodeId}')">Add Spouse</button>
-          <button onclick="addChild('${nodeId}')">Add Child</button>
-          <button onclick="toggleCollapse('${nodeId}')">${nodeData.collapsed ? "Expand" : "Collapse"}</button>
-        </div>
-      `;
+    node.innerHTML = `
+      <input type="text" placeholder="Name" value="${nodeData.name}" />
+      <input type="date" placeholder="Birthday" value="${nodeData.birthday}" />
+      <input type="date" placeholder="Death (if any)" value="${nodeData.death}" />
+      <div class="controls">
+        <button onclick="addSpouse('${nodeId}')">Add Spouse</button>
+        <button onclick="addChild('${nodeId}')">Add Child</button>
+        <button onclick="toggleCollapse('${nodeId}')">${nodeData.collapsed ? "Expand" : "Collapse"}</button>
+      </div>
+    `;
 
-      // Event listeners for inputs
-      const inputs = node.querySelectorAll("input");
-      inputs[0].addEventListener("input", (e) => {
-        nodes[nodeId].name = e.target.value;
-        renderTree();
-      });
-      inputs[1].addEventListener("input", (e) => {
-        nodes[nodeId].birthday = e.target.value;
-      });
-      inputs[2].addEventListener("input", (e) => {
-        nodes[nodeId].death = e.target.value;
-      });
-
-      treeContainer.appendChild(node);
-      return node;
-    }
-
-    function addRootNode() {
-      const id = createNodeObject(null);
-      createNodeElement(id);
-      layoutAndRender();
-    }
-
-    function addChild(parentId) {
-      if (nodes[parentId].collapsed) {
-        nodes[parentId].collapsed = false; // auto-expand if collapsed
-      }
-      const id = createNodeObject(parentId);
-      createNodeElement(id);
-      layoutAndRender();
-    }
-
-    function addSpouse(nodeId) {
-      if (nodes[nodeId].spouseId !== null) {
-        alert("Spouse already exists!");
-        return;
-      }
-      const spouseId = createNodeObject(null);
-      nodes[spouseId].parentId = nodes[nodeId].parentId;
-      nodes[nodeId].spouseId = spouseId;
-      nodes[spouseId].spouseId = nodeId;
-
-      createNodeElement(spouseId);
-      layoutAndRender();
-    }
-
-    function toggleCollapse(nodeId) {
-      nodes[nodeId].collapsed = !nodes[nodeId].collapsed;
-      layoutAndRender();
-    }
-
-    // Calculate positions using dynastic hierarchical layout
-    // Each generation on horizontal level, siblings spaced horizontally
-    function layoutAndRender() {
-      clearNodes();
-      clearSvg();
-
-      // Flatten visible nodes by applying collapse
-      function getVisibleChildren(id) {
-        if (nodes[id].collapsed) return [];
-        let result = [];
-        for (const c of nodes[id].childrenIds) {
-          result.push(c);
-          result = result.concat(getVisibleChildren(c));
-        }
-        return result;
-      }
-
-      // Recursively compute positions
-      let levelMap = {};
-      let maxDepth = 0;
-      function assignLevels(id, level = 0) {
-        if (!levelMap[level]) levelMap[level] = [];
-        levelMap[level].push(id);
-        maxDepth = Math.max(maxDepth, level);
-        if (!nodes[id].collapsed) {
-          for (const c of nodes[id].childrenIds) {
-            assignLevels(c, level + 1);
-          }
-        }
-      }
-
-      for (const rootId of roots) {
-        assignLevels(rootId, 0);
-      }
-
-      // Position nodes level by level
-      const verticalSpacing = 150;
-      const horizontalSpacing = 220;
-
-      // Positions map: nodeId -> {x,y}
-      let positions = {};
-
-      // For each level assign x by sibling order
-      for (let level = 0; level <= maxDepth; level++) {
-        const ids = levelMap[level] || [];
-        for (let i = 0; i < ids.length; i++) {
-          const id = ids[i];
-          positions[id] = { x: i * horizontalSpacing, y: level * verticalSpacing };
-        }
-      }
-
-      // Position spouses side-by-side
-      for (const id in nodes) {
-        const spouseId = nodes[id].spouseId;
-        if (spouseId !== null && positions[id] && positions[spouseId]) {
-          positions[spouseId].x = positions[id].x + 180;
-          positions[spouseId].y = positions[id].y;
-        }
-      }
-
-      // Create elements and position
-      for (const id in nodes) {
-        // If parent collapsed, hide children
-        const parentId = nodes[id].parentId;
-        if (parentId !== null && nodes[parentId].collapsed) {
-          continue; // skip hidden nodes
-        }
-
-        const nodeEl = document.getElementById(id) || createNodeElement(id);
-        nodeEl.style.left = positions[id].x + "px";
-        nodeEl.style.top = positions[id].y + "px";
-      }
-
-      drawLines(positions);
-    }
-
-    // Clear all nodes from container
-    function clearNodes() {
-      // Keep only nodes that still exist in nodes object
-      const currentNodes = new Set(Object.keys(nodes));
-      [...treeContainer.children].forEach((el) => {
-        if (el.classList && el.classList.contains("node") && !currentNodes.has(el.id)) {
-          el.remove();
-        }
-      });
-    }
-
-    // Draw connection lines between parents and children
-    function drawLines(positions) {
-      clearSvg();
-      for (const id in nodes) {
-        const node = nodes[id];
-        const parentId = node.parentId;
-        if (parentId === null) continue;
-
-        if (!positions[id] || !positions[parentId]) continue;
-
-        const startX = positions[parentId].x + 90; // half width approx
-        const startY = positions[parentId].y + 110; // bottom of parent box approx
-        const endX = positions[id].x + 90;
-        const endY = positions[id].y;
-
-        const line = document.createElementNS(
-          "http://www.w3.org/2000/svg",
-          "line"
-        );
-        line.setAttribute("x1", startX);
-        line.setAttribute("y1", startY);
-        line.setAttribute("x2", endX);
-        line.setAttribute("y2", endY);
-        line.setAttribute("stroke", "#000");
-        line.setAttribute("stroke-width", "2");
-        svg.appendChild(line);
-      }
-    }
-
-    function clearSvg() {
-      while (svg.firstChild) {
-        svg.removeChild(svg.firstChild);
-      }
-    }
-
-    // Search and highlight logic
-    searchInput.addEventListener("input", () => {
-      const term = searchInput.value.toLowerCase();
-      for (const id in nodes) {
-        const node = nodes[id];
-        const nodeEl = document.getElementById(id);
-        if (!nodeEl) continue;
-        if (node.name.toLowerCase().includes(term) && term !== "") {
-          nodeEl.classList.add("highlight");
-          // Auto expand ancestors for found node
-          let p = node.parentId;
-          while (p !== null) {
-            nodes[p].collapsed = false;
-            p = nodes[p].parentId;
-          }
-        } else {
-          nodeEl.classList.remove("highlight");
-        }
-      }
-      layoutAndRender();
+    // Event listeners for inputs
+    const inputs = node.querySelectorAll("input");
+    inputs[0].addEventListener("input", (e) => {
+      nodes[nodeId].name = e.target.value;
+      renderTree();
+    });
+    inputs[1].addEventListener("input", (e) => {
+      nodes[nodeId].birthday = e.target.value;
+    });
+    inputs[2].addEventListener("input", (e) => {
+      nodes[nodeId].death = e.target.value;
     });
 
-    // Initial empty state
+    treeContainer.appendChild(node);
+    return node;
+  }
+
+  function addRootNode() {
+    const id = createNodeObject(null);
+    createNodeElement(id);
     layoutAndRender();
-  </script>
+  }
+
+  function addChild(parentId) {
+    if (nodes[parentId].collapsed) {
+      nodes[parentId].collapsed = false; // auto-expand if collapsed
+    }
+    const id = createNodeObject(parentId);
+    createNodeElement(id);
+    layoutAndRender();
+  }
+
+  function addSpouse(nodeId) {
+    if (nodes[nodeId].spouseId !== null) {
+      alert("Spouse already exists!");
+      return;
+    }
+    const spouseId = createNodeObject(null);
+    nodes[spouseId].parentId = nodes[nodeId].parentId;
+    nodes[nodeId].spouseId = spouseId;
+    nodes[spouseId].spouseId = nodeId;
+
+    createNodeElement(spouseId);
+    layoutAndRender();
+  }
+
+  function toggleCollapse(nodeId) {
+    nodes[nodeId].collapsed = !nodes[nodeId].collapsed;
+    layoutAndRender();
+  }
+
+  // Vertical dynastic layout function:
+  // Generation in columns, nodes stacked vertically,
+  // spouses side by side horizontally,
+  // children in next column to the right.
+  function layoutAndRender() {
+    clearNodes();
+    clearSvg();
+
+    // Flatten visible nodes by applying collapse
+    function getVisibleChildren(id) {
+      if (nodes[id].collapsed) return [];
+      let result = [];
+      for (const c of nodes[id].childrenIds) {
+        result.push(c);
+        result = result.concat(getVisibleChildren(c));
+      }
+      return result;
+    }
+
+    // Assign column (generation) levels
+    let levelMap = {};
+    let maxDepth = 0;
+    function assignLevels(id, level = 0) {
+      if (!levelMap[level]) levelMap[level] = [];
+      levelMap[level].push(id);
+      maxDepth = Math.max(maxDepth, level);
+      if (!nodes[id].collapsed) {
+        for (const c of nodes[id].childrenIds) {
+          assignLevels(c, level + 1);
+        }
+      }
+    }
+
+    for (const rootId of roots) {
+      assignLevels(rootId, 0);
+    }
+
+    // Positions map: nodeId -> {x,y}
+    let positions = {};
+
+    const verticalSpacing = 180; // spacing between nodes vertically
+    const horizontalSpacing = 230; // spacing between columns
+
+    // For each level (column), stack nodes vertically
+    for (let level = 0; level <= maxDepth; level++) {
+      const ids = levelMap[level] || [];
+      for (let i = 0; i < ids.length; i++) {
+        const id = ids[i];
+        positions[id] = {
+          x: level * horizontalSpacing,
+          y: i * verticalSpacing,
+        };
+      }
+    }
+
+    // Position spouses side-by-side horizontally (offset X)
+    for (const id in nodes) {
+      const spouseId = nodes[id].spouseId;
+      if (
+        spouseId !== null &&
+        positions[id] &&
+        positions[spouseId] &&
+        positions[spouseId].x === positions[id].x &&
+        positions[spouseId].y === positions[id].y
+      ) {
+        // push spouse right of main node
+        positions[spouseId].x = positions[id].x + 180;
+      }
+    }
+
+    // Create elements and position
+    for (const id in nodes) {
+      const parentId = nodes[id].parentId;
+      if (parentId !== null && nodes[parentId].collapsed) {
+        continue; // skip hidden nodes
+      }
+
+      const nodeEl = document.getElementById(id) || createNodeElement(id);
+      nodeEl.style.left = positions[id].x + "px";
+      nodeEl.style.top = positions[id].y + "px";
+    }
+
+    drawLines(positions);
+  }
+
+  // Clear all nodes from container
+  function clearNodes() {
+    const currentNodes = new Set(Object.keys(nodes));
+    [...treeContainer.children].forEach((el) => {
+      if (el.classList && el.classList.contains("node") && !currentNodes.has(el.id)) {
+        el.remove();
+      }
+    });
+  }
+
+  // Draw connection lines between parents and children
+  function drawLines(positions) {
+    clearSvg();
+    for (const id in nodes) {
+      const node = nodes[id];
+      const parentId = node.parentId;
+      if (parentId === null) continue;
+
+      if (!positions[id] || !positions[parentId]) continue;
+
+      const startX = positions[parentId].x + 180; // right edge of parent box approx
+      const startY = positions[parentId].y + 50; // vertical center of parent box approx
+      const endX = positions[id].x; // left edge of child box approx
+      const endY = positions[id].y + 50; // vertical center of child box approx
+
+      const line = document.createElementNS(
+        "http://www.w3.org/2000/svg",
+        "line"
+      );
+      line.setAttribute("x1", startX);
+      line.setAttribute("y1", startY);
+      line.setAttribute("x2", endX);
+      line.setAttribute("y2", endY);
+      line.setAttribute("stroke", "#000");
+      line.setAttribute("stroke-width", "2");
+      svg.appendChild(line);
+    }
+  }
+
+  function clearSvg() {
+    while (svg.firstChild) {
+      svg.removeChild(svg.firstChild);
+    }
+  }
+
+  // Search and highlight logic
+  searchInput.addEventListener("input", () => {
+    const term = searchInput.value.toLowerCase();
+    for (const id in nodes) {
+      const node = nodes[id];
+      const nodeEl = document.getElementById(id);
+      if (!nodeEl) continue;
+      if (node.name.toLowerCase().includes(term) && term !== "") {
+        nodeEl.classList.add("highlight");
+        // Auto expand ancestors for found node
+        let p = node.parentId;
+        while (p !== null) {
+          nodes[p].collapsed = false;
+          p = nodes[p].parentId;
+        }
+      } else {
+        nodeEl.classList.remove("highlight");
+      }
+    }
+    layoutAndRender();
+  });
+
+  // Initial empty state
+  layoutAndRender();
+</script>
 </body>
 </html>
