@@ -1,235 +1,445 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Family Tree with Firebase</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
-  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
-    window.firebaseImports = { initializeApp, getDatabase, ref, onValue, set, update };
-  </script>
-  <style>
-    .highlight {
-      background-color: #ffe58f;
-      border-radius: 0.25rem;
-      box-shadow: 0 0 8px 2px #ffd666aa;
-      animation: none;
-    }
-
-    .blink-highlight {
-      animation: blink 1s infinite;
-      background-color: #ffd666;
-      border-radius: 0.25rem;
-      box-shadow: 0 0 8px 2px #ffb700cc;
-    }
-
-    @keyframes blink {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    .children-container {
-      transition: max-height 0.3s ease, opacity 0.3s ease;
-      overflow: hidden;
-    }
-
-    .node-box {
-      border: 2px solid #93c5fd;
-      border-radius: 0.5rem;
-      padding: 0.5rem 0.75rem;
-      margin-bottom: 0.5rem;
-      background: white;
-      box-shadow: 0 2px 6px rgb(147 197 253 / 0.5);
-      position: relative;
-      display: inline-block;
-    }
-
-    .tree-node-container {
-      border-left: 2px solid #93c5fd;
-      margin-left: 1rem;
-      padding-left: 1rem;
-    }
-
-    #tree-scroll-container {
-      width: 100%;
-      max-width: 100vw;
-      height: 70vh;
-      overflow: auto;
-      border: 1px solid #cbd5e1;
-      border-radius: 0.5rem;
-      padding: 1rem;
-      background: #f9fafb;
-      box-sizing: border-box;
-      user-select: none;
-    }
-
-    .toggle-expand-btn {
-      margin-bottom: 1rem;
-      padding: 0.5rem 1rem;
-      background-color: #3b82f6;
-      color: white;
-      font-weight: 600;
-      border-radius: 0.375rem;
-      cursor: pointer;
-      user-select: none;
-      transition: background-color 0.2s ease;
-    }
-
-    .toggle-expand-btn:hover {
-      background-color: #2563eb;
-    }
-  </style>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Editable Family Tree with Firebase & Search Highlight</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+  import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-database.js";
+  window.firebaseImports = { initializeApp, getDatabase, ref, onValue, set, update };
+</script>
+<style>
+  .highlight {
+    background-color: #ffe58f;
+    border-radius: 0.25rem;
+    box-shadow: 0 0 8px 2px #ffd666aa;
+    animation: none;
+  }
+  .blink-highlight {
+    animation: blink 1s infinite;
+    background-color: #ffd666;
+    border-radius: 0.25rem;
+    box-shadow: 0 0 8px 2px #ffb700cc;
+  }
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.4; }
+  }
+  .children-container {
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    overflow: hidden;
+  }
+  .node-box {
+    border: 2px solid #93c5fd;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.5rem;
+    background: white;
+    box-shadow: 0 2px 6px rgb(147 197 253 / 0.5);
+    position: relative;
+    display: inline-block;
+  }
+  .tree-node-container {
+    border-left: 2px solid #93c5fd;
+    margin-left: 1rem;
+    padding-left: 1rem;
+  }
+  #tree-scroll-container {
+    width: 100%;
+    max-width: 100vw;
+    height: 70vh;
+    overflow: auto;
+    border: 1px solid #cbd5e1;
+    border-radius: 0.5rem;
+    padding: 1rem;
+    background: #f9fafb;
+    box-sizing: border-box;
+    user-select: none;
+  }
+  .toggle-expand-btn {
+    margin-bottom: 1rem;
+    padding: 0.5rem 1rem;
+    background-color: #3b82f6;
+    color: white;
+    font-weight: 600;
+    border-radius: 0.375rem;
+    cursor: pointer;
+    user-select: none;
+    transition: background-color 0.2s ease;
+  }
+  .toggle-expand-btn:hover {
+    background-color: #2563eb;
+  }
+  input[type="text"] {
+    border: 1px solid #cbd5e1;
+    border-radius: 0.375rem;
+    padding: 0.2rem 0.4rem;
+    font-size: 0.9rem;
+  }
+  button {
+    user-select: none;
+  }
+</style>
 </head>
 <body class="bg-gray-50 min-h-screen flex flex-col items-center p-4">
-  <div class="mb-2">
-    <input id="searchBox" type="text" placeholder="Search name..." class="border border-gray-300 px-2 py-1 rounded" />
+  <div class="mb-2 flex gap-2 w-full max-w-6xl">
+    <input
+      id="searchBox"
+      type="text"
+      placeholder="Search name..."
+      class="flex-grow border border-gray-300 px-2 py-1 rounded"
+      autoComplete="off"
+    />
   </div>
   <div id="root" class="w-full max-w-6xl bg-white p-6 rounded shadow"></div>
 
-  <script type="text/babel">
-    const { useState, useEffect, useRef } = React;
+<script type="text/babel">
+  const { useState, useEffect, useRef } = React;
 
-    const {
-      initializeApp,
-      getDatabase,
-      ref,
-      onValue,
-      set,
-      update,
-    } = window.firebaseImports;
+  const {
+    initializeApp,
+    getDatabase,
+    ref,
+    onValue,
+    set,
+    update,
+  } = window.firebaseImports;
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
-      authDomain: "project-955237504610034331.firebaseapp.com",
-      databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
-      projectId: "project-955237504610034331",
-      storageBucket: "project-955237504610034331.appspot.com",
-      messagingSenderId: "76212939677",
-      appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
-      measurementId: "G-RCJ4P82PVM"
-    };
+  const firebaseConfig = {
+    apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
+    authDomain: "project-955237504610034331.firebaseapp.com",
+    databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
+    projectId: "project-955237504610034331",
+    storageBucket: "project-955237504610034331.appspot.com",
+    messagingSenderId: "76212939677",
+    appId: "1:76212939677:web:cc36cc1cadfd106b6e5d74",
+    measurementId: "G-RCJ4P82PVM"
+  };
 
-    const app = initializeApp(firebaseConfig);
-    const database = getDatabase(app);
+  const app = initializeApp(firebaseConfig);
+  const database = getDatabase(app);
 
-    let nextId = 1000;
+  // Generate unique IDs for new nodes (basic)
+  let nextId = 10000;
 
-    function TreeNode({ node, onUpdate, onDelete, highlightIds, blinkId }) {
-      const isHighlighted = highlightIds.has(node.id);
-      const isBlinking = blinkId === node.id;
+  function TreeNode({
+    node,
+    onUpdateNode,
+    onAddChild,
+    onAddSpouse,
+    onDeleteNode,
+    highlightIds,
+    blinkId,
+  }) {
+    const [collapsed, setCollapsed] = useState(false);
+    const isHighlighted = highlightIds.has(node.id);
+    const isBlinking = blinkId === node.id;
 
-      return (
-        <div className={`ml-4`}>
-          <div className={`node-box ${isHighlighted ? "highlight" : ""} ${isBlinking ? "blink-highlight" : ""}`}>
-            {node.name || <em className="text-gray-400">(unnamed)</em>}
-          </div>
-          {node.children?.map(child => (
-            <TreeNode
-              key={child.id}
-              node={child}
-              onUpdate={onUpdate}
-              onDelete={onDelete}
-              highlightIds={highlightIds}
-              blinkId={blinkId}
+    // Controlled inputs for editing
+    const [name, setName] = useState(node.name || "");
+    const [spouse, setSpouse] = useState(node.spouse || "");
+    const [dob, setDob] = useState(node.dob || "");
+    const [dod, setDod] = useState(node.dod || "");
+
+    // Sync inputs if node changes from outside
+    useEffect(() => {
+      setName(node.name || "");
+      setSpouse(node.spouse || "");
+      setDob(node.dob || "");
+      setDod(node.dod || "");
+    }, [node]);
+
+    // Update handler for any field
+    function handleUpdate(field, value) {
+      onUpdateNode(node.id, { ...node, [field]: value });
+    }
+
+    return (
+      <div className="mb-2">
+        <div
+          className={`node-box ${isHighlighted ? "highlight" : ""} ${isBlinking ? "blink-highlight" : ""}`}
+        >
+          <div className="flex items-center gap-2">
+            <button
+              className="text-blue-500 font-bold select-none"
+              onClick={() => setCollapsed(!collapsed)}
+              title={collapsed ? "Expand children" : "Collapse children"}
+            >
+              {collapsed ? "+" : "-"}
+            </button>
+
+            <input
+              type="text"
+              value={name}
+              placeholder="Name"
+              onChange={(e) => {
+                setName(e.target.value);
+                handleUpdate("name", e.target.value);
+              }}
+              className="w-36"
             />
-          ))}
+            <input
+              type="text"
+              value={spouse}
+              placeholder="Spouse"
+              onChange={(e) => {
+                setSpouse(e.target.value);
+                handleUpdate("spouse", e.target.value);
+              }}
+              className="w-28"
+            />
+            <input
+              type="text"
+              value={dob}
+              placeholder="DOB"
+              onChange={(e) => {
+                setDob(e.target.value);
+                handleUpdate("dob", e.target.value);
+              }}
+              className="w-20"
+            />
+            <input
+              type="text"
+              value={dod}
+              placeholder="DOD"
+              onChange={(e) => {
+                setDod(e.target.value);
+                handleUpdate("dod", e.target.value);
+              }}
+              className="w-20"
+            />
+
+            <button
+              onClick={() => onAddChild(node.id)}
+              title="Add Child"
+              className="px-1 text-green-600 font-bold rounded hover:bg-green-100"
+            >
+              +
+            </button>
+            <button
+              onClick={() => onAddSpouse(node.id)}
+              title="Add Spouse"
+              className="px-1 text-purple-600 font-bold rounded hover:bg-purple-100"
+            >
+              💍
+            </button>
+            {node.id !== 1 && (
+              <button
+                onClick={() => onDeleteNode(node.id)}
+                title="Delete Node"
+                className="px-1 text-red-600 font-bold rounded hover:bg-red-100"
+              >
+                ×
+              </button>
+            )}
+          </div>
+
+          {!collapsed && (node.children?.length ?? 0) > 0 && (
+            <div className="tree-node-container">
+              {node.children.map((child) => (
+                <TreeNode
+                  key={child.id}
+                  node={child}
+                  onUpdateNode={onUpdateNode}
+                  onAddChild={onAddChild}
+                  onAddSpouse={onAddSpouse}
+                  onDeleteNode={onDeleteNode}
+                  highlightIds={highlightIds}
+                  blinkId={blinkId}
+                />
+              ))}
+            </div>
+          )}
         </div>
-      );
-    }
+      </div>
+    );
+  }
 
-    function FamilyTreeApp() {
-      const [treeData, setTreeData] = useState(null);
-      const [search, setSearch] = useState("");
-      const [highlightIds, setHighlightIds] = useState(new Set());
-      const [blinkId, setBlinkId] = useState(null);
+  function FamilyTreeApp() {
+    const [treeData, setTreeData] = useState(null);
+    const [search, setSearch] = useState("");
+    const [highlightIds, setHighlightIds] = useState(new Set());
+    const [blinkId, setBlinkId] = useState(null);
+    const searchRef = useRef(null);
 
-      useEffect(() => {
-        const dbRef = ref(database, "/tree");
-        return onValue(dbRef, (snapshot) => {
-          const val = snapshot.val();
-          if (val) {
-            setTreeData(val);
-          } else {
-            const rootNode = { id: 1, name: "Root Person", children: [] };
-            set(ref(database, "/tree"), rootNode);
-            setTreeData(rootNode);
-          }
-        });
-      }, []);
-
-      useEffect(() => {
-        if (!treeData || !search.trim()) {
-          setHighlightIds(new Set());
-          setBlinkId(null);
-          return;
+    // Load tree from Firebase realtime DB
+    useEffect(() => {
+      const dbRef = ref(database, "/tree");
+      return onValue(dbRef, (snapshot) => {
+        const val = snapshot.val();
+        if (val) {
+          setTreeData(val);
+        } else {
+          // Initialize with root node if empty
+          const rootNode = { id: 1, name: "Root Person", children: [] };
+          set(ref(database, "/tree"), rootNode);
+          setTreeData(rootNode);
         }
+      });
+    }, []);
 
-        const targetName = search.toLowerCase();
-
-        const findNodePaths = (node, path = []) => {
-          let matches = [];
-          const newPath = [...path, node];
-          if (node.name?.toLowerCase().includes(targetName)) {
-            matches.push(newPath);
-          }
-          for (const child of node.children || []) {
-            matches = matches.concat(findNodePaths(child, newPath));
-          }
-          return matches;
-        };
-
-        const collectIds = (node) => {
-          const ids = new Set();
-          const collect = (n) => {
-            ids.add(n.id);
-            (n.children || []).forEach(collect);
+    // Save updates to Firebase
+    function updateNodeInTree(nodeId, updatedNode) {
+      // Recursively update node by ID
+      function recursiveUpdate(node) {
+        if (node.id === nodeId) return updatedNode;
+        if (node.children) {
+          return {
+            ...node,
+            children: node.children.map(recursiveUpdate),
           };
-          collect(node);
-          return ids;
-        };
+        }
+        return node;
+      }
 
-        const matchedPaths = findNodePaths(treeData);
-        const highlight = new Set();
-
-        matchedPaths.forEach(path => {
-          path.forEach(n => highlight.add(n.id)); // ancestors
-          const last = path[path.length - 1];
-          const descIds = collectIds(last);
-          descIds.forEach(id => highlight.add(id)); // descendants
-        });
-
-        setHighlightIds(highlight);
-        setBlinkId(matchedPaths[0]?.at(-1)?.id || null);
-      }, [search, treeData]);
-
-      useEffect(() => {
-        const input = document.getElementById("searchBox");
-        const listener = () => setSearch(input.value);
-        input.addEventListener("input", listener);
-        return () => input.removeEventListener("input", listener);
-      }, []);
-
-      if (!treeData) return <div>Loading...</div>;
-
-      return (
-        <div id="tree-scroll-container">
-          <TreeNode
-            node={treeData}
-            onUpdate={() => {}}
-            onDelete={() => {}}
-            highlightIds={highlightIds}
-            blinkId={blinkId}
-          />
-        </div>
-      );
+      const newTree = recursiveUpdate(treeData);
+      set(ref(database, "/tree"), newTree);
     }
 
-    ReactDOM.createRoot(document.getElementById("root")).render(<FamilyTreeApp />);
-  </script>
+    // Add child to a node
+    function addChildToNode(parentId) {
+      const newChild = {
+        id: ++nextId,
+        name: "",
+        spouse: "",
+        dob: "",
+        dod: "",
+        children: [],
+      };
+
+      function recursiveAdd(node) {
+        if (node.id === parentId) {
+          const children = node.children ? [...node.children, newChild] : [newChild];
+          return { ...node, children };
+        }
+        if (node.children) {
+          return { ...node, children: node.children.map(recursiveAdd) };
+        }
+        return node;
+      }
+
+      const newTree = recursiveAdd(treeData);
+      set(ref(database, "/tree"), newTree);
+    }
+
+    // Add spouse to node (just update spouse name)
+    function addSpouseToNode(nodeId) {
+      // For simplicity, just add spouse name placeholder if empty
+      function recursiveAdd(node) {
+        if (node.id === nodeId) {
+          if (!node.spouse) {
+            return { ...node, spouse: "New Spouse" };
+          }
+          return node;
+        }
+        if (node.children) {
+          return { ...node, children: node.children.map(recursiveAdd) };
+        }
+        return node;
+      }
+      const newTree = recursiveAdd(treeData);
+      set(ref(database, "/tree"), newTree);
+    }
+
+    // Delete node by id (only if not root)
+    function deleteNodeById(nodeId) {
+      if (nodeId === 1) return; // do not delete root
+
+      function recursiveDelete(node) {
+        if (!node.children) return node;
+        const filteredChildren = node.children.filter(c => c.id !== nodeId);
+        const newChildren = filteredChildren.map(recursiveDelete);
+        return { ...node, children: newChildren };
+      }
+
+      const newTree = recursiveDelete(treeData);
+      set(ref(database, "/tree"), newTree);
+    }
+
+    // Search logic with ancestors + descendants highlight + blinking
+    useEffect(() => {
+      if (!treeData || !search.trim()) {
+        setHighlightIds(new Set());
+        setBlinkId(null);
+        return;
+      }
+
+      const targetName = search.toLowerCase();
+
+      // Find paths to all matching nodes
+      const findNodePaths = (node, path = []) => {
+        let matches = [];
+        const newPath = [...path, node];
+        if (node.name?.toLowerCase().includes(targetName)) {
+          matches.push(newPath);
+        }
+        for (const child of node.children || []) {
+          matches = matches.concat(findNodePaths(child, newPath));
+        }
+        return matches;
+      };
+
+      // Collect descendants IDs starting from node
+      const collectDescendantIds = (node) => {
+        const ids = new Set();
+        function collect(n) {
+          ids.add(n.id);
+          (n.children || []).forEach(collect);
+        }
+        collect(node);
+        return ids;
+      };
+
+      const matchedPaths = findNodePaths(treeData);
+      const highlight = new Set();
+
+      matchedPaths.forEach(path => {
+        // Ancestors (the path)
+        path.forEach(n => highlight.add(n.id));
+        // Descendants of matched node
+        const lastNode = path[path.length - 1];
+        const descendants = collectDescendantIds(lastNode);
+        descendants.forEach(id => highlight.add(id));
+      });
+
+      setHighlightIds(highlight);
+      setBlinkId(matchedPaths[0]?.at(-1)?.id || null);
+    }, [search, treeData]);
+
+    // Update search on input
+    useEffect(() => {
+      const input = document.getElementById("searchBox");
+      if (!input) return;
+
+      const listener = () => setSearch(input.value);
+      input.addEventListener("input", listener);
+
+      return () => input.removeEventListener("input", listener);
+    }, []);
+
+    if (!treeData) return <div>Loading...</div>;
+
+    return (
+      <div id="tree-scroll-container">
+        <TreeNode
+          node={treeData}
+          onUpdateNode={updateNodeInTree}
+          onAddChild={addChildToNode}
+          onAddSpouse={addSpouseToNode}
+          onDeleteNode={deleteNodeById}
+          highlightIds={highlightIds}
+          blinkId={blinkId}
+        />
+      </div>
+    );
+  }
+
+  ReactDOM.createRoot(document.getElementById("root")).render(<FamilyTreeApp />);
+</script>
 </body>
 </html>
