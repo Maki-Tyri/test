@@ -1,49 +1,44 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8">
-  <title>Proposal Page</title>
-  <style>
-    body {
-      margin: 0;
-      background: #111;
-      color: #fff;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      height: 100vh;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      text-align: center;
+<!-- Keep your full version here -->
+<!-- At the end of sayYes(), replace the redirect with postMessage: -->
+<script>
+  function sayYes() {
+    setBackground('https://i.pinimg.com/736x/5a/9e/06/5a9e06ef555717d951d00b6403715b95.jpg');
+    for (let i = 0; i < 50; i++) {
+      const heart = document.createElement('div');
+      heart.classList.add('heart');
+      heart.style.left = Math.random() * window.innerWidth + 'px';
+      heart.style.top = Math.random() * window.innerHeight + 'px';
+      document.body.appendChild(heart);
+      setTimeout(() => heart.remove(), 1000);
     }
-    button {
-      margin-top: 20px;
-      padding: 15px 30px;
-      font-size: 18px;
-      background-color: #ff4081;
-      border: none;
-      border-radius: 8px;
-      color: white;
-      cursor: pointer;
-      box-shadow: 0 0 10px rgba(255, 64, 129, 0.6);
-      transition: background 0.3s ease;
+    for (let i = 0; i < 100; i++) {
+      const sparkle = document.createElement('div');
+      sparkle.classList.add('heart');
+      sparkle.style.background = 'hotpink';
+      sparkle.style.left = Math.random() * 100 + 'vw';
+      sparkle.style.top = Math.random() * 100 + 'vh';
+      document.body.appendChild(sparkle);
+      setTimeout(() => sparkle.remove(), 1200);
     }
-    button:hover {
-      background-color: #e91e63;
-    }
-  </style>
-</head>
-<body>
 
-  <h1>Hi Love ❤️</h1>
-  <p>I have something special for you...</p>
-  <button onclick="goToNext()">See the Surprise</button>
+    let count = 3;
+    const countdownEl = document.getElementById('countdown');
+    const finalMessage = document.getElementById('finalMessage');
+    countdownEl.style.display = 'block';
+    countdownEl.innerText = count;
 
-  <script>
-    function goToNext() {
-      parent.postMessage({ action: 'goToSurprise' }, '*');
-    }
-  </script>
-
-</body>
-</html>
+    const countdownInterval = setInterval(() => {
+      count--;
+      if (count > 0) {
+        countdownEl.innerText = count;
+      } else {
+        clearInterval(countdownInterval);
+        countdownEl.style.display = 'none';
+        finalMessage.style.display = 'block';
+        setTimeout(() => {
+          window.parent.postMessage("goToSurprise", "*");
+        }, 4000);
+      }
+    }, 1000);
+  }
+</script>
