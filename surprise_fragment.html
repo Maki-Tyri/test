@@ -1,21 +1,54 @@
-<!-- At the end of the file -->
+<style>
+  body {
+    margin: 0;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background: linear-gradient(to top right, #ffb6c1, #ffe4e1);
+    color: #333;
+    overflow: hidden;
+    position: relative;
+    height: 100vh;
+    text-align: center;
+  }
+  h1 {
+    margin-top: 5vh;
+    font-size: 48px;
+    color: #d81e5b;
+    text-shadow: 0 0 10px #ff8aa1;
+  }
+  p {
+    font-size: 22px;
+    margin: 20px;
+    color: #d81e5b;
+  }
+  button {
+    padding: 12px 25px;
+    font-size: 18px;
+    border: none;
+    border-radius: 30px;
+    background-color: #ff69b4;
+    color: white;
+    cursor: pointer;
+    margin: 20px 10px 0;
+  }
+  #unmuteBtn {
+    margin-top: 30px;
+  }
+</style>
+
+<h1>💍 Tyri Said YES! 💍</h1>
+<p>From this moment onwards, it's you and me.<br>
+Through laughter and tears, sunsets and sunrises,<br>
+hand in hand, heart with heart.<br>
+I promise to choose you every day. 💑✨<br>
+<span style="font-weight: bold; font-size: 24px; color: #ff1493;">HAPPY Birthday mahal ko 🎂❤️❤️❤️</span><br>
+<span style="font-weight: bold; font-size: 24px; color: #ff1493;">I LOVE YOU MUCH PO 🎂❤️❤️❤️</span>
+</p>
+
+<button id="unmuteBtn">🔊 Unmute Music</button>
+
 <script>
-  const heartsContainer = document.getElementById('hearts-container');
-
-  for (let i = 0; i < 60; i++) {
-    const heart = document.createElement('div');
-    heart.classList.add('heart');
-    heart.style.left = Math.random() * 100 + 'vw';
-    heart.style.bottom = '-' + (Math.random() * 20 + 10) + 'vh';
-    heart.style.background = ['#ff69b4', '#ff1493', 'red', '#ffc0cb'][Math.floor(Math.random() * 4)];
-    heart.style.animationDuration = (4 + Math.random() * 5) + 's';
-    const size = 15 + Math.random() * 20;
-    heart.style.width = heart.style.height = size + 'px';
-    heart.style.opacity = (0.5 + Math.random() * 0.5).toFixed(2);
-    heartsContainer.appendChild(heart);
-  }
-
-  function unmuteMusic() {
-    window.parent.postMessage("unmuteMusic", "*");
-  }
+  document.getElementById('unmuteBtn').addEventListener('click', () => {
+    window.parent.postMessage({ action: 'unmuteMusic' }, '*');
+    document.getElementById('unmuteBtn').style.display = 'none';
+  });
 </script>
