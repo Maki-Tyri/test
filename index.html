@@ -1,18 +1,17 @@
-index <!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Proposal Flow with Login and Persistent Music</title>
+  <title>Proposal Flow with Persistent Music</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body, html {
-      margin: 0; padding: 0; height: 100%;
+      margin:0; padding:0; height:100%;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      overflow: hidden;
       background: #000;
       color: #fff;
-      overflow: hidden;
     }
-
     #musicFrame {
       position: fixed;
       width: 0;
@@ -22,52 +21,16 @@ index <!DOCTYPE html>
       pointer-events: none;
       z-index: -1;
     }
-
-    /* Center login box */
-    #loginBox {
-      height: 100vh;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      background: #111;
-      flex-direction: column;
-      gap: 15px;
-    }
-    #loginBox input {
-      padding: 10px;
-      font-size: 18px;
-      border-radius: 10px;
-      border: none;
-      width: 250px;
-      text-align: center;
-    }
-    #loginBox button {
-      padding: 10px 25px;
-      font-size: 18px;
-      border-radius: 15px;
-      border: none;
-      background: #ff69b4;
-      color: white;
-      cursor: pointer;
-      width: 150px;
-    }
-    #loginError {
-      color: #ff4c4c;
-      font-weight: bold;
-    }
-
-    /* Content iframe */
     #contentFrame {
       width: 100vw;
       height: 100vh;
       border: none;
-      display: none; /* hidden until login */
     }
   </style>
 </head>
 <body>
 
-<!-- Music iframe (hidden but playing) -->
+<!-- Persistent Music iframe -->
 <iframe
   id="musicFrame"
   src="https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=1&loop=1&playlist=gDxdkSkkM0Q"
@@ -75,45 +38,19 @@ index <!DOCTYPE html>
   allowfullscreen
 ></iframe>
 
-<!-- Login Form -->
-<div id="loginBox">
-  <h2>Login to continue</h2>
-  <input id="username" type="text" placeholder="Username" autocomplete="off" />
-  <input id="password" type="password" placeholder="Password" autocomplete="off" />
-  <button onclick="tryLogin()">Login</button>
-  <div id="loginError"></div>
-</div>
-
-<!-- Proposal / Surprise content -->
-<iframe id="contentFrame" src=""></iframe>
+<!-- Main content iframe -->
+<iframe id="contentFrame" src="proposal_fragment.html"></iframe>
 
 <script>
-  const loginBox = document.getElementById('loginBox');
   const contentFrame = document.getElementById('contentFrame');
-  const loginError = document.getElementById('loginError');
 
-  // Simple login check (example only)
-  function tryLogin() {
-    const user = document.getElementById('username').value.trim();
-    const pass = document.getElementById('password').value.trim();
-
-    // Example: username "tyri" and password "love"
-    if(=== 'Tyri' && pass === '112624') {
-      loginError.textContent = '';
-      loginBox.style.display = 'none';
-      contentFrame.style.display = 'block';
-      contentFrame.src = 'proposal_fragment.html';
-    } else {
-      loginError.textContent = 'Invalid username or password.';
-    }
-  }
-
-  // Listen for messages from contentFrame (proposal/surprise pages)
+  // Listen for messages from contentFrame to navigate pages
   window.addEventListener('message', (e) => {
     if (!e.data) return;
     if (e.data.action === 'goToSurprise') {
       contentFrame.src = 'surprise_fragment.html';
     } else if (e.data.action === 'unmuteMusic') {
+      // Reload music iframe with unmute param
       document.getElementById('musicFrame').src =
         'https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=0&loop=1&playlist=gDxdkSkkM0Q';
     }
