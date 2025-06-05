@@ -2,26 +2,41 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Proposal Flow with Persistent Music</title>
+  <title>Proposal</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body, html {
-      margin:0; padding:0; height:100%;
+      margin: 0;
+      padding: 0;
+      height: 100%;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      overflow: hidden;
       background: #000;
       color: #fff;
+      overflow: hidden;
     }
-    #musicFrame {
-      position: fixed;
-      width: 0;
-      height: 0;
-      border: 0;
-      opacity: 0;
-      pointer-events: none;
-      z-index: -1;
+
+    #startBtn {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      padding: 20px 40px;
+      font-size: 20px;
+      cursor: pointer;
+      background: #ff4081;
+      border: none;
+      border-radius: 10px;
+      color: white;
+      box-shadow: 0 0 10px rgba(255, 64, 129, 0.7);
+      transition: background 0.3s ease;
     }
+
+    #startBtn:hover {
+      background: #e91e63;
+    }
+
     #contentFrame {
+      display: none;
       width: 100vw;
       height: 100vh;
       border: none;
@@ -30,29 +45,46 @@
 </head>
 <body>
 
-<!-- Persistent Music iframe -->
-<iframe
-  id="musicFrame"
-  src="https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=1&loop=1&playlist=gDxdkSkkM0Q"
-  allow="autoplay"
-  allowfullscreen
-></iframe>
+<!-- Start Button -->
+<button id="startBtn">Play</button>
 
 <!-- Main content iframe -->
 <iframe id="contentFrame" src="proposal_fragment.html"></iframe>
 
 <script>
+  const startBtn = document.getElementById('startBtn');
   const contentFrame = document.getElementById('contentFrame');
 
-  // Listen for messages from contentFrame to navigate pages
+  startBtn.addEventListener('click', () => {
+    // Create and insert music iframe AFTER user interaction
+    const musicFrame = document.createElement('iframe');
+    musicFrame.id = 'musicFrame';
+    musicFrame.src = 'https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=1&loop=1&playlist=gDxdkSkkM0Q';
+    musicFrame.allow = 'autoplay';
+    musicFrame.style.position = 'fixed';
+    musicFrame.style.width = '0';
+    musicFrame.style.height = '0';
+    musicFrame.style.border = '0';
+    musicFrame.style.opacity = '0';
+    musicFrame.style.pointerEvents = 'none';
+    musicFrame.style.zIndex = '-1';
+    document.body.appendChild(musicFrame);
+
+    // Hide start button and show content
+    startBtn.style.display = 'none';
+    contentFrame.style.display = 'block';
+  });
+
+  // Handle messages from iframe
   window.addEventListener('message', (e) => {
     if (!e.data) return;
     if (e.data.action === 'goToSurprise') {
-      contentFrame.src = 'surprise_fragment.html';
+      contentFrame.src = 'proposal_fragment.html';
     } else if (e.data.action === 'unmuteMusic') {
-      // Reload music iframe with unmute param
-      document.getElementById('musicFrame').src =
-        'https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=0&loop=1&playlist=gDxdkSkkM0Q';
+      const musicFrame = document.getElementById('musicFrame');
+      if (musicFrame) {
+        musicFrame.src = 'https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=0&loop=1&playlist=gDxdkSkkM0Q';
+      }
     }
   }, false);
 </script>
