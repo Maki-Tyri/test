@@ -79,7 +79,7 @@
   window.addEventListener('message', (e) => {
     if (!e.data) return;
     if (e.data.action === 'goToSurprise') {
-      contentFrame.src = 'proposal_fragment.html';
+      contentFrame.src = 'surprice_fragment.html';
     } else if (e.data.action === 'unmuteMusic') {
       const musicFrame = document.getElementById('musicFrame');
       if (musicFrame) {
