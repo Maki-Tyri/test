@@ -2,52 +2,60 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Forever with You</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Proposal Flow with Persistent Music</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
+    body, html {
+      margin:0; padding:0; height:100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
       overflow: hidden;
-      height: 100%;
-      width: 100%;
+      background: #000;
+      color: #fff;
     }
-
-    #musicPlayer {
-      display: none;
+    #musicFrame {
+      position: fixed;
+      width: 0;
+      height: 0;
+      border: 0;
+      opacity: 0;
+      pointer-events: none;
+      z-index: -1;
     }
-
     #contentFrame {
+      width: 100vw;
+      height: 100vh;
       border: none;
-      width: 100%;
-      height: 100%;
     }
   </style>
 </head>
 <body>
-  <!-- Hidden YouTube music iframe -->
-  <iframe
-    id="musicPlayer"
-    src="https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&loop=1&mute=1&playlist=gDxdkSkkM0Q"
-    allow="autoplay"
-  ></iframe>
 
-  <!-- Main content frame -->
-  <iframe id="contentFrame" src="proposal_fragment.html"></iframe>
+<!-- Persistent Music iframe -->
+<iframe
+  id="musicFrame"
+  src="https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=1&loop=1&playlist=gDxdkSkkM0Q"
+  allow="autoplay"
+  allowfullscreen
+></iframe>
 
-  <script>
-    // Allow child frame to request music unmute
-    window.addEventListener("message", (event) => {
-      if (event.data === "unmuteMusic") {
-        const iframe = document.getElementById("musicPlayer");
-        const src = iframe.src.replace("mute=1", "mute=0");
-        iframe.src = src;
-      }
+<!-- Main content iframe -->
+<iframe id="contentFrame" src="proposal_fragment.html"></iframe>
 
-      if (event.data === "goToSurprise") {
-        document.getElementById("contentFrame").src = "surprise_fragment.html";
-      }
-    });
-  </script>
+<script>
+  const contentFrame = document.getElementById('contentFrame');
+
+  // Listen for messages from contentFrame to navigate pages
+  window.addEventListener('message', (e) => {
+    if (!e.data) return;
+    if (e.data.action === 'goToSurprise') {
+      contentFrame.src = 'surprise_fragment.html';
+    } else if (e.data.action === 'unmuteMusic') {
+      // Reload music iframe with unmute param
+      document.getElementById('musicFrame').src =
+        'https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=0&loop=1&playlist=gDxdkSkkM0Q';
+    }
+  }, false);
+</script>
+
 </body>
 </html>
