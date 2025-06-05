@@ -2,60 +2,328 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Proposal Flow with Persistent Music</title>
+  <title>Proposal Page with Music Visible</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    body, html {
-      margin:0; padding:0; height:100%;
+    /* Same styles as before */
+    body {
+      margin: 0;
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      overflow: hidden;
-      background: #000;
-      color: #fff;
-    }
-    #musicFrame {
-      position: fixed;
-      width: 0;
-      height: 0;
-      border: 0;
-      opacity: 0;
-      pointer-events: none;
-      z-index: -1;
-    }
-    #contentFrame {
-      width: 100vw;
+      background: url('https://i.pinimg.com/736x/d7/00/04/d70004c89987ac91aef3f39d6f468655.jpg') no-repeat center center fixed;
+      background-size: cover;
       height: 100vh;
+      color: #fff;
+      overflow: hidden;
+      transition: background-image 0.5s ease-in-out;
+    }
+    .overlay {
+      background-color: rgba(255, 255, 255, 0);
+      padding: 20px;
+      border-radius: 15px;
+      text-align: center;
+      width: 90%;
+      max-width: 450px;
+      margin: auto;
+      margin-top: 20%;
+      opacity: 0;
+      animation: fadeIn 2s ease-in-out forwards;
+      position: relative;
+    }
+    .login-box {
+      background-color: white;
+      padding: 25px;
+      border-radius: 15px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.2);
+      color: black;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(30px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    h2 {
+      font-size: 28px;
+      color: #1877f2;
+      margin-bottom: 10px;
+    }
+    #proposal {
+      font-size: 32px;
+      font-weight: 600;
+      line-height: 1.5;
+      margin-bottom: 20px;
+      color: #fff;
+      text-shadow: 1px 1px 4px #000;
+    }
+    input {
+      font-size: 16px;
+      padding: 10px;
+      width: 90%;
+      max-width: 250px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+    }
+    button {
+      padding: 12px 24px;
       border: none;
+      border-radius: 8px;
+      margin: 10px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      position: relative;
+    }
+    #yesBtn {
+      background-color: #ff69b4;
+      color: white;
+      z-index: 1;
+    }
+    #noBtn {
+      background-color: #888;
+      color: white;
+      z-index: 2;
+      position: absolute;
+    }
+    #loginPage, #proposalPage {
+      display: none;
+    }
+    #loginPage.show, #proposalPage.show {
+      display: block;
+    }
+    #countdown, #finalMessage {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 40px;
+      font-weight: bold;
+      text-align: center;
+      z-index: 10;
+      display: none;
+    }
+    #countdown {
+      color: #fff;
+      text-shadow: 2px 2px 6px #000;
+    }
+    #finalMessage {
+      font-size: 3.5rem;
+      color: #d81e5b;
+      text-shadow: 0 0 10px #ff8aa1, 0 0 20px #ffb6c1, 0 0 30px #fff;
+      animation: popUp 1.5s ease-out;
+    }
+    @keyframes popUp {
+      from {
+        transform: translate(-50%, -50%) scale(0.5);
+        opacity: 0;
+      }
+      to {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 1;
+      }
+    }
+    #unmuteBtn {
+      display: none;
+      margin-top: 20px;
+      background: #ff69b4;
+      color: white;
+      font-weight: bold;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+
+    /* Position iframe bottom right corner */
+    #ytplayer {
+      position: fixed;
+      bottom: 10px;
+      right: 10px;
+      width: 200px;
+      height: 113px;
+      border: 2px solid #ff69b4;
+      border-radius: 12px;
+      box-shadow: 0 0 10px #ff69b4;
+      z-index: 9999;
+      background: black;
     }
   </style>
+  <script src="https://www.youtube.com/iframe_api"></script>
 </head>
 <body>
+  <iframe
+    id="ytplayer"
+    type="text/html"
+    src="https://www.youtube.com/embed/5p_9Af2JQp4?enablejsapi=1&origin=http://localhost&autoplay=1&mute=1&loop=1&playlist=5p_9Af2JQp4"
+    frameborder="0"
+    allow="autoplay"
+    allowfullscreen
+  ></iframe>
 
-<!-- Persistent Music iframe -->
-<iframe
-  id="musicFrame"
-  src="https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=1&loop=1&playlist=gDxdkSkkM0Q"
-  allow="autoplay"
-  allowfullscreen
-></iframe>
+  <div class="overlay" id="loginPage">
+    <div class="login-box">
+      <h2>Maki Web</h2>
+      <p>Log in to continue...</p>
+      <input type="text" id="username" placeholder="Username" /><br /><br />
+      <input type="password" id="password" placeholder="Password" /><br /><br />
+      <button onclick="login()">Login</button>
+    </div>
+  </div>
 
-<!-- Main content iframe -->
-<iframe id="contentFrame" src="proposal_fragment.html"></iframe>
+  <div class="overlay" id="proposalPage">
+    <div id="proposal">
+      I've loved you since I can't remember when,<br />
+      and I'm gonna love you till I can't forget how.<br /><br />
+      <strong>Will you marry me?</strong>
+    </div>
+    <button id="yesBtn" onclick="sayYes()">Yes 💍</button>
+    <button id="noBtn" onclick="shrinkNo()">No 🙈</button>
+    <button id="unmuteBtn" onclick="unmuteMusic()">Unmute Music 🔊</button>
+  </div>
 
-<script>
-  const contentFrame = document.getElementById('contentFrame');
+  <div id="countdown">3</div>
+  <div id="finalMessage">💖💍Tyri said YES!💍💖</div>
 
-  // Listen for messages from contentFrame to navigate pages
-  window.addEventListener('message', (e) => {
-    if (!e.data) return;
-    if (e.data.action === 'goToSurprise') {
-      contentFrame.src = 'surprise_fragment.html';
-    } else if (e.data.action === 'unmuteMusic') {
-      // Reload music iframe with unmute param
-      document.getElementById('musicFrame').src =
-        'https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=0&loop=1&playlist=gDxdkSkkM0Q';
+  <script>
+    const users = {
+      Tyri: "112624",
+      Maki: "112624",
+    };
+
+    let ytPlayer;
+    let isMuted = true;
+
+    window.onload = () => {
+      document.getElementById("loginPage").classList.add("show");
+    };
+
+    // YouTube API ready callback
+    function onYouTubeIframeAPIReady() {
+      ytPlayer = new YT.Player("ytplayer", {
+        events: {
+          onReady: (event) => {
+            event.target.mute(); // mute to allow autoplay
+          },
+        },
+      });
     }
-  }, false);
-</script>
 
+    function login() {
+      const u = document.getElementById("username").value.trim();
+      const p = document.getElementById("password").value.trim();
+      if (users[u] === p) {
+        document.getElementById("loginPage").style.display = "none";
+        document.getElementById("proposalPage").classList.add("show");
+
+        if (ytPlayer && ytPlayer.playVideo) {
+          ytPlayer.playVideo();
+
+          // Unmute after user interaction
+          setTimeout(() => {
+            ytPlayer.unMute();
+            isMuted = false;
+            showUnmuteButton(false);
+          }, 300);
+        }
+      } else {
+        alert("Incorrect username or password.");
+      }
+    }
+
+    function showUnmuteButton(show) {
+      const btn = document.getElementById("unmuteBtn");
+      btn.style.display = show ? "inline-block" : "none";
+    }
+
+    function unmuteMusic() {
+      if (ytPlayer) {
+        ytPlayer.unMute();
+        isMuted = false;
+        showUnmuteButton(false);
+      }
+    }
+
+    function setBackground(url) {
+      document.body.style.background = `url('${url}') no-repeat center center fixed`;
+      document.body.style.backgroundSize = "cover";
+    }
+
+    let noScale = 1;
+    let yesScale = 1;
+    let noClicked = false;
+
+    function shrinkNo() {
+      const noBtn = document.getElementById("noBtn");
+      const yesBtn = document.getElementById("yesBtn");
+
+      if (!noClicked) {
+        setBackground(
+          "https://i.pinimg.com/736x/04/ef/2c/04ef2cbeca3bc0548f5fae3f0558c494.jpg"
+        );
+        noClicked = true;
+      }
+
+      if (noScale > 0.1) {
+        noScale -= 0.05;
+        noBtn.style.transform = `scale(${noScale})`;
+      }
+
+      const overlay = document.getElementById("proposalPage");
+      const maxX = overlay.clientWidth - noBtn.offsetWidth;
+      const maxY = overlay.clientHeight - noBtn.offsetHeight;
+      const randX = Math.floor(Math.random() * maxX);
+      const randY = Math.floor(Math.random() * maxY);
+      noBtn.style.left = `${randX}px`;
+      noBtn.style.top = `${randY}px`;
+
+      yesScale += 0.05;
+      yesBtn.style.transform = `scale(${yesScale})`;
+
+      if (noScale <= 0.1) {
+        noBtn.style.display = "none";
+      }
+    }
+
+    function sayYes() {
+      setBackground(
+        "https://i.pinimg.com/736x/5a/9e/06/5a9e06ef555717d951d00b6403715b95.jpg"
+      );
+      for (let i = 0; i < 50; i++) {
+        const heart = document.createElement("div");
+        heart.classList.add("heart");
+        heart.style.left = Math.random() * window.innerWidth + "px";
+        heart.style.top = Math.random() * window.innerHeight + "px";
+        document.body.appendChild(heart);
+        setTimeout(() => heart.remove(), 1000);
+      }
+
+      for (let i = 0; i < 100; i++) {
+        const sparkle = document.createElement("div");
+        sparkle.classList.add("heart");
+        sparkle.style.background = "hotpink";
+        sparkle.style.left = Math.random() * 100 + "vw";
+        sparkle.style.top = Math.random() * 100 + "vh";
+        document.body.appendChild(sparkle);
+        setTimeout(() => sparkle.remove(), 1200);
+      }
+
+      let count = 3;
+      const countdownEl = document.getElementById("countdown");
+      const finalMessage = document.getElementById("finalMessage");
+      countdownEl.style.display = "block";
+      countdownEl.innerText = count;
+
+      const countdownInterval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          countdownEl.innerText = count;
+        } else {
+          clearInterval(countdownInterval);
+          countdownEl.style.display = "none";
+          finalMessage.style.display = "block";
+          setTimeout(() => {
+            window.location.href = "Surprise.html";
+          }, 4000);
+        }
+      }, 1000);
+    }
+  </script>
 </body>
 </html>
