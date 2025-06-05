@@ -1,103 +1,124 @@
-<!DOCTYPE html>
+index <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Welcome My Love</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no" />
+  <title>Proposal Flow with Login and Persistent Music</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
-    * {
-      box-sizing: border-box;
+    body, html {
+      margin: 0; padding: 0; height: 100%;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: #000;
+      color: #fff;
+      overflow: hidden;
     }
 
-    body {
-      margin: 0;
-      padding: 0;
+    #musicFrame {
+      position: fixed;
+      width: 0;
+      height: 0;
+      border: 0;
+      opacity: 0;
+      pointer-events: none;
+      z-index: -1;
+    }
+
+    /* Center login box */
+    #loginBox {
       height: 100vh;
-      width: 100vw;
-      background: linear-gradient(to right, #ff9a9e, #fad0c4);
       display: flex;
       justify-content: center;
       align-items: center;
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      overflow: hidden;
-      position: relative;
+      background: #111;
+      flex-direction: column;
+      gap: 15px;
     }
-
-    .login-container {
-      background: rgba(255, 255, 255, 0.85);
-      padding: 30px;
-      border-radius: 20px;
-      box-shadow: 0 8px 16px rgba(0,0,0,0.3);
-      text-align: center;
-      max-width: 90%;
-    }
-
-    h1 {
-      font-size: 6vw;
-      margin-bottom: 15px;
-      color: #c2185b;
-    }
-
-    input {
-      width: 80%;
-      padding: 12px;
-      margin: 10px 0;
-      border: 2px solid #c2185b;
-      border-radius: 8px;
-      font-size: 4vw;
-    }
-
-    button {
-      padding: 12px 25px;
-      font-size: 4vw;
+    #loginBox input {
+      padding: 10px;
+      font-size: 18px;
+      border-radius: 10px;
       border: none;
-      border-radius: 30px;
-      background-color: #ff69b4;
+      width: 250px;
+      text-align: center;
+    }
+    #loginBox button {
+      padding: 10px 25px;
+      font-size: 18px;
+      border-radius: 15px;
+      border: none;
+      background: #ff69b4;
       color: white;
       cursor: pointer;
-      margin-top: 10px;
-      transition: background-color 0.3s ease;
+      width: 150px;
+    }
+    #loginError {
+      color: #ff4c4c;
+      font-weight: bold;
     }
 
-    button:hover {
-      background-color: #ff1493;
-    }
-
-    @media (min-width: 600px) {
-      h1 { font-size: 36px; }
-      input, button { font-size: 20px; }
-    }
-
-    .music-iframe {
-      position: absolute;
-      width: 0;
-      height: 0;
-      opacity: 0;
-      pointer-events: none;
+    /* Content iframe */
+    #contentFrame {
+      width: 100vw;
+      height: 100vh;
+      border: none;
+      display: none; /* hidden until login */
     }
   </style>
 </head>
 <body>
 
-  <div class="login-container">
-    <h1>Welcome Tyri 💖</h1>
-    <input type="text" placeholder="Your Name" id="Tyri" />
-    <input type="password" placeholder="Secret Code" id="112624" />
-    <br />
-    <button onclick="nextPage()">Next</button>
-  </div>
+<!-- Music iframe (hidden but playing) -->
+<iframe
+  id="musicFrame"
+  src="https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=1&loop=1&playlist=gDxdkSkkM0Q"
+  allow="autoplay"
+  allowfullscreen
+></iframe>
 
-  <!-- Background music that autoplays & loops -->
-  <iframe
-    class="music-iframe"
-    src="https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=1&loop=1&playlist=gDxdkSkkM0Q"
-    allow="autoplay"
-  ></iframe>
+<!-- Login Form -->
+<div id="loginBox">
+  <h2>Login to continue</h2>
+  <input id="username" type="text" placeholder="Username" autocomplete="off" />
+  <input id="password" type="password" placeholder="Password" autocomplete="off" />
+  <button onclick="tryLogin()">Login</button>
+  <div id="loginError"></div>
+</div>
 
-  <script>
-    function nextPage() {
-      window.location.href = 'proposal_fragment.html';
+<!-- Proposal / Surprise content -->
+<iframe id="contentFrame" src=""></iframe>
+
+<script>
+  const loginBox = document.getElementById('loginBox');
+  const contentFrame = document.getElementById('contentFrame');
+  const loginError = document.getElementById('loginError');
+
+  // Simple login check (example only)
+  function tryLogin() {
+    const user = document.getElementById('username').value.trim();
+    const pass = document.getElementById('password').value.trim();
+
+    // Example: username "tyri" and password "love"
+    if(=== 'Tyri' && pass === '112624') {
+      loginError.textContent = '';
+      loginBox.style.display = 'none';
+      contentFrame.style.display = 'block';
+      contentFrame.src = 'proposal_fragment.html';
+    } else {
+      loginError.textContent = 'Invalid username or password.';
     }
-  </script>
+  }
+
+  // Listen for messages from contentFrame (proposal/surprise pages)
+  window.addEventListener('message', (e) => {
+    if (!e.data) return;
+    if (e.data.action === 'goToSurprise') {
+      contentFrame.src = 'surprise_fragment.html';
+    } else if (e.data.action === 'unmuteMusic') {
+      document.getElementById('musicFrame').src =
+        'https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=0&loop=1&playlist=gDxdkSkkM0Q';
+    }
+  }, false);
+</script>
+
 </body>
 </html>
