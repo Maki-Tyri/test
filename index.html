@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Proposal</title>
+  <title>Proposal Flow with Persistent Music</title>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <style>
     body, html {
@@ -46,7 +46,7 @@
 <body>
 
 <!-- Start Button -->
-<button id="startBtn">Play</button>
+<button id="startBtn">Start Experience</button>
 
 <!-- Main content iframe -->
 <iframe id="contentFrame" src="proposal_fragment.html"></iframe>
@@ -79,7 +79,7 @@
   window.addEventListener('message', (e) => {
     if (!e.data) return;
     if (e.data.action === 'goToSurprise') {
-      contentFrame.src = 'surprice_fragment.html';
+      contentFrame.src = 'surprise_fragment.html';
     } else if (e.data.action === 'unmuteMusic') {
       const musicFrame = document.getElementById('musicFrame');
       if (musicFrame) {
