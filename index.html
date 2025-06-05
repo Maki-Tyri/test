@@ -2,65 +2,59 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Proposal with Music</title>
+  <title>Our Forever Music + Content</title>
   <style>
-    body, html { margin:0; padding:0; height:100%; font-family: sans-serif; background:#000; color:#fff; }
-    #musicFrame {
-      position: fixed; width: 0; height: 0; border: 0; opacity: 0; pointer-events: none; z-index: -1;
+    body, html {
+      margin: 0; padding: 0; height: 100vh; width: 100vw; overflow: hidden;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to top right, #ffb6c1, #ffe4e1);
     }
-    #loginBox, #contentFrame { width: 100%; height: 100%; }
-    #contentFrame { border: none; display:none; }
+    #music-player {
+      position: fixed;
+      top: 0; left: 0; width: 0; height: 0; opacity: 0; pointer-events: none;
+    }
+    #content-frame {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      border: none;
+    }
   </style>
 </head>
 <body>
 
-  <!-- music starts here -->
-  <iframe
-    id="musicFrame"
-    src="https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=1&loop=1&playlist=gDxdkSkkM0Q"
-    allow="autoplay"
-  ></iframe>
+  <!-- Hidden music player iframe -->
+  <iframe 
+    id="music-player" 
+    src="https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=1&loop=1&playlist=gDxdkSkkM0Q" 
+    allow="autoplay" 
+    allowfullscreen>
+  </iframe>
 
-  <!-- login -->
-  <div id="loginBox">
-    <h2>Login</h2>
-    <input id="username" placeholder="Username" autocomplete="off" />
-    <input id="password" type="password" placeholder="Password" autocomplete="off" />
-    <button onclick="tryLogin()">Login</button>
-    <div id="loginError" style="color:#f88;"></div>
-  </div>
+  <!-- This iframe will load proposal or surprise pages -->
+  <iframe id="content-frame" src="proposal_fragment.html"></iframe>
 
-  <!-- proposal/surprise content -->
-  <iframe id="contentFrame"></iframe>
+  <script>
+    const musicPlayer = document.getElementById('music-player');
+    const contentFrame = document.getElementById('content-frame');
 
-<script>
-  const loginBox = document.getElementById('loginBox');
-  const contentFrame = document.getElementById('contentFrame');
-  const loginError = document.getElementById('loginError');
-  const musicFrame = document.getElementById('musicFrame');
+    window.addEventListener('message', (event) => {
+      const data = event.data;
+      if (!data || typeof data !== 'object') return;
 
-  function tryLogin() {
-    const user = document.getElementById('username').value.trim();
-    const pass = document.getElementById('password').value.trim();
-    if(user === 'Tyri' && pass === '112624') {
-      loginError.textContent = '';
-      loginBox.style.display = 'none';
-      contentFrame.style.display = 'block';
-      contentFrame.src = 'proposal_fragment.html';
-    } else {
-      loginError.textContent = 'Incorrect username or password';
-    }
-  }
+      if (data.action === 'unmuteMusic') {
+        // Unmute music by reloading iframe src with mute=0
+        let src = musicPlayer.src;
+        if (src.includes('mute=1')) {
+          src = src.replace('mute=1', 'mute=0');
+          musicPlayer.src = src;
+        }
+      }
 
-  // listen for message to navigate inside iframe
-  window.addEventListener('message', e => {
-    if(e.data?.action === 'goToSurprise') {
-      contentFrame.src = 'surprise_fragment.html';
-    } else if(e.data?.action === 'unmuteMusic') {
-      musicFrame.src = "https://www.youtube.com/embed/gDxdkSkkM0Q?autoplay=1&mute=0&loop=1&playlist=gDxdkSkkM0Q";
-    }
-  });
-</script>
+      if (data.action === 'navigate' && data.page) {
+        contentFrame.src = data.page;
+      }
+    });
+  </script>
 
 </body>
 </html>
