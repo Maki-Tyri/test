@@ -1,329 +1,197 @@
-<!DOCTYPE html>
+<!DOCTYPE html> 
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <title>Proposal Page with Music Visible</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="UTF-8">
+  <title>She Said YES!</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <style>
-    /* Same styles as before */
-    body {
-      margin: 0;
+    /* Your existing styles preserved */
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; padding: 0; height: 100%; width: 100%;
+      background: radial-gradient(circle at top left, #ffe4e1, #ffb6c1, #ff69b4);
       font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      background: url('https://i.pinimg.com/736x/d7/00/04/d70004c89987ac91aef3f39d6f468655.jpg') no-repeat center center fixed;
-      background-size: cover;
-      height: 100vh;
-      color: #fff;
-      overflow: hidden;
-      transition: background-image 0.5s ease-in-out;
+      color: #fff; text-align: center; overflow: hidden; position: relative;
     }
-    .overlay {
-      background-color: rgba(255, 255, 255, 0);
-      padding: 20px;
-      border-radius: 15px;
-      text-align: center;
-      width: 90%;
-      max-width: 450px;
-      margin: auto;
-      margin-top: 20%;
-      opacity: 0;
-      animation: fadeIn 2s ease-in-out forwards;
-      position: relative;
+    body {
+      display: flex; flex-direction: column; justify-content: center;
+      align-items: center; height: 100vh;
     }
-    .login-box {
-      background-color: white;
-      padding: 25px;
-      border-radius: 15px;
-      box-shadow: 0 0 15px rgba(0,0,0,0.2);
-      color: black;
+
+    #rings-container {
+      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      pointer-events: none; z-index: 0; overflow: hidden;
     }
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(30px); }
-      to { opacity: 1; transform: translateY(0); }
+
+    h1, p, .button-group {
+      position: relative; z-index: 10; user-select: none;
+      text-shadow: 2px 2px 10px #c2185b;
     }
-    h2 {
-      font-size: 28px;
-      color: #1877f2;
-      margin-bottom: 10px;
+
+    h1 {
+      font-size: 10vw; margin: 0;
+      animation: fadeIn 2s ease-out forwards, pulse 3s infinite;
     }
-    #proposal {
-      font-size: 32px;
-      font-weight: 600;
-      line-height: 1.5;
-      margin-bottom: 20px;
-      color: #fff;
-      text-shadow: 1px 1px 4px #000;
+
+    p {
+      font-size: 5vw; margin: 4vh 10vw 2vh;
+      animation: fadeIn 3s ease-out forwards;
+      line-height: 1.6;
+      text-shadow: 1px 1px 6px #c2185b;
     }
-    input {
-      font-size: 16px;
-      padding: 10px;
-      width: 90%;
-      max-width: 250px;
-      border-radius: 6px;
-      border: 1px solid #ccc;
-    }
-    button {
-      padding: 12px 24px;
-      border: none;
-      border-radius: 8px;
-      margin: 10px;
-      font-size: 18px;
+
+    .special-text {
       font-weight: bold;
-      cursor: pointer;
-      transition: all 0.3s ease;
-      box-shadow: 0 0 10px rgba(0, 0, 0, 0.3);
+      font-size: 6vw;
+      background: linear-gradient(45deg, #ff69b4, #ff1493, #ff69b4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      display: inline-block;
       position: relative;
+      user-select: none;
+      text-shadow: 1px 1px 4px #c2185b;
     }
-    #yesBtn {
+
+    .ring-emoji {
+      display: inline-block;
+      animation: twinkle 2s infinite ease-in-out;
+      font-size: 5vw;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+
+    .button-group {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 15px;
+      flex-wrap: wrap;
+      margin-top: 3vh;
+    }
+
+    button {
+      padding: 12px 25px;
+      font-size: 4vw;
+      border: none;
+      border-radius: 30px;
       background-color: #ff69b4;
       color: white;
-      z-index: 1;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: background-color 0.3s ease;
     }
-    #noBtn {
-      background-color: #888;
-      color: white;
-      z-index: 2;
+
+    button:hover {
+      background-color: #ff1493;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    @keyframes twinkle {
+      0%, 100% { transform: rotate(0deg) scale(1); }
+      50% { transform: rotate(15deg) scale(1.2); }
+    }
+
+    .ring {
       position: absolute;
+      font-size: 20px;
+      animation: floatUp 8s ease-in infinite;
+      opacity: 0.7;
     }
-    #loginPage, #proposalPage {
-      display: none;
-    }
-    #loginPage.show, #proposalPage.show {
-      display: block;
-    }
-    #countdown, #finalMessage {
-      position: fixed;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      font-size: 40px;
-      font-weight: bold;
-      text-align: center;
-      z-index: 10;
-      display: none;
-    }
-    #countdown {
-      color: #fff;
-      text-shadow: 2px 2px 6px #000;
-    }
-    #finalMessage {
-      font-size: 3.5rem;
-      color: #d81e5b;
-      text-shadow: 0 0 10px #ff8aa1, 0 0 20px #ffb6c1, 0 0 30px #fff;
-      animation: popUp 1.5s ease-out;
-    }
-    @keyframes popUp {
-      from {
-        transform: translate(-50%, -50%) scale(0.5);
-        opacity: 0;
-      }
-      to {
-        transform: translate(-50%, -50%) scale(1);
+
+    @keyframes floatUp {
+      0% {
+        transform: translateY(0);
         opacity: 1;
       }
-    }
-    #unmuteBtn {
-      display: none;
-      margin-top: 20px;
-      background: #ff69b4;
-      color: white;
-      font-weight: bold;
-      border-radius: 8px;
-      cursor: pointer;
+      100% {
+        transform: translateY(-120vh);
+        opacity: 0;
+      }
     }
 
-    /* Position iframe bottom right corner */
-    #ytplayer {
-      position: fixed;
-      bottom: 10px;
-      right: 10px;
-      width: 200px;
-      height: 113px;
-      border: 2px solid #ff69b4;
-      border-radius: 12px;
-      box-shadow: 0 0 10px #ff69b4;
-      z-index: 9999;
-      background: black;
+    @media (min-width: 600px) {
+      h1 { font-size: 64px; }
+      p { font-size: 28px; }
+      button { font-size: 20px; }
+      .special-text { font-size: 36px; }
+      .ring-emoji { font-size: 32px; }
+    }
+
+    #unmute-button {
+      z-index: 20;
+    }
+
+    iframe {
+      display: none;
     }
   </style>
-  <script src="https://www.youtube.com/iframe_api"></script>
 </head>
 <body>
-  <iframe
-    id="ytplayer"
-    type="text/html"
+
+  <div id="rings-container"></div>
+
+  <h1>💍 Tyri Said YES! 💍</h1>
+
+  <p>
+    This is the beginning of forever.<br>
+    Through every laugh, every tear, every dream —<br>
+    I promise to hold your hand and heart tightly.<br><br>
+    <span class="special-text">Happy Birthday, my Love<span class="ring-emoji">🎂🎂🎂</span></span><br>
+    <span class="special-text">Forever Starts Now<span class="ring-emoji">❤️❤️❤️</span></span>
+  </p>
+
+  <div class="button-group">
+    <button onclick="location.href='index.html'">Back to Home</button>
+    <button id="unmute-button">Unmute Music</button>
+  </div>
+
+  <!-- Hidden YouTube iframe -->
+  <iframe id="bg-music" width="0" height="0"
     src="https://www.youtube.com/embed/5p_9Af2JQp4?enablejsapi=1&origin=http://localhost&autoplay=1&mute=1&loop=1&playlist=5p_9Af2JQp4"
-    frameborder="0"
-    allow="autoplay"
-    allowfullscreen
-  ></iframe>
-
-  <div class="overlay" id="loginPage">
-    <div class="login-box">
-      <h2>Maki Web</h2>
-      <p>Log in to continue...</p>
-      <input type="text" id="username" placeholder="Username" /><br /><br />
-      <input type="password" id="password" placeholder="Password" /><br /><br />
-      <button onclick="login()">Login</button>
-    </div>
-  </div>
-
-  <div class="overlay" id="proposalPage">
-    <div id="proposal">
-      I've loved you since I can't remember when,<br />
-      and I'm gonna love you till I can't forget how.<br /><br />
-      <strong>Will you marry me?</strong>
-    </div>
-    <button id="yesBtn" onclick="sayYes()">Yes 💍</button>
-    <button id="noBtn" onclick="shrinkNo()">No 🙈</button>
-    <button id="unmuteBtn" onclick="unmuteMusic()">Unmute Music 🔊</button>
-  </div>
-
-  <div id="countdown">3</div>
-  <div id="finalMessage">💖💍Tyri said YES!💍💖</div>
+    frameborder="0" allow="autoplay" allowfullscreen></iframe>
 
   <script>
-    const users = {
-      Tyri: "112624",
-      Maki: "112624",
-    };
+    const ringsContainer = document.getElementById('rings-container');
 
-    let ytPlayer;
-    let isMuted = true;
+    for (let i = 0; i < 40; i++) {
+      const ring = document.createElement('div');
+      ring.classList.add('ring');
+      ring.innerText = '❤️‍🔥';
+      ring.style.left = Math.random() * 100 + 'vw';
+      ring.style.bottom = '-' + (Math.random() * 20 + 10) + 'vh';
+      ring.style.fontSize = (18 + Math.random() * 24) + 'px';
+      ring.style.animationDuration = (6 + Math.random() * 5) + 's';
+      ring.style.opacity = (0.5 + Math.random() * 0.5).toFixed(2);
+      ringsContainer.appendChild(ring);
+    }
 
-    window.onload = () => {
-      document.getElementById("loginPage").classList.add("show");
-    };
-
-    // YouTube API ready callback
+    // YouTube player API control
+    let player;
     function onYouTubeIframeAPIReady() {
-      ytPlayer = new YT.Player("ytplayer", {
-        events: {
-          onReady: (event) => {
-            event.target.mute(); // mute to allow autoplay
-          },
-        },
-      });
+      player = new YT.Player('bg-music');
     }
 
-    function login() {
-      const u = document.getElementById("username").value.trim();
-      const p = document.getElementById("password").value.trim();
-      if (users[u] === p) {
-        document.getElementById("loginPage").style.display = "none";
-        document.getElementById("proposalPage").classList.add("show");
+    // Load YouTube API script dynamically
+    const tag = document.createElement('script');
+    tag.src = "https://www.youtube.com/iframe_api";
+    document.body.appendChild(tag);
 
-        if (ytPlayer && ytPlayer.playVideo) {
-          ytPlayer.playVideo();
-
-          // Unmute after user interaction
-          setTimeout(() => {
-            ytPlayer.unMute();
-            isMuted = false;
-            showUnmuteButton(false);
-          }, 300);
-        }
-      } else {
-        alert("Incorrect username or password.");
+    document.getElementById('unmute-button').addEventListener('click', () => {
+      if (player && player.unMute) {
+        player.unMute();
+        player.setVolume(100);
       }
-    }
-
-    function showUnmuteButton(show) {
-      const btn = document.getElementById("unmuteBtn");
-      btn.style.display = show ? "inline-block" : "none";
-    }
-
-    function unmuteMusic() {
-      if (ytPlayer) {
-        ytPlayer.unMute();
-        isMuted = false;
-        showUnmuteButton(false);
-      }
-    }
-
-    function setBackground(url) {
-      document.body.style.background = `url('${url}') no-repeat center center fixed`;
-      document.body.style.backgroundSize = "cover";
-    }
-
-    let noScale = 1;
-    let yesScale = 1;
-    let noClicked = false;
-
-    function shrinkNo() {
-      const noBtn = document.getElementById("noBtn");
-      const yesBtn = document.getElementById("yesBtn");
-
-      if (!noClicked) {
-        setBackground(
-          "https://i.pinimg.com/736x/04/ef/2c/04ef2cbeca3bc0548f5fae3f0558c494.jpg"
-        );
-        noClicked = true;
-      }
-
-      if (noScale > 0.1) {
-        noScale -= 0.05;
-        noBtn.style.transform = `scale(${noScale})`;
-      }
-
-      const overlay = document.getElementById("proposalPage");
-      const maxX = overlay.clientWidth - noBtn.offsetWidth;
-      const maxY = overlay.clientHeight - noBtn.offsetHeight;
-      const randX = Math.floor(Math.random() * maxX);
-      const randY = Math.floor(Math.random() * maxY);
-      noBtn.style.left = `${randX}px`;
-      noBtn.style.top = `${randY}px`;
-
-      yesScale += 0.05;
-      yesBtn.style.transform = `scale(${yesScale})`;
-
-      if (noScale <= 0.1) {
-        noBtn.style.display = "none";
-      }
-    }
-
-    function sayYes() {
-      setBackground(
-        "https://i.pinimg.com/736x/5a/9e/06/5a9e06ef555717d951d00b6403715b95.jpg"
-      );
-      for (let i = 0; i < 50; i++) {
-        const heart = document.createElement("div");
-        heart.classList.add("heart");
-        heart.style.left = Math.random() * window.innerWidth + "px";
-        heart.style.top = Math.random() * window.innerHeight + "px";
-        document.body.appendChild(heart);
-        setTimeout(() => heart.remove(), 1000);
-      }
-
-      for (let i = 0; i < 100; i++) {
-        const sparkle = document.createElement("div");
-        sparkle.classList.add("heart");
-        sparkle.style.background = "hotpink";
-        sparkle.style.left = Math.random() * 100 + "vw";
-        sparkle.style.top = Math.random() * 100 + "vh";
-        document.body.appendChild(sparkle);
-        setTimeout(() => sparkle.remove(), 1200);
-      }
-
-      let count = 3;
-      const countdownEl = document.getElementById("countdown");
-      const finalMessage = document.getElementById("finalMessage");
-      countdownEl.style.display = "block";
-      countdownEl.innerText = count;
-
-      const countdownInterval = setInterval(() => {
-        count--;
-        if (count > 0) {
-          countdownEl.innerText = count;
-        } else {
-          clearInterval(countdownInterval);
-          countdownEl.style.display = "none";
-          finalMessage.style.display = "block";
-          setTimeout(() => {
-            window.location.href = "Surprise.html";
-          }, 4000);
-        }
-      }, 1000);
-    }
+    });
   </script>
+
 </body>
 </html>
