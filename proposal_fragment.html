@@ -1,129 +1,62 @@
-<style>
-  body {
-    margin: 0;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background: url('https://i.pinimg.com/736x/d7/00/04/d70004c89987ac91aef3f39d6f468655.jpg') no-repeat center center fixed;
-    background-size: cover;
-    height: 100vh;
-    color: #fff;
-    overflow: hidden;
-    position: relative;
-  }
-  .overlay {
-    padding: 20px;
-    border-radius: 15px;
-    text-align: center;
-    width: 90%;
-    max-width: 450px;
-    margin: auto;
-    margin-top: 20%;
-    opacity: 1;
-    position: relative;
-  }
-  #yesBtn, #noBtn {
-    padding: 15px 25px;
-    font-size: 20px;
-    border-radius: 15px;
-    border: none;
-    cursor: pointer;
-    margin: 15px;
-  }
-  #yesBtn {
-    background-color: #ff69b4;
-    color: white;
-  }
-  #noBtn {
-    background-color: #bbb;
-    color: black;
-    position: absolute;
-  }
-</style>
-
-<div class="overlay" id="proposalPage">
-  <div id="proposal" style="font-size: 26px; margin-bottom: 20px;">
-    I've loved you since I can't remember when,<br>
-    and I'm gonna love you till I can't forget how.<br><br>
-    <strong>Will you marry me?</strong>
-  </div>
-  <button id="yesBtn" onclick="sayYes()">Yes 💍</button>
-  <button id="noBtn" onclick="shrinkNo()">No 🙈</button>
-</div>
-
-<script>
-  let noScale = 1;
-  let noClicked = false;
-
-  function shrinkNo() {
-    const noBtn = document.getElementById("noBtn");
-    const yesBtn = document.getElementById("yesBtn");
-
-    if (!noClicked) {
-      document.body.style.background = "url('https://i.pinimg.com/736x/04/ef/2c/04ef2cbeca3bc0548f5fae3f0558c494.jpg') no-repeat center center fixed";
-      document.body.style.backgroundSize = "cover";
-      noClicked = true;
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Proposal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    body {
+      margin: 0; padding: 20px;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(to top right, #ffb6c1, #ffe4e1);
+      color: #333;
+      text-align: center;
+      user-select: none;
     }
-
-    if (noScale > 0.1) {
-      noScale -= 0.05;
-      noBtn.style.transform = `scale(${noScale})`;
+    h1 {
+      font-size: 3em;
+      color: #c2185b;
+      text-shadow: 2px 2px 10px #f48fb1;
     }
-
-    const overlay = document.getElementById("proposalPage");
-    const maxX = overlay.clientWidth - noBtn.offsetWidth;
-    const maxY = overlay.clientHeight - noBtn.offsetHeight;
-    const randX = Math.floor(Math.random() * maxX);
-    const randY = Math.floor(Math.random() * maxY);
-    noBtn.style.left = `${randX}px`;
-    noBtn.style.top = `${randY}px`;
-
-    yesBtn.style.transform = `scale(${1 + (1 - noScale)})`;
-
-    if (noScale <= 0.1) {
-      noBtn.style.display = "none";
+    p {
+      font-size: 1.5em;
+      margin-top: 1em;
+      line-height: 1.4;
     }
-  }
-
-  function sayYes() {
-    document.body.style.background = "url('https://i.pinimg.com/736x/5a/9e/06/5a9e06ef555717d951d00b6403715b95.jpg') no-repeat center center fixed";
-    document.body.style.backgroundSize = "cover";
-
-    for (let i = 0; i < 50; i++) {
-      const heart = document.createElement('div');
-      heart.style.position = 'absolute';
-      heart.style.width = '20px';
-      heart.style.height = '20px';
-      heart.style.background = 'red';
-      heart.style.transform = 'rotate(45deg)';
-      heart.style.left = Math.random() * window.innerWidth + 'px';
-      heart.style.top = Math.random() * window.innerHeight + 'px';
-      heart.style.borderRadius = '3px';
-      heart.style.opacity = 0.8;
-      document.body.appendChild(heart);
-      setTimeout(() => heart.remove(), 1000);
+    button {
+      margin-top: 2em;
+      font-size: 1.2em;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 30px;
+      background-color: #ff69b4;
+      color: white;
+      cursor: pointer;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+      transition: background-color 0.3s ease;
+      user-select: none;
     }
+    button:hover {
+      background-color: #ff1493;
+    }
+  </style>
+</head>
+<body>
 
-    let count = 3;
-    const countdownEl = document.createElement('div');
-    countdownEl.style.position = 'fixed';
-    countdownEl.style.top = '50%';
-    countdownEl.style.left = '50%';
-    countdownEl.style.transform = 'translate(-50%, -50%)';
-    countdownEl.style.fontSize = '40px';
-    countdownEl.style.fontWeight = 'bold';
-    countdownEl.style.color = '#fff';
-    document.body.appendChild(countdownEl);
+  <h1>💍 Will You Marry Me? 💍</h1>
+  <p>
+    From this moment onwards,<br>
+    I promise to love you forever.<br>
+    Let's start our forever journey together.
+  </p>
 
-    countdownEl.innerText = count;
-    const interval = setInterval(() => {
-      count--;
-      if (count > 0) {
-        countdownEl.innerText = count;
-      } else {
-        clearInterval(interval);
-        countdownEl.remove();
-        // Send message to parent to load surprise page
-        window.parent.postMessage({ action: 'goToSurprise' }, '*');
-      }
-    }, 1000);
-  }
-</script>
+  <button onclick="parent.postMessage({action:'navigate', page:'surprise_fragment.html'}, '*')">
+    Next Surprise
+  </button>
+
+  <button onclick="parent.postMessage({action:'unmuteMusic'}, '*')" style="margin-left: 15px;">
+    🔊 Unmute Music
+  </button>
+
+</body>
+</html>
