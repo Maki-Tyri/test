@@ -1,197 +1,193 @@
-<!DOCTYPE html> 
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <title>She Said YES!</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Budget App</title>
   <style>
-    /* Your existing styles preserved */
-    * { box-sizing: border-box; }
-    html, body {
-      margin: 0; padding: 0; height: 100%; width: 100%;
-      background: radial-gradient(circle at top left, #ffe4e1, #ffb6c1, #ff69b4);
-      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-      color: #fff; text-align: center; overflow: hidden; position: relative;
-    }
     body {
-      display: flex; flex-direction: column; justify-content: center;
-      align-items: center; height: 100vh;
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+      background: #f5f5f5;
     }
-
-    #rings-container {
-      position: fixed; top: 0; left: 0; right: 0; bottom: 0;
-      pointer-events: none; z-index: 0; overflow: hidden;
+    .container {
+      padding: 1rem;
+      max-width: 600px;
+      margin: auto;
+      background: white;
+      margin-top: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
     }
-
-    h1, p, .button-group {
-      position: relative; z-index: 10; user-select: none;
-      text-shadow: 2px 2px 10px #c2185b;
+    input, button {
+      width: 100%;
+      padding: 0.5rem;
+      margin-top: 0.5rem;
     }
-
-    h1 {
-      font-size: 10vw; margin: 0;
-      animation: fadeIn 2s ease-out forwards, pulse 3s infinite;
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+      gap: 10px;
+      margin-top: 1rem;
     }
-
-    p {
-      font-size: 5vw; margin: 4vh 10vw 2vh;
-      animation: fadeIn 3s ease-out forwards;
-      line-height: 1.6;
-      text-shadow: 1px 1px 6px #c2185b;
+    .card {
+      background: #e0e0e0;
+      padding: 1rem;
+      text-align: center;
+      border-radius: 6px;
     }
-
-    .special-text {
-      font-weight: bold;
-      font-size: 6vw;
-      background: linear-gradient(45deg, #ff69b4, #ff1493, #ff69b4);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-      display: inline-block;
-      position: relative;
-      user-select: none;
-      text-shadow: 1px 1px 4px #c2185b;
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1rem;
     }
-
-    .ring-emoji {
-      display: inline-block;
-      animation: twinkle 2s infinite ease-in-out;
-      font-size: 5vw;
-      vertical-align: middle;
-      margin-left: 8px;
-    }
-
-    .button-group {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 15px;
-      flex-wrap: wrap;
-      margin-top: 3vh;
-    }
-
-    button {
-      padding: 12px 25px;
-      font-size: 4vw;
-      border: none;
-      border-radius: 30px;
-      background-color: #ff69b4;
-      color: white;
-      cursor: pointer;
-      box-shadow: 0 4px 10px rgba(0,0,0,0.2);
-      transition: background-color 0.3s ease;
-    }
-
-    button:hover {
-      background-color: #ff1493;
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @keyframes pulse {
-      0%, 100% { transform: scale(1); }
-      50% { transform: scale(1.05); }
-    }
-
-    @keyframes twinkle {
-      0%, 100% { transform: rotate(0deg) scale(1); }
-      50% { transform: rotate(15deg) scale(1.2); }
-    }
-
-    .ring {
-      position: absolute;
-      font-size: 20px;
-      animation: floatUp 8s ease-in infinite;
-      opacity: 0.7;
-    }
-
-    @keyframes floatUp {
-      0% {
-        transform: translateY(0);
-        opacity: 1;
-      }
-      100% {
-        transform: translateY(-120vh);
-        opacity: 0;
-      }
-    }
-
-    @media (min-width: 600px) {
-      h1 { font-size: 64px; }
-      p { font-size: 28px; }
-      button { font-size: 20px; }
-      .special-text { font-size: 36px; }
-      .ring-emoji { font-size: 32px; }
-    }
-
-    #unmute-button {
-      z-index: 20;
-    }
-
-    iframe {
-      display: none;
+    th, td {
+      border: 1px solid #ccc;
+      padding: 0.5rem;
+      text-align: left;
     }
   </style>
-</head>
-<body>
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+    import { getDatabase, ref, set, push, onValue, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-  <div id="rings-container"></div>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
+      authDomain: "project-955237504610034331.firebaseapp.com",
+      databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
+      projectId: "project-955237504610034331",
+      storageBucket: "project-955237504610034331.firebasestorage.app",
+      messagingSenderId: "76212939677",
+      appId: "1:76212939677:web:ef498bc1e4e480ab6e5d74",
+      measurementId: "G-WXBEP1LXTX"
+    };
 
-  <h1>💍 Tyri Said YES! 💍</h1>
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth();
+    const db = getDatabase();
 
-  <p>
-    This is the beginning of forever.<br>
-    Through every laugh, every tear, every dream —<br>
-    I promise to hold your hand and heart tightly.<br><br>
-    <span class="special-text">Happy Birthday, my Love<span class="ring-emoji">🎂🎂🎂</span></span><br>
-    <span class="special-text">Forever Starts Now<span class="ring-emoji">❤️❤️❤️</span></span>
-  </p>
+    let currentUser;
 
-  <div class="button-group">
-    <button onclick="location.href='index.html'">Back to Home</button>
-    <button id="unmute-button">Unmute Music</button>
-  </div>
-
-  <!-- Hidden YouTube iframe -->
-  <iframe id="bg-music" width="0" height="0"
-    src="https://www.youtube.com/embed/5p_9Af2JQp4?enablejsapi=1&origin=http://localhost&autoplay=1&mute=1&loop=1&playlist=5p_9Af2JQp4"
-    frameborder="0" allow="autoplay" allowfullscreen></iframe>
-
-  <script>
-    const ringsContainer = document.getElementById('rings-container');
-
-    for (let i = 0; i < 40; i++) {
-      const ring = document.createElement('div');
-      ring.classList.add('ring');
-      ring.innerText = '❤️‍🔥';
-      ring.style.left = Math.random() * 100 + 'vw';
-      ring.style.bottom = '-' + (Math.random() * 20 + 10) + 'vh';
-      ring.style.fontSize = (18 + Math.random() * 24) + 'px';
-      ring.style.animationDuration = (6 + Math.random() * 5) + 's';
-      ring.style.opacity = (0.5 + Math.random() * 0.5).toFixed(2);
-      ringsContainer.appendChild(ring);
+    function login() {
+      const email = document.getElementById("email").value;
+      const password = document.getElementById("password").value;
+      signInWithEmailAndPassword(auth, email, password)
+        .then(userCredential => {
+          currentUser = userCredential.user;
+          showDashboard();
+        })
+        .catch(() => alert("Login failed. Check your credentials."));
     }
 
-    // YouTube player API control
-    let player;
-    function onYouTubeIframeAPIReady() {
-      player = new YT.Player('bg-music');
+    function showDashboard() {
+      document.getElementById("loginDiv").style.display = "none";
+      document.getElementById("dashboard").style.display = "block";
+      const uid = auth.currentUser.uid;
+      document.getElementById("welcome").innerText = "Welcome, " + auth.currentUser.email.split("@")[0];
+
+      const entriesRef = ref(db, `users/${uid}/entries`);
+      onValue(entriesRef, snapshot => {
+        const data = snapshot.val() || {};
+        let total = 0;
+        let html = "";
+        Object.values(data).forEach(e => {
+          html += `<tr><td>${e.dt}</td><td>${e.category}</td><td>${e.item}</td><td>₱${e.price}</td></tr>`;
+          total += e.price;
+        });
+        document.getElementById("entriesBody").innerHTML = html;
+        document.getElementById("expenses").innerText = `₱${total}`;
+
+        onValue(ref(db, `users/${uid}/budget`), snap => {
+          const budget = snap.val() || 0;
+          document.getElementById("budget").innerText = `₱${budget}`;
+          document.getElementById("balance").innerText = `₱${budget - total}`;
+        });
+      });
+
+      onValue(ref(db, `users/${uid}/savings`), snap => {
+        document.getElementById("savings").innerText = `₱${snap.val() || 0}`;
+      });
     }
 
-    // Load YouTube API script dynamically
-    const tag = document.createElement('script');
-    tag.src = "https://www.youtube.com/iframe_api";
-    document.body.appendChild(tag);
+    function setNewBudget() {
+      const uid = auth.currentUser.uid;
+      const newB = parseFloat(document.getElementById("newBudget").value);
+      if (isNaN(newB)) return;
 
-    document.getElementById('unmute-button').addEventListener('click', () => {
-      if (player && player.unMute) {
-        player.unMute();
-        player.setVolume(100);
+      const balance = parseFloat(document.getElementById("balance").innerText.replace("₱", "")) || 0;
+      const savingsRef = ref(db, `users/${uid}/savings`);
+      onValue(savingsRef, snap => {
+        const currentSavings = snap.val() || 0;
+        set(savingsRef, currentSavings + balance);
+        set(ref(db, `users/${uid}/budget`), newB);
+        set(ref(db, `users/${uid}/entries`), null);
+      }, { onlyOnce: true });
+    }
+
+    function addExpense() {
+      const uid = auth.currentUser.uid;
+      const category = prompt("Enter category");
+      const item = prompt("Enter item name");
+      const price = parseFloat(prompt("Enter price") || "0");
+      if (!category || !item || isNaN(price)) return;
+      const dt = new Date().toLocaleString();
+      push(ref(db, `users/${uid}/entries`), { dt, category, item, price });
+    }
+
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        currentUser = user;
+        showDashboard();
       }
     });
-  </script>
 
+    window.login = login;
+    window.setNewBudget = setNewBudget;
+    window.addExpense = addExpense;
+  </script>
+</head>
+<body>
+  <div class="container" id="loginDiv">
+    <h2>Login</h2>
+    <input type="email" id="email" placeholder="Email" />
+    <input type="password" id="password" placeholder="Password" />
+    <button onclick="login()">Sign In</button>
+  </div>
+
+  <div class="container" id="dashboard" style="display:none">
+    <h2 id="welcome"></h2>
+    <p>Budget: <span id="budget">₱0</span></p>
+    <p>Balance: <span id="balance">₱0</span></p>
+    <p>Expenses: <span id="expenses">₱0</span></p>
+    <p>Savings: <span id="savings">₱0</span></p>
+    <input type="number" id="newBudget" placeholder="New Budget" />
+    <button onclick="setNewBudget()">Set Budget</button>
+
+    <div class="grid">
+      <div class="card">expenses report</div>
+      <div class="card">grocery</div>
+      <div class="card">market</div>
+      <div class="card">online</div>
+      <div class="card">transportation</div>
+      <div class="card">others</div>
+      <div class="card">savings</div>
+    </div>
+
+    <h3>Expenses Table</h3>
+    <button onclick="addExpense()">Add Expense</button>
+    <table>
+      <thead>
+        <tr>
+          <th>Date/Time</th>
+          <th>Category</th>
+          <th>Item</th>
+          <th>Price</th>
+        </tr>
+      </thead>
+      <tbody id="entriesBody"></tbody>
+    </table>
+  </div>
 </body>
 </html>
