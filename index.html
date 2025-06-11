@@ -1,294 +1,227 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Budget App</title>
-    <style>
-      body {
-        font-family: Arial;
-        margin: 0;
-        padding: 0;
-        background: #f0f0f0;
-      }
-      .container {
-        max-width: 600px;
-        margin: auto;
-        padding: 20px;
-      }
-      .login,
-      .dashboard,
-      .page {
-        display: none;
-      }
-      input,
-      button {
-        width: 100%;
-        padding: 10px;
-        margin: 10px 0;
-        font-size: 16px;
-      }
-      .nav-icons button {
-        width: 48%;
-        margin: 1%;
-      }
-      table {
-        width: 100%;
-        border-collapse: collapse;
-        margin-top: 10px;
-      }
-      th,
-      td {
-        border: 1px solid #ccc;
-        padding: 6px;
-        text-align: center;
-      }
-      .item-entry {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        margin-bottom: 5px;
-      }
-      .item-entry input[type="checkbox"] {
-        width: auto;
-      }
-      .hidden {
-        display: none;
-      }
-    </style>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-database.js"></script>
-  </head>
-  <body>
-    <div class="container">
-      <!-- Login -->
-      <div class="login" id="login">
-        <h2>Login</h2>
-        <input type="text" id="username" placeholder="Username" />
-        <input type="password" id="password" placeholder="Password" />
-        <button onclick="login()">Sign In</button>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Budget App</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-database-compat.js"></script>
+  <style>
+    * { box-sizing: border-box; }
+    body { margin: 0; font-family: Arial, sans-serif; background: #f2f2f2; }
+    .container { max-width: 480px; margin: auto; padding: 20px; }
+    input, button, select {
+      width: 100%; padding: 10px; margin: 8px 0; border: 1px solid #ccc; border-radius: 6px;
+    }
+    button { background-color: #3b82f6; color: white; font-weight: bold; border: none; }
+    button:hover { background-color: #2563eb; }
+    .card {
+      background: white; padding: 15px; border-radius: 10px; margin: 10px 0; box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+    }
+    .hidden { display: none; }
+    .icon-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+    .icon-btn {
+      background: #e0f2fe; text-align: center; padding: 20px; border-radius: 10px; cursor: pointer;
+      font-size: 16px; font-weight: bold; text-transform: capitalize;
+    }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: center; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- LOGIN PAGE -->
+    <div id="loginPage">
+      <h2 style="text-align:center;">🔐 Budget App Login</h2>
+      <input type="email" id="email" placeholder="Username (Email)">
+      <input type="password" id="password" placeholder="Password">
+      <button onclick="login()">Login</button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboardPage" class="hidden">
+      <h3>👋 Welcome, <span id="usernameDisplay"></span></h3>
+
+      <!-- Summary -->
+      <div class="card">
+        <h4>💰 Budget Summary</h4>
+        <p>Budget: ₱<span id="budgetTotal">0</span></p>
+        <p>Expenses: ₱<span id="expensesTotal">0</span></p>
+        <p>Balance: ₱<span id="balanceTotal">0</span></p>
+        <input type="number" id="newBudget" placeholder="Enter new budget">
+        <button onclick="setNewBudget()">Set Budget (Resets Records)</button>
       </div>
 
-      <!-- Dashboard -->
-      <div class="dashboard" id="dashboard">
-        <h2>Welcome, <span id="userDisplay"></span></h2>
-        <div class="nav-icons">
-          <button onclick="openPage('expenses')">Expenses Report</button>
-          <button onclick="openPage('grocery')">Grocery</button>
-          <button onclick="openPage('market')">Market</button>
-          <button onclick="openPage('online')">Online</button>
-          <button onclick="openPage('transportation')">Transportation</button>
-          <button onclick="openPage('others')">Others</button>
-          <button onclick="openPage('savings')">Savings</button>
-        </div>
-      </div>
-
-      <!-- Expenses Report -->
-      <div class="page" id="expenses">
-        <h3>Expenses Report</h3>
-        <label>Total Budget: <input type="number" id="mainBudget" /></label>
-        <button onclick="setMainBudget()">Set Budget</button>
-        <p>Balance: <span id="mainBalance">0</span></p>
-        <p>Expenses: <span id="mainExpenses">0</span></p>
-        <table>
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Category</th>
-              <th>Item</th>
-              <th>Price</th>
-            </tr>
-          </thead>
-          <tbody id="expenseTable"></tbody>
-        </table>
-      </div>
-
-      <!-- Categories -->
-      <div class="page" id="grocery">
-        <h3>Grocery</h3>
-        <div id="groceryContent"></div>
-      </div>
-      <div class="page" id="market">
-        <h3>Market</h3>
-        <div id="marketContent"></div>
-      </div>
-      <div class="page" id="online">
-        <h3>Online</h3>
-        <div id="onlineContent"></div>
-      </div>
-      <div class="page" id="transportation">
-        <h3>Transportation</h3>
-        <div id="transportationContent"></div>
-      </div>
-      <div class="page" id="others">
-        <h3>Others</h3>
-        <div id="othersContent"></div>
-      </div>
-
-      <!-- Savings -->
-      <div class="page" id="savings">
-        <h3>Savings</h3>
-        <p>Leftover Balance: <span id="savingsBalance">0</span></p>
+      <!-- Icons -->
+      <div class="icon-grid">
+        <div class="icon-btn" onclick="showPage('report')">📄 Expenses Report</div>
+        <div class="icon-btn" onclick="showCategory('grocery')">🛒 Grocery</div>
+        <div class="icon-btn" onclick="showCategory('market')">🥬 Market</div>
+        <div class="icon-btn" onclick="showCategory('online')">💻 Online</div>
+        <div class="icon-btn" onclick="showCategory('transportation')">🚗 Transportation</div>
+        <div class="icon-btn" onclick="showCategory('others')">📦 Others</div>
+        <div class="icon-btn" onclick="showPage('savings')">🏦 Savings</div>
       </div>
     </div>
 
-    <script>
-      const firebaseConfig = {
-        apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
-        authDomain: "project-955237504610034331.firebaseapp.com",
-        databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
-        projectId: "project-955237504610034331",
-        storageBucket: "project-955237504610034331.firebasestorage.app",
-        messagingSenderId: "76212939677",
-        appId: "1:76212939677:web:ef498bc1e4e480ab6e5d74",
-        measurementId: "G-WXBEP1LXTX"
-      };
+    <!-- EXPENSE REPORT -->
+    <div id="reportPage" class="hidden">
+      <h3>📄 Expenses Report</h3>
+      <table>
+        <thead>
+          <tr><th>Date</th><th>Category</th><th>Item</th><th>Price</th></tr>
+        </thead>
+        <tbody id="reportTable"></tbody>
+      </table>
+      <button onclick="backToDashboard()">← Back</button>
+    </div>
 
-      const app = firebase.initializeApp(firebaseConfig);
-      const db = firebase.database();
+    <!-- CATEGORY PAGE -->
+    <div id="categoryPage" class="hidden">
+      <h3 id="categoryTitle">Category</h3>
+      <p>Budget: ₱<span id="catBudget">0</span></p>
+      <p>Expenses: ₱<span id="catExpenses">0</span></p>
+      <input type="number" id="catBudgetInput" placeholder="Set Category Budget">
+      <input type="text" id="catItemName" placeholder="Item Name">
+      <input type="number" id="catItemPrice" placeholder="Item Price">
+      <button onclick="addCategoryItem()">Add Item</button>
+      <ul id="catItemList"></ul>
+      <button onclick="backToDashboard()">← Back</button>
+    </div>
 
-      const loginEl = document.getElementById("login");
-      const dashboardEl = document.getElementById("dashboard");
-      const userDisplay = document.getElementById("userDisplay");
-      const pages = document.querySelectorAll(".page");
+    <!-- SAVINGS PAGE -->
+    <div id="savingsPage" class="hidden">
+      <h3>🏦 Savings</h3>
+      <p>Total Savings: ₱<span id="savingsAmount">0</span></p>
+      <button onclick="backToDashboard()">← Back</button>
+    </div>
+  </div>
 
-      let mainBudget = 0, mainBalance = 0, savings = 0;
+  <script>
+    const firebaseConfig = {
+      apiKey: "AIzaSyCy9CKJ6CELheBhw7Gs0BgsE1E0FsoYdgU",
+      authDomain: "project-955237504610034331.firebaseapp.com",
+      databaseURL: "https://project-955237504610034331-default-rtdb.firebaseio.com",
+      projectId: "project-955237504610034331",
+      storageBucket: "project-955237504610034331.firebasestorage.app",
+      messagingSenderId: "76212939677",
+      appId: "1:76212939677:web:ef498bc1e4e480ab6e5d74",
+      measurementId: "G-WXBEP1LXTX"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const db = firebase.database();
 
-      const categories = ["grocery", "market", "online", "transportation", "others"];
+    let user = null;
+    let budget = 0, expenses = [], savings = 0;
+    let categories = { grocery: [], market: [], online: [], transportation: [], others: [] };
+    let catBudgets = { grocery: 0, market: 0, online: 0, transportation: 0, others: 0 };
+    let currentCategory = "";
 
-      function login() {
-        const username = document.getElementById("username").value;
-        const password = document.getElementById("password").value;
-        if (!username || !password) return alert("Fill all fields");
-        db.ref("users/" + username).set({ username, password });
-        localStorage.setItem("username", username);
-        userDisplay.textContent = username;
-        loginEl.style.display = "none";
-        dashboardEl.style.display = "block";
+    function login() {
+      const email = email.value;
+      const password = password.value;
+      auth.signInWithEmailAndPassword(email, password).then(res => {
+        user = res.user;
+        document.getElementById("loginPage").classList.add("hidden");
+        document.getElementById("dashboardPage").classList.remove("hidden");
+        usernameDisplay.textContent = user.email;
+        loadData();
+      }).catch(err => alert("Login failed."));
+    }
+
+    function loadData() {
+      db.ref("users/" + user.uid).on("value", snap => {
+        const data = snap.val() || {};
+        budget = data.budget || 0;
+        expenses = data.expenses || [];
+        savings = data.savings || 0;
+        categories = data.categories || categories;
+        catBudgets = data.catBudgets || catBudgets;
+        updateDashboard();
+      });
+    }
+
+    function updateDashboard() {
+      const totalSpent = expenses.reduce((sum, e) => sum + parseFloat(e.price), 0);
+      document.getElementById("budgetTotal").textContent = budget;
+      document.getElementById("expensesTotal").textContent = totalSpent;
+      document.getElementById("balanceTotal").textContent = budget - totalSpent;
+    }
+
+    function setNewBudget() {
+      const newB = parseFloat(document.getElementById("newBudget").value);
+      if (isNaN(newB)) return alert("Enter valid budget");
+      const remaining = budget - expenses.reduce((sum, e) => sum + parseFloat(e.price), 0);
+      savings += remaining;
+      budget = newB;
+      expenses = [];
+      categories = { grocery: [], market: [], online: [], transportation: [], others: [] };
+      db.ref("users/" + user.uid).set({ budget, expenses, savings, categories, catBudgets });
+    }
+
+    function showPage(page) {
+      document.querySelectorAll(".container > div").forEach(div => div.classList.add("hidden"));
+      if (page === "report") {
+        reportPage.classList.remove("hidden");
+        reportTable.innerHTML = expenses.map(e =>
+          `<tr><td>${e.date}</td><td>${e.category}</td><td>${e.item}</td><td>₱${e.price}</td></tr>`
+        ).join("");
+      } else if (page === "savings") {
+        savingsPage.classList.remove("hidden");
+        savingsAmount.textContent = savings;
       }
+    }
 
-      function openPage(page) {
-        pages.forEach(p => p.style.display = 'none');
-        document.getElementById(page).style.display = 'block';
-        if (categories.includes(page)) renderCategory(page);
-        if (page === 'savings') updateSavingsDisplay();
+    function showCategory(cat) {
+      currentCategory = cat;
+      categoryTitle.textContent = cat.toUpperCase();
+      document.querySelectorAll(".container > div").forEach(div => div.classList.add("hidden"));
+      categoryPage.classList.remove("hidden");
+      catBudget.textContent = catBudgets[cat] || 0;
+      const items = categories[cat] || [];
+      const spent = items.reduce((sum, i) => sum + parseFloat(i.price), 0);
+      catExpenses.textContent = spent;
+      catItemList.innerHTML = items.map((i, idx) => `
+        <li>
+          <input type="checkbox" onchange="editItem(${idx})"> ${i.name} - ₱${i.price}
+          <button onclick="deleteItem(${idx})">❌</button>
+        </li>`).join("");
+    }
+
+    function addCategoryItem() {
+      const name = catItemName.value;
+      const price = parseFloat(catItemPrice.value);
+      if (!name || isNaN(price)) return alert("Invalid input");
+      if (price > catBudgets[currentCategory]) return alert("Price exceeds category budget");
+      categories[currentCategory].push({ name, price });
+      expenses.push({ date: new Date().toLocaleString(), category: currentCategory, item: name, price });
+      db.ref("users/" + user.uid).update({ expenses, categories });
+      showCategory(currentCategory);
+    }
+
+    function editItem(index) {
+      const newPrice = prompt("New price:");
+      const price = parseFloat(newPrice);
+      if (!isNaN(price)) {
+        categories[currentCategory][index].price = price;
+        db.ref("users/" + user.uid + "/categories").set(categories);
+        showCategory(currentCategory);
       }
+    }
 
-      function setMainBudget() {
-        const input = parseFloat(document.getElementById("mainBudget").value);
-        if (isNaN(input)) return alert("Invalid budget");
-        savings += mainBalance; // move leftover to savings
-        mainBudget = input;
-        mainBalance = input;
-        updateMainDisplay();
-        db.ref("expenses").remove(); // clear previous expenses
-        document.getElementById("expenseTable").innerHTML = "";
-        categories.forEach(cat => {
-          db.ref("category/" + cat).remove();
-          document.getElementById(cat + "Content").innerHTML = "";
-        });
-        updateSavingsDisplay();
-      }
+    function deleteItem(index) {
+      categories[currentCategory].splice(index, 1);
+      db.ref("users/" + user.uid + "/categories").set(categories);
+      showCategory(currentCategory);
+    }
 
-      function updateMainDisplay() {
-        document.getElementById("mainBalance").textContent = mainBalance;
-        document.getElementById("mainExpenses").textContent = mainBudget - mainBalance;
-      }
-
-      function updateSavingsDisplay() {
-        document.getElementById("savingsBalance").textContent = savings;
-      }
-
-      function renderCategory(cat) {
-        const container = document.getElementById(cat + "Content");
-        container.innerHTML = `
-          <label>Budget: <input type="number" id="${cat}Budget" /></label>
-          <button onclick="setCategoryBudget('${cat}')">Set</button>
-          <p>Balance: <span id="${cat}Balance">0</span></p>
-          <p>Expenses: <span id="${cat}Expenses">0</span></p>
-          <div id="${cat}Items"></div>
-          <button onclick="addItem('${cat}')">Add Item</button>
-        `;
-      }
-
-      const categoryData = {};
-
-      function setCategoryBudget(cat) {
-        const input = parseFloat(document.getElementById(cat + "Budget").value);
-        if (isNaN(input) || input > mainBalance) return alert("Invalid or exceeds main balance");
-        categoryData[cat] = { budget: input, balance: input, expenses: 0, items: [] };
-        updateCategoryUI(cat);
-        updateMainDisplay();
-        mainBalance -= input;
-      }
-
-      function updateCategoryUI(cat) {
-        document.getElementById(cat + "Balance").textContent = categoryData[cat].balance;
-        document.getElementById(cat + "Expenses").textContent = categoryData[cat].expenses;
-        const list = document.getElementById(cat + "Items");
-        list.innerHTML = "";
-        categoryData[cat].items.forEach((item, index) => {
-          const div = document.createElement("div");
-          div.className = "item-entry";
-          div.innerHTML = `
-            <input type="checkbox" onchange="toggleEdit('${cat}', ${index}, this.checked)">
-            <input type="text" value="${item.name}" disabled />
-            <input type="number" value="${item.price}" class="price" disabled />
-            <button onclick="saveItem('${cat}', ${index})" class="hidden">✔</button>
-            <button onclick="deleteItem('${cat}', ${index})">🗑️</button>
-          `;
-          list.appendChild(div);
-        });
-      }
-
-      function addItem(cat) {
-        categoryData[cat].items.push({ name: 'Item', price: 0 });
-        updateCategoryUI(cat);
-      }
-
-      function toggleEdit(cat, index, checked) {
-        const entry = document.getElementById(cat + "Items").children[index];
-        entry.querySelectorAll("input")[1].disabled = !checked;
-        entry.querySelectorAll("input")[2].disabled = !checked;
-        entry.querySelector(".hidden").style.display = checked ? 'inline' : 'none';
-      }
-
-      function saveItem(cat, index) {
-        const entry = document.getElementById(cat + "Items").children[index];
-        const name = entry.querySelectorAll("input")[1].value;
-        const price = parseFloat(entry.querySelectorAll("input")[2].value);
-        if (isNaN(price) || price > categoryData[cat].balance) {
-          alert(\"Price invalid or exceeds category budget\"); return;
-        }
-        categoryData[cat].items[index] = { name, price };
-        categoryData[cat].balance -= price;
-        categoryData[cat].expenses += price;
-        mainBalance -= price;
-        updateCategoryUI(cat);
-        updateMainDisplay();
-        const now = new Date().toLocaleString();
-        const row = `<tr><td>${now}</td><td>${cat}</td><td>${name}</td><td>${price}</td></tr>`;
-        document.getElementById(\"expenseTable\").innerHTML += row;
-      }
-
-      function deleteItem(cat, index) {
-        const price = categoryData[cat].items[index].price;
-        categoryData[cat].balance += price;
-        categoryData[cat].expenses -= price;
-        mainBalance += price;
-        categoryData[cat].items.splice(index, 1);
-        updateCategoryUI(cat);
-        updateMainDisplay();
-      }
-
-      // Auto-login if saved
-      if (localStorage.getItem(\"username\")) {
-        userDisplay.textContent = localStorage.getItem(\"username\");
-        loginEl.style.display = \"none\";
-        dashboardEl.style.display = \"block\";
-      } else {
-        loginEl.style.display = \"block\";
-      }
-    </script>
-  </body>
+    function backToDashboard() {
+      document.querySelectorAll(".container > div").forEach(div => div.classList.add("hidden"));
+      dashboardPage.classList.remove("hidden");
+      updateDashboard();
+    }
+  </script>
+</body>
 </html>
